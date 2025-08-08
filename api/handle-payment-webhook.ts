@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
 import { randomBytes } from 'crypto';
+import { Buffer } from 'buffer';
 import type { Database } from '../lib/database.types';
 
 // Zakáže predvolený parser tela požiadavky, aby sme mohli čítať raw body pre Stripe.
@@ -94,7 +95,7 @@ export default async function handler(
         .from('licenses')
         .insert([{
           license_key: newKey,
-          status: 'available',
+          status: 'available' as const,
           product_id: 'PODCAST_MIXER_PRO',
           assigned_email: null,
         }]);

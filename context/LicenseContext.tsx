@@ -47,13 +47,18 @@ export const LicenseProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [license]);
 
   const unlockWithKey = useCallback(async (email: string, key: string): Promise<UnlockResult> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
     try {
         const response = await fetch('/api/verify-license', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, key }),
+            signal: controller.signal,
         });
 
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (response.ok && data.success) {
@@ -63,6 +68,7 @@ export const LicenseProvider: React.FC<{ children: ReactNode }> = ({ children })
             return { success: false, error: data.error || 'invalid_key' };
         }
     } catch (error) {
+        clearTimeout(timeoutId);
         console.error("Activation request failed:", error);
         return { success: false, error: 'server_error' };
     }

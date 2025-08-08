@@ -138,10 +138,10 @@ const AppContent: React.FC = () => {
       setTimeout(() => setError(null), 5000);
   }
   
-    const handleInfo = (key: TranslationKey) => {
+    const handleInfo = (key: TranslationKey, duration: number = 5000) => {
         const message = t(key);
         setInfo(message);
-        setTimeout(() => setInfo(null), 5000);
+        setTimeout(() => setInfo(null), duration);
     }
 
   const addTracks = useCallback(async (files: FileList, type: 'music' | 'spoken' | 'jingle') => {
@@ -277,6 +277,20 @@ const AppContent: React.FC = () => {
           localStorage.removeItem('podcastMixerSession');
       }
   }, []); // Note: This should only run once on mount, so `t` is not in deps
+
+  // Handle redirects from payment gateway
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment_success') === 'true') {
+        handleInfo('info_payment_success', 10000);
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (urlParams.get('payment_canceled') === 'true') {
+        handleInfo('info_payment_canceled', 8000);
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [t]);
+
 
   // Save session to localStorage whenever something changes
   useEffect(() => {
