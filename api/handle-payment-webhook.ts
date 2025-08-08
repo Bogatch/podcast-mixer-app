@@ -1,3 +1,5 @@
+
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
@@ -107,7 +109,7 @@ export default async function handler(
           license_key: newKey,
           status: 'available' as const,
           product_id: 'PODCAST_MIXER_PRO',
-          assigned_email: null,
+          assigned_email: '',
         }]);
 
       if (dbError) {
