@@ -5,8 +5,8 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: any | undefined }
-  | any[]
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   public: {
