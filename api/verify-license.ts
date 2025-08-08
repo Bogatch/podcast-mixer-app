@@ -1,4 +1,5 @@
 
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../lib/database.types';
@@ -31,7 +32,7 @@ export default async function handler(
     // 1. Nájdeme kľúč v databáze
     const { data: license, error } = await supabase
       .from('licenses')
-      .select('*')
+      .select('id, created_at, license_key, status, product_id, assigned_email')
       .eq('license_key', key.trim())
       .single();
 

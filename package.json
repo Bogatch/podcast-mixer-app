@@ -5,7 +5,7 @@
   "main": "electron.js",
   "scripts": {
     "start:electron": "npm run build:electron && electron .",
-    "build": "rm -rf public && mkdir -p public && cp index.html public/ && esbuild index.tsx --bundle --outfile=public/bundle.js --minify --sourcemap --platform=browser --format=iife",
+    "build:ui": "rm -rf public && mkdir -p public && cp index.html public/ && esbuild index.tsx --bundle --outfile=public/bundle.js --minify --sourcemap --platform=browser --format=iife",
     "build:electron": "rm -rf dist && mkdir -p dist && cp index.html dist/ && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --platform=browser --format=iife",
     "package:electron": "npm run build:electron && electron-builder"
   },
