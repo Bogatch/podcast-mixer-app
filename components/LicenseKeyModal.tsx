@@ -64,7 +64,11 @@ export const LicenseKeyModal: React.FC<LicenseKeyModalProps> = ({ onClose }) => 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error('Server responded with an error');
+        // Try to parse the error message from the server for better debugging
+        const errorData = await response.json().catch(() => ({}));
+        const serverMessage = errorData?.error?.message || 'Server responded with an error';
+        console.error('Payment initiation failed. Server message:', serverMessage);
+        throw new Error(serverMessage); // Throw with server message for context
       }
       const data = await response.json();
       if (data.url) {
@@ -77,6 +81,8 @@ export const LicenseKeyModal: React.FC<LicenseKeyModalProps> = ({ onClose }) => 
       if (err.name === 'AbortError') {
         setError(t('error_request_timeout'));
       } else {
+        // We still show a generic message to the end-user for security.
+        // The detailed error is in the developer console.
         setError(t('license_purchase_error'));
       }
       setIsPurchasing(false);

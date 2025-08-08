@@ -1,11 +1,12 @@
 
+
 export type Json =
   | string
   | number
   | boolean
   | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+  | { [key: string]: any | undefined }
+  | any[]
 
 export type Database = {
   public: {
