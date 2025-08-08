@@ -1,0 +1,48 @@
+{
+  "name": "podcast-mixer-studio",
+  "version": "1.2.0",
+  "description": "Nástroj na nahrávanie a vizuálne mixovanie zvukových stôp pre podcasty.",
+  "main": "electron.js",
+  "scripts": {
+    "start": "npm run build:ui && electron .",
+    "build:ui": "esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --platform=browser --format=iife",
+    "build": "npm run build:ui && electron-builder"
+  },
+  "author": "KIKS® Soft",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.4",
+    "jszip": "^3.10.1",
+    "lamejs": "^1.2.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "resend": "^3.2.0",
+    "stripe": "^15.8.0"
+  },
+  "devDependencies": {
+    "electron": "^29.1.5",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.20.2"
+  },
+  "build": {
+    "appId": "com.podcastmixer.studio",
+    "productName": "Podcast Mixer Studio",
+    "files": [
+      "electron.js",
+      "index.html",
+      "dist/"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "category": "public.app-category.audio"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
