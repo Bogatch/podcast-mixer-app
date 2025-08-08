@@ -2,10 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../lib/database.types';
 
-// Inicializácia Supabase klienta s použitím premenných prostredia
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
-const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+// Inicializácia Supabase klienta s overením premenných prostredia
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = (supabaseUrl && supabaseKey) ? createClient<Database>(supabaseUrl, supabaseKey) : null;
 
 export default async function handler(
   req: VercelRequest,
@@ -13,6 +13,11 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'method_not_allowed', message: 'Only POST requests allowed' });
+  }
+
+  if (!supabase) {
+    console.error('Supabase client is not initialized. Check environment variables.');
+    return res.status(500).json({ success: false, error: 'server_error', message: 'Database connection is not configured.' });
   }
 
   const { email, key } = req.body as { email: string, key: string };
@@ -25,7 +30,7 @@ export default async function handler(
     // 1. Nájdeme kľúč v databáze
     const { data: license, error } = await supabase
       .from('licenses')
-      .select()
+      .select('*')
       .eq('license_key', key.trim())
       .single();
 

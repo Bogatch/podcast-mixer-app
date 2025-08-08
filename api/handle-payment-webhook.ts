@@ -6,21 +6,25 @@ import { randomBytes } from 'crypto';
 import { Buffer } from 'buffer';
 import type { Database } from '../lib/database.types';
 
+// --- Safe Initializations ---
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = (supabaseUrl && supabaseKey) ? createClient<Database>(supabaseUrl, supabaseKey) : null;
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 // Zakáže predvolený parser tela požiadavky, aby sme mohli čítať raw body pre Stripe.
 export const config = {
   api: {
     bodyParser: false,
   },
 };
-
-// Inicializácia klientov s použitím premenných prostredia
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
-const supabase = createClient<Database>(supabaseUrl, supabaseKey);
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 // Funkcia na generovanie unikátneho licenčného kľúča
 const generateLicenseKey = (): string => {
@@ -59,6 +63,12 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // --- Pre-flight checks ---
+  if (!supabase || !resend || !stripe || !webhookSecret) {
+      console.error('One or more services are not configured. Check environment variables for Supabase, Resend, and Stripe.');
+      return res.status(500).json({ error: 'Server configuration error.' });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ message: 'Only POST requests are allowed' });
