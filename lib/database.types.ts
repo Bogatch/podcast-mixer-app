@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -6,7 +7,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       licenses: {
@@ -14,7 +15,7 @@ export interface Database {
           id: number
           created_at: string
           license_key: string
-          status: 'available' | 'used'
+          status: "available" | "used"
           product_id: string
           assigned_email: string | null
         }
@@ -22,7 +23,7 @@ export interface Database {
           id?: number
           created_at?: string
           license_key: string
-          status: 'available' | 'used'
+          status: "available" | "used"
           product_id: string
           assigned_email?: string | null
         }
@@ -30,7 +31,7 @@ export interface Database {
           id?: number
           created_at?: string
           license_key?: string
-          status?: 'available' | 'used'
+          status?: "available" | "used"
           product_id?: string
           assigned_email?: string | null
         }
@@ -38,16 +39,16 @@ export interface Database {
       }
     }
     Views: {
-      [_ in never]: never
+      [key in never]: never
     }
     Functions: {
-      [_ in never]: never
+      [key in never]: never
     }
     Enums: {
-      [_ in never]: never
+      [key in never]: never
     }
     CompositeTypes: {
-      [_ in never]: never
+      [key in never]: never
     }
   }
 }

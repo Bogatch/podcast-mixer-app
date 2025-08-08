@@ -4,9 +4,10 @@
   "description": "Nástroj na nahrávanie a vizuálne mixovanie zvukových stôp pre podcasty.",
   "main": "electron.js",
   "scripts": {
-    "start": "npm run build:ui && electron .",
-    "build:ui": "esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --platform=browser --format=iife",
-    "build": "npm run build:ui && electron-builder"
+    "start:electron": "npm run build:electron && electron .",
+    "build": "rm -rf public && mkdir -p public && cp index.html public/ && esbuild index.tsx --bundle --outfile=public/bundle.js --minify --sourcemap --platform=browser --format=iife",
+    "build:electron": "rm -rf dist && mkdir -p dist && cp index.html dist/ && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --platform=browser --format=iife",
+    "package:electron": "npm run build:electron && electron-builder"
   },
   "author": "KIKS® Soft",
   "license": "UNLICENSED",
@@ -20,16 +21,17 @@
     "stripe": "^15.8.0"
   },
   "devDependencies": {
+    "@vercel/node": "^3.1.0",
     "electron": "^29.1.5",
     "electron-builder": "^24.13.3",
-    "esbuild": "^0.20.2"
+    "esbuild": "^0.20.2",
+    "typescript": "^5.4.5"
   },
   "build": {
     "appId": "com.podcastmixer.studio",
     "productName": "Podcast Mixer Studio",
     "files": [
       "electron.js",
-      "index.html",
       "dist/"
     ],
     "mac": {

@@ -15,7 +15,7 @@ export default async function handler(
     return res.status(405).json({ success: false, error: 'method_not_allowed', message: 'Only POST requests allowed' });
   }
 
-  const { email, key } = req.body;
+  const { email, key } = req.body as { email: string, key: string };
 
   if (!email || !key) {
     return res.status(400).json({ success: false, error: 'invalid_key' });
@@ -25,7 +25,7 @@ export default async function handler(
     // 1. Nájdeme kľúč v databáze
     const { data: license, error } = await supabase
       .from('licenses')
-      .select('*')
+      .select('status, assigned_email')
       .eq('license_key', key.trim())
       .single();
 
