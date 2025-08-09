@@ -16,7 +16,7 @@ export type Database = {
           license_key: string
           status: string
           product_id: string
-          assigned_email: string | null
+          assigned_email: string
         }
         Insert: {
           id?: number
@@ -24,7 +24,7 @@ export type Database = {
           license_key: string
           status: string
           product_id: string
-          assigned_email?: string | null
+          assigned_email?: string
         }
         Update: {
           id?: number
@@ -32,7 +32,7 @@ export type Database = {
           license_key?: string
           status?: string
           product_id?: string
-          assigned_email?: string | null
+          assigned_email?: string
         }
         Relationships: []
       }
