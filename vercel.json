@@ -9,10 +9,6 @@
       "config": {
         "distDir": "public"
       }
-    },
-    {
-      "src": "api/**/*.ts",
-      "use": "@vercel/node"
     }
   ],
   "rewrites": [
