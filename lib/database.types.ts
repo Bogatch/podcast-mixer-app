@@ -47,8 +47,5 @@ export type Database = {
     Enums: {
       [key: string]: never
     }
-    CompositeTypes: {
-      [key: string]: never
-    }
   }
 }
