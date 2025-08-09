@@ -104,11 +104,11 @@ export default async function handler(
       // 2. Uloženie do databázy
       const { error: dbError } = await supabase
         .from('licenses')
-        .insert([{
+        .insert({
           license_key: newKey,
           status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
-        }]);
+        });
 
       if (dbError) {
         console.error('Database error on license creation:', dbError);
@@ -126,9 +126,12 @@ export default async function handler(
 
       if (emailError) {
           console.error('Email sending error:', emailError);
-      } else {
-        console.log(`Licenčný kľúč úspešne odoslaný na ${customerEmail}`);
+          // Throw an error to ensure the webhook fails if the email can't be sent.
+          // This allows Stripe to retry, giving the user another chance to receive their key.
+          throw new Error('Failed to send license key email.');
       }
+      
+      console.log(`Licenčný kľúč úspešne odoslaný na ${customerEmail}`);
       
       // 4. Úspešná odpoveď
       res.status(200).json({ received: true, message: 'License issued successfully.' });
