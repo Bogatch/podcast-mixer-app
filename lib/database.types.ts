@@ -8,7 +8,7 @@ export type Database = {
           id: number
           created_at: string
           license_key: string
-          status: string
+          status: "available" | "used"
           product_id: string
           assigned_email: string
         }
@@ -16,7 +16,7 @@ export type Database = {
           id?: number
           created_at?: string
           license_key: string
-          status: string
+          status: "available" | "used"
           product_id: string
           assigned_email: string
         }
@@ -24,7 +24,7 @@ export type Database = {
           id?: number
           created_at?: string
           license_key?: string
-          status?: string
+          status?: "available" | "used"
           product_id?: string
           assigned_email?: string
         }

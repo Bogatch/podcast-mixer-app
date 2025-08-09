@@ -107,7 +107,7 @@ export default async function handler(
         .from('licenses')
         .insert([{
           license_key: newKey,
-          status: 'available' as const,
+          status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
           assigned_email: '',
         }]);

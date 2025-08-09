@@ -59,7 +59,7 @@ export default async function handler(
     if (license.status === 'available') {
       const { error: updateError } = await supabase
         .from('licenses')
-        .update({ assigned_email: email, status: 'used' as const })
+        .update({ assigned_email: email, status: 'used' })
         .eq('license_key', key.trim());
 
       if (updateError) {
