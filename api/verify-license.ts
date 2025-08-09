@@ -30,18 +30,16 @@ export default async function handler(
 
   try {
     // 1. Nájdeme kľúč v databáze
-    const licenseResponse = await supabase
+    const { data: license, error } = await supabase
       .from('licenses')
       .select('*')
       .eq('license_key', key.trim())
       .single();
 
-    if (licenseResponse.error || !licenseResponse.data) {
+    if (error || !license) {
       console.warn(`Pokus o aktiváciu s neexistujúcim kľúčom: ${key}`);
       return res.status(400).json({ success: false, error: 'invalid_key' });
     }
-
-    const license = licenseResponse.data;
 
     // 2. Skontrolujeme, či kľúč už nie je použitý
     if (license.status === 'used') {

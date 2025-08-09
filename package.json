@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "description": "Nástroj na nahrávanie a vizuálne mixovanie zvukových stôp pre podcasty.",
   "scripts": {
-    "build": "rm -rf public && mkdir -p public && cp index.html public/ && esbuild index.tsx --bundle --outfile=public/bundle.js --minify --sourcemap --platform=browser --format=iife"
+    "build:ui": "rm -rf public && mkdir -p public && cp index.html public/ && esbuild index.tsx --bundle --outfile=public/bundle.js --minify --sourcemap --platform=browser --format=iife"
   },
   "author": "KIKS® Soft",
   "license": "UNLICENSED",
