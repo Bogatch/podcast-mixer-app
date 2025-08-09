@@ -2,7 +2,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import Stripe from 'stripe';
 import { randomBytes } from 'crypto';
 import type { Database } from '../lib/database.types';
@@ -13,7 +12,6 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = (supabaseUrl && supabaseKey) ? createClient<Database>(supabaseUrl, supabaseKey) : null;
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
@@ -65,7 +63,7 @@ export default async function handler(
   res: VercelResponse
 ) {
   // --- Pre-flight checks ---
-  if (!supabase || !resend || !stripe || !webhookSecret) {
+  if (!supabase || !resendApiKey || !stripe || !webhookSecret) {
       console.error('One or more services are not configured. Check environment variables for Supabase, Resend, and Stripe.');
       return res.status(500).json({ error: 'Server configuration error.' });
   }
@@ -108,8 +106,8 @@ export default async function handler(
           license_key: newKey,
           status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
-          assigned_email: '',
-        }] as any);
+          assigned_email: null,
+        }]);
 
       if (dbError) {
         console.error('Database error on license creation:', dbError);
@@ -118,6 +116,9 @@ export default async function handler(
       console.log(`Vygenerovaný a uložený kľúč ${newKey} po platbe od ${customerEmail}`);
 
       // 3. Odoslanie e-mailu zákazníkovi
+      const { Resend } = await import('resend');
+      const resend = new Resend(resendApiKey);
+      
       const { error: emailError } = await resend.emails.send({
         from: 'Podcast Mixer Studio <sales@kiks.sk>', // Nahraďte vašou overenou doménou
         to: [customerEmail],
