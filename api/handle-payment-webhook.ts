@@ -104,11 +104,11 @@ export default async function handler(
       // 2. Uloženie do databázy
       const { error: dbError } = await supabase
         .from('licenses')
-        .insert({
+        .insert([{ // Ensure payload is an array
           license_key: newKey,
           status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
-        });
+        }]);
 
       if (dbError) {
         console.error('Database error on license creation:', dbError);
