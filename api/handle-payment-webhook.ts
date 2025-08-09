@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
@@ -106,7 +107,7 @@ export default async function handler(
           license_key: newKey,
           status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
-          assigned_email: '',
+          assigned_email: null,
         }]);
 
       if (dbError) {

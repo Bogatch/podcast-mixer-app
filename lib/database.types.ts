@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -16,7 +17,7 @@ export type Database = {
           license_key: string
           status: string
           product_id: string
-          assigned_email: string
+          assigned_email: string | null
         }
         Insert: {
           id?: number
@@ -24,7 +25,7 @@ export type Database = {
           license_key: string
           status: string
           product_id: string
-          assigned_email?: string
+          assigned_email?: string | null
         }
         Update: {
           id?: number
@@ -32,7 +33,7 @@ export type Database = {
           license_key?: string
           status?: string
           product_id?: string
-          assigned_email?: string
+          assigned_email?: string | null
         }
         Relationships: []
       }
