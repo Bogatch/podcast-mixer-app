@@ -1,5 +1,4 @@
 
-
 export type Database = {
   public: {
     Tables: {
@@ -8,7 +7,7 @@ export type Database = {
           id: number
           created_at: string
           license_key: string
-          status: "available" | "used"
+          status: string
           product_id: string
           assigned_email: string
         }
@@ -16,7 +15,7 @@ export type Database = {
           id?: number
           created_at?: string
           license_key: string
-          status: "available" | "used"
+          status: string
           product_id: string
           assigned_email: string
         }
@@ -24,7 +23,7 @@ export type Database = {
           id?: number
           created_at?: string
           license_key?: string
-          status?: "available" | "used"
+          status?: string
           product_id?: string
           assigned_email?: string
         }

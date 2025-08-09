@@ -110,7 +110,7 @@ export default async function handler(
           status: 'available',
           product_id: 'PODCAST_MIXER_PRO',
           assigned_email: '',
-        }]);
+        }] as any);
 
       if (dbError) {
         console.error('Database error on license creation:', dbError);
