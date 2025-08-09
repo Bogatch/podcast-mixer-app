@@ -1,5 +1,13 @@
 
-export type Database = {
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
   public: {
     Tables: {
       licenses: {
@@ -17,7 +25,7 @@ export type Database = {
           license_key: string
           status: string
           product_id: string
-          assigned_email: string | null
+          assigned_email?: string | null
         }
         Update: {
           id?: number
