@@ -32,7 +32,7 @@ export default async function handler(
     // 1. Nájdeme kľúč v databáze
     const { data: license, error } = await supabase
       .from('licenses')
-      .select('*')
+      .select('status, assigned_email')
       .eq('license_key', key.trim())
       .single();
 
