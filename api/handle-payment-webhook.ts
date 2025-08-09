@@ -5,7 +5,6 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
 import { randomBytes } from 'crypto';
-import { Buffer } from 'buffer';
 import type { Database } from '../lib/database.types';
 
 // --- Safe Initializations ---
