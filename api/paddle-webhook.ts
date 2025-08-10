@@ -1,5 +1,12 @@
+
 // This file now handles Stripe webhooks.
 // It was previously named for Paddle to minimize file changes, but its logic is entirely for Stripe.
+
+// This is a workaround for the build environment not having node types.
+// It tells TypeScript that 'Buffer' exists as a global type.
+declare class Buffer extends Uint8Array {
+  static concat(list: readonly Uint8Array[], totalLength?: number): Buffer;
+}
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../lib/database.types';
