@@ -91,8 +91,8 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
         const audioData = {
             numberOfChannels: audioBuffer.numberOfChannels,
             sampleRate: audioBuffer.sampleRate,
-            left: audioBuffer.getChannelData(0).buffer,
-            right: audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1).buffer : null,
+            left: audioBuffer.getChannelData(0).buffer.slice(0),
+            right: audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1).buffer.slice(0) : null,
         };
 
         const transferableObjects = [audioData.left];
@@ -100,6 +100,6 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
             transferableObjects.push(audioData.right);
         }
 
-        worker.postMessage({ audioData, bitrate }, transferableObjects);
+        worker.postMessage({ audioData, bitrate }, { transfer: transferableObjects as Transferable[] });
     });
 }

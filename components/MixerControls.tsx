@@ -1,8 +1,8 @@
 import React, { useContext } from 'react';
-import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, KeyIcon } from './icons';
+import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
 import { I18nContext } from '../lib/i18n';
-import { useLicense } from '../context/LicenseContext';
+import { useAuth } from '../context/AuthContext';
 
 interface MixerControlsProps {
   mixDuration: number;
@@ -25,12 +25,13 @@ interface MixerControlsProps {
   isExporting: boolean;
   onExportProject: () => void;
   onOpenExportModal: () => void;
+  onOpenAuthModal: () => void;
   mixedAudioUrl: string | null;
   totalDuration: number;
+  demoMaxDuration: number;
   hasTracks: boolean;
   showDuckingControl: boolean;
   showUnderlayControl: boolean;
-  licenseStatus: 'trial' | 'premium';
 }
 
 const formatDuration = (seconds: number): string => {
@@ -60,19 +61,39 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   isExporting,
   onExportProject,
   onOpenExportModal,
+  onOpenAuthModal,
   mixedAudioUrl,
   totalDuration,
+  demoMaxDuration,
   hasTracks,
   showDuckingControl,
   showUnderlayControl,
-  licenseStatus,
 }) => {
   const { t } = useContext(I18nContext);
-  const { exportsRemaining } = useLicense();
+  const { isPro } = useAuth();
+
   const canMix = !isDisabled && !isMixing;
-  
-  const canExportAudio = !!mixedAudioUrl && !isMixing && !isExporting && (licenseStatus === 'premium' || exportsRemaining > 0);
-  const canExportProject = !!mixedAudioUrl && !isMixing && !isExporting && licenseStatus === 'premium';
+  const canExport = !!mixedAudioUrl && !isMixing && !isExporting;
+  const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
+
+
+  const handleExportAudioClick = () => {
+    if (!canExport) return;
+    if (!isPro) {
+      onOpenAuthModal();
+    } else {
+      onOpenExportModal();
+    }
+  };
+
+  const handleExportProjectClick = () => {
+    if (!canExport) return;
+    if (!isPro) {
+      onOpenAuthModal();
+    } else {
+      onExportProject();
+    }
+  };
 
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
@@ -286,6 +307,11 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
               <div>
                 <p className="text-gray-400 text-sm">{t('output_estimated_duration')}</p>
                 <p className="text-2xl font-bold text-white">{formatDuration(totalDuration)}</p>
+                {isDemoLimitExceeded && (
+                  <p className="text-yellow-400 text-xs mt-2 px-2">
+                    {t('warning_demo_duration_exceeded', { minutes: demoMaxDuration / 60 })}
+                  </p>
+                )}
               </div>
               <div className="flex items-center justify-center pt-2 space-x-4">
                   <div className="flex items-center space-x-2">
@@ -313,63 +339,73 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
             </div>
             
             <div className="space-y-3">
+              {isDemoLimitExceeded ? (
+                <button
+                  onClick={onOpenAuthModal}
+                  disabled={!canMix}
+                  className="w-full flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-600 text-black font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-yellow-400"
+                >
+                  <SparklesIcon className="w-5 h-5 mr-2" />
+                  {t('output_unlock_to_mix')}
+                </button>
+              ) : (
+                <button
+                    onClick={onMix}
+                    disabled={!canMix}
+                    className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
+                >
+                    {isMixing ? (
+                    <>
+                        <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                        {t('output_processing')}
+                    </>
+                    ) : (
+                    <>
+                        <MixIcon className="w-5 h-5 mr-2" />
+                        {mixedAudioUrl ? t('output_remix') : t('output_mix')}
+                    </>
+                    )}
+                </button>
+              )}
+              
               {mixedAudioUrl && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                        onClick={onOpenExportModal}
-                        disabled={!canExportAudio}
-                        className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500"
-                    >
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        {t('output_export_audio')}
-                    </button>
-                    <div className="relative">
-                      <button
-                          onClick={onExportProject}
-                          disabled={!canExportProject}
-                          className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500"
-                          title={licenseStatus === 'trial' ? t('tooltip_premium_feature') : t('tooltip_export_project')}
+                <div className="pt-2">
+                    <div className="mb-3">
+                      <p className="text-sm font-semibold text-center text-gray-300 mb-2">{t('output_preview')}</p>
+                      <audio controls src={mixedAudioUrl} className="w-full">
+                        {t('output_audio_not_supported')}
+                      </audio>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                            onClick={handleExportAudioClick}
+                            disabled={!canExport || (isPro && isExporting)}
+                            className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500"
                         >
-                          {isExporting ? (
-                            <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                          ) : (
-                            <ArchiveBoxIcon className="w-5 h-5 mr-2" />
-                          )}
-                          <span>{t('output_export_project')}</span>
+                            {!isPro && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
+                            <DownloadIcon className="w-5 h-5 mr-2" />
+                            {t('output_export_audio')}
                         </button>
-                        {licenseStatus === 'trial' && (
-                           <div className="absolute -top-2 -right-2 transform translate-x-1/3 -translate-y-1/3">
-                              <span className="flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-teal-600 rounded-full">
-                                PRO
-                              </span>
-                           </div>
-                        )}
+                        <button
+                            onClick={handleExportProjectClick}
+                            disabled={!canExport || (isPro && isExporting)}
+                            className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500"
+                          >
+                            {isExporting && isPro ? (
+                              <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                            ) : (
+                              <>
+                                {!isPro && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
+                                <ArchiveBoxIcon className="w-5 h-5 mr-2" />
+                              </>
+                            )}
+                            <span>{t('output_export_project')}</span>
+                          </button>
                     </div>
                 </div>
               )}
-
-              <button
-                  onClick={onMix}
-                  disabled={!canMix}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
-              >
-                  {isMixing ? (
-                  <>
-                      <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                      {t('output_processing')}
-                  </>
-                  ) : (
-                  <>
-                      <MixIcon className="w-5 h-5 mr-2" />
-                      {mixedAudioUrl ? t('output_remix') : t('output_mix')}
-                  </>
-                  )}
-              </button>
             </div>
             
-            {licenseStatus === 'trial' && exportsRemaining <= 0 && mixedAudioUrl &&
-              <p className="text-xs text-yellow-400 mt-2 text-center">{t('license_error_no_exports_short')}</p>
-            }
             {isDisabled && !isMixing && hasTracks && <p className="text-xs text-yellow-400 mt-2 text-center">{t('output_relink_prompt')}</p>}
             {isDisabled && !isMixing && !hasTracks && <p className="text-xs text-red-400 mt-2 text-center">{t('output_upload_prompt')}</p>}
         </div>

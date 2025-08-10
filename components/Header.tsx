@@ -1,16 +1,18 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
-    MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, KeyIcon, FolderPlusIcon,
+    MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, FolderPlusIcon, KeyIcon, SparklesIcon, SaveIcon, SpinnerIcon,
     UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon
 } from './icons';
 import { I18nContext, Locale } from '../lib/i18n';
-import { useLicense } from '../context/LicenseContext';
+import { useAuth } from '../context/AuthContext';
 
 
 interface HeaderProps {
     onOpenHelp: () => void;
-    onUnlock: () => void;
-    onNewProject: () => void;
+    onOpenAuthModal: () => void;
+    onSaveProject: () => void;
+    isSaving: boolean;
+    hasTracks: boolean;
 }
 
 const LanguageOption: React.FC<{
@@ -29,16 +31,21 @@ const LanguageOption: React.FC<{
   </button>
 );
 
-export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onUnlock, onNewProject }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenAuthModal, onSaveProject, isSaving, hasTracks }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
-  const { status } = useLicense();
+  const { user, profile, signOut, isPro } = useAuth();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setIsLangOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -62,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onUnlock, onNewProje
   }
 
   return (
-    <header className="flex items-center justify-between">
+    <header className="flex items-start justify-between">
       <div className="flex items-center space-x-4">
         <div className="p-3 bg-teal-500/10 rounded-lg">
            <MicIcon className="w-8 h-8 text-teal-400" />
@@ -73,60 +80,83 @@ export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onUnlock, onNewProje
         </div>
       </div>
       <div className="flex items-center space-x-2 sm:space-x-3">
-        {status === 'trial' && (
+          <div className="relative" ref={langRef}>
             <button
-                onClick={onUnlock}
-                title={t('license_unlock_header_button')}
-                className="flex items-center space-x-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-sm font-medium text-white rounded-md transition-colors"
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              title={t('language')}
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
             >
-                <KeyIcon className="w-5 h-5"/>
-                <span className="hidden sm:inline">{t('unlock')}</span>
+              {languageOptions[locale].icon}
+              <ChevronDownIcon className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
             </button>
-        )}
-        <button 
-          onClick={onNewProject}
-          title={t('header_new_project')}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
-        >
-           <FolderPlusIcon className="w-5 h-5"/>
-           <span className="hidden sm:inline">{t('header_new_project')}</span>
-        </button>
-        <div className="relative" ref={langRef}>
-          <button
-            onClick={() => setIsLangOpen(!isLangOpen)}
-            title={t('language')}
+            {isLangOpen && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600"
+                role="menu"
+              >
+                {(Object.keys(languageOptions) as Locale[]).map((lang) => (
+                  <LanguageOption
+                    key={lang}
+                    locale={lang}
+                    label={languageOptions[lang].label}
+                    icon={languageOptions[lang].icon}
+                    onClick={() => handleLangSelect(lang)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <button 
+            onClick={onOpenHelp}
+            title={t('header_help')}
             className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
           >
-            {languageOptions[locale].icon}
-            <ChevronDownIcon className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+             <QuestionMarkCircleIcon className="w-5 h-5"/>
+             <span className="hidden sm:inline">{t('help_title')}</span>
           </button>
-          {isLangOpen && (
-            <div
-              className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600"
-              role="menu"
-              aria-orientation="vertical"
-              aria-labelledby="lang-menu-button"
+          
+          {user && hasTracks && (
+            <button
+              onClick={onSaveProject}
+              disabled={isSaving}
+              title={t('save_project')}
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-sm font-medium text-white rounded-md transition-colors"
             >
-              {(Object.keys(languageOptions) as Locale[]).map((lang) => (
-                <LanguageOption
-                  key={lang}
-                  locale={lang}
-                  label={languageOptions[lang].label}
-                  icon={languageOptions[lang].icon}
-                  onClick={() => handleLangSelect(lang)}
-                />
-              ))}
-            </div>
+              {isSaving ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
+              <span className="hidden sm:inline">{isSaving ? t('saving') : t('save_project')}</span>
+            </button>
           )}
-        </div>
-        <button 
-          onClick={onOpenHelp}
-          title={t('header_help')}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
-        >
-           <QuestionMarkCircleIcon className="w-5 h-5"/>
-           <span className="hidden sm:inline">{t('help_title')}</span>
-        </button>
+
+          {user ? (
+            <div className="relative" ref={userMenuRef}>
+                <button
+                    onClick={() => setIsUserMenuOpen(prev => !prev)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+                >
+                    <span className="truncate max-w-[150px] hidden md:inline">{user.email}</span>
+                    {isPro && <span className="text-xs font-bold uppercase tracking-widest text-yellow-400 bg-yellow-900/50 px-2 py-1 rounded-md">PRO</span>}
+                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600">
+                        <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-600">{t('signed_in_as')}</div>
+                        <div className="px-4 py-3 text-sm text-gray-200 truncate">{user.email}</div>
+                        <div className="border-t border-gray-600">
+                            <button onClick={signOut} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300">
+                                {t('log_out')}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+          ) : (
+            <button
+                onClick={onOpenAuthModal}
+                className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors whitespace-nowrap"
+            >
+                <span className="text-sm">{t('log_in')}</span>
+            </button>
+          )}
       </div>
     </header>
   );

@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { XMarkIcon, SpinnerIcon, DownloadIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
-import { useLicense } from '../context/LicenseContext';
 
 export interface ExportOptions {
   format: 'wav' | 'mp3';
@@ -13,12 +12,10 @@ interface ExportModalProps {
   onClose: () => void;
   onExport: (options: ExportOptions) => void;
   isExporting: boolean;
-  licenseStatus: 'trial' | 'premium';
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isExporting, licenseStatus }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isExporting }) => {
   const { t } = useContext(I18nContext);
-  const { exportsRemaining } = useLicense();
   const [options, setOptions] = useState<ExportOptions>({
     format: 'mp3',
     bitrate: 192,
@@ -30,37 +27,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
     onExport(options);
   };
   
-  const isTrial = licenseStatus === 'trial';
-
   const OptionButton: React.FC<{
     value: any;
     currentValue: any;
     onClick: () => void;
     label: string;
-    isPremium?: boolean;
-  }> = ({ value, currentValue, onClick, label, isPremium = false }) => {
-    const isDisabled = isExporting || (isTrial && isPremium);
+  }> = ({ value, currentValue, onClick, label }) => {
     return (
-        <div className="relative">
-            <button
-                onClick={onClick}
-                disabled={isDisabled}
-                className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    value === currentValue
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                }`}
-            >
-                {label}
-            </button>
-            {isDisabled && isPremium && (
-                 <div className="absolute -top-1 -right-1 transform translate-x-1/4 -translate-y-1/4" title={t('tooltip_premium_feature')}>
-                    <span className="flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-teal-600 rounded-full">
-                        PRO
-                    </span>
-                </div>
-            )}
-        </div>
+        <button
+            onClick={onClick}
+            disabled={isExporting}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                value === currentValue
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+            }`}
+        >
+            {label}
+        </button>
     );
   };
 
@@ -87,13 +71,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
         </header>
 
         <main className="p-6 space-y-6 overflow-y-auto">
-          {isTrial && (
-              <div className="bg-yellow-500/10 border-l-4 border-yellow-500 text-yellow-300 p-4 rounded-r-lg">
-                  <p className="font-bold">{t('license_trial_mode')}</p>
-                  <p className="text-sm">{t('license_exports_remaining', { count: exportsRemaining })}</p>
-              </div>
-          )}
-
           <div>
             <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_format')}</label>
             <div className="flex space-x-2">
@@ -108,7 +85,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                 currentValue={options.format}
                 onClick={() => setOptions(o => ({ ...o, format: 'wav' }))}
                 label={t('export_format_wav_label')}
-                isPremium
               />
             </div>
           </div>
@@ -117,23 +93,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
              <div>
                 <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_quality')}</label>
                 <div className="flex flex-wrap gap-2">
-                    {[128, 192].map(rate => (
+                    {[128, 192, 256, 320].map(rate => (
                         <OptionButton
                             key={rate}
                             value={rate}
                             currentValue={options.bitrate}
                             onClick={() => setOptions(o => ({ ...o, bitrate: rate as ExportOptions['bitrate'] }))}
                             label={`${rate} kbps`}
-                        />
-                    ))}
-                     {[256, 320].map(rate => (
-                        <OptionButton
-                            key={rate}
-                            value={rate}
-                            currentValue={options.bitrate}
-                            onClick={() => setOptions(o => ({ ...o, bitrate: rate as ExportOptions['bitrate'] }))}
-                            label={`${rate} kbps`}
-                            isPremium
                         />
                     ))}
                 </div>

@@ -1,54 +1,63 @@
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = any;
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      licenses: {
+      profiles: {
         Row: {
-          id: number
-          created_at: string
-          license_key: string
-          status: string
-          product_id: string
-          assigned_email: string
-        }
+          id: string;
+          email: string;
+          is_pro: boolean;
+        };
         Insert: {
-          id?: number
-          created_at?: string
-          license_key: string
-          status: string
-          product_id: string
-          assigned_email?: string
-        }
+          id: string;
+          email: string;
+          is_pro?: boolean;
+        };
         Update: {
-          id?: number
-          created_at?: string
-          license_key?: string
-          status?: string
-          product_id?: string
-          assigned_email?: string
-        }
-        Relationships: []
-      }
-    }
+          id?: string;
+          email?: string;
+          is_pro?: boolean;
+        };
+        Relationships: [];
+      };
+      projects: {
+        Row: {
+          id: number;
+          user_id: string;
+          name: string;
+          project_data: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          name: string;
+          project_data: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          name?: string;
+          project_data?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
 }
