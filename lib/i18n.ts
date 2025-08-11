@@ -161,6 +161,7 @@ export const translations = {
     'auth_logging_in': 'Logging in...',
     'auth_signing_up': 'Signing up...',
     'auth_check_email': 'Please check your email to confirm your account.',
+    'auth_check_email_detailed': 'Sign-up successful! A confirmation email has been sent. It may take a few minutes to arrive. Please also check your spam folder.',
     'auth_must_be_logged_in': 'You must be logged in to purchase a PRO license.',
 
     // Migration Modal
@@ -377,6 +378,7 @@ export const translations = {
     'auth_logging_in': 'Prihlasuje sa...',
     'auth_signing_up': 'Registruje sa...',
     'auth_check_email': 'Prosím, skontrolujte si e-mail a potvrďte svoj účet.',
+    'auth_check_email_detailed': 'Registrácia úspešná! Bol vám odoslaný potvrdzovací e-mail. Doručenie môže trvať niekoľko minút. Prosím, skontrolujte si aj priečinok so spamom.',
     'auth_must_be_logged_in': 'Pre zakúpenie PRO licencie musíte byť prihlásený.',
 
     // Migration Modal
@@ -565,6 +567,7 @@ export const translations = {
     'auth_logging_in': 'Anmelden...',
     'auth_signing_up': 'Registrieren...',
     'auth_check_email': 'Bitte überprüfen Sie Ihre E-Mails, um Ihr Konto zu bestätigen.',
+    'auth_check_email_detailed': 'Registrierung erfolgreich! Eine Bestätigungs-E-Mail wurde gesendet. Es kann einige Minuten dauern, bis sie ankommt. Bitte überprüfen Sie auch Ihren Spam-Ordner.',
     'auth_must_be_logged_in': 'Sie müssen angemeldet sein, um eine PRO-Lizenz zu erwerben.',
     'migrate_title': 'Lokales Projekt gefunden',
     'migrate_subtitle': 'Sie haben ein Projekt in diesem Browser gespeichert. Möchten Sie es in Ihr Konto importieren?',
