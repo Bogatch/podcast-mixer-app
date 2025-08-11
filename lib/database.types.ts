@@ -26,15 +26,7 @@ export interface Database {
           email?: string;
           is_pro?: boolean;
         };
-        Relationships: [
-          {
-            columns: ["id"];
-            foreignKeyName: "profiles_id_fkey";
-            isOneToOne: true;
-            referencedColumns: ["id"];
-            referencedRelation: "users";
-          }
-        ];
+        Relationships: [];
       };
       projects: {
         Row: {
@@ -58,15 +50,7 @@ export interface Database {
           project_data?: Json;
           created_at?: string;
         };
-        Relationships: [
-          {
-            columns: ["user_id"];
-            foreignKeyName: "projects_user_id_fkey";
-            isOneToOne: false;
-            referencedColumns: ["id"];
-            referencedRelation: "users";
-          }
-        ];
+        Relationships: [];
       };
     };
     Views: {

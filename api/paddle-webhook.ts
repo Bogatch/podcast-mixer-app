@@ -10,9 +10,9 @@ declare class Buffer extends Uint8Array {
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../lib/database.types';
-// It's assumed the 'stripe' and 'resend' npm packages are available in the Vercel environment.
+// It's assumed the 'stripe' and 'nodemailer' npm packages are available in the Vercel environment.
 import Stripe from 'stripe';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 // Helper to read body from Node.js request stream, which Vercel uses.
 async function getRawBody(req: any): Promise<Buffer> {
@@ -37,21 +37,26 @@ export default async function handler(req: any, res: any) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  // --- Environment variables for Stripe, Supabase, and Resend ---
+  // --- Environment variables for Stripe, Supabase, and SMTP ---
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
+  
+  // --- Custom SMTP Server configuration ---
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = process.env.SMTP_PORT;
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+  const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL;
 
   if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Server configuration error: Missing environment variables for Stripe/Supabase.');
     return res.status(500).json({ error: 'Server configuration error' });
   }
   
-  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
-    console.warn('Resend email configuration is missing. "Thank you" emails will not be sent.');
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !SMTP_FROM_EMAIL) {
+    console.warn('Custom SMTP email configuration is missing. "Thank you" emails will not be sent.');
   }
 
   const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
@@ -95,14 +100,23 @@ export default async function handler(req: any, res: any) {
       } else {
         console.log(`Successfully upgraded user ${userId} to PRO.`);
         
-        // --- Send "Thank You" Email via Resend ---
-        if (RESEND_API_KEY && RESEND_FROM_EMAIL) {
+        // --- Send "Thank You" Email via Custom SMTP ---
+        if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD && SMTP_FROM_EMAIL) {
             const userEmail = session.customer_email;
             if (userEmail) {
                 try {
-                    const resend = new Resend(RESEND_API_KEY);
-                    await resend.emails.send({
-                        from: RESEND_FROM_EMAIL,
+                    const transporter = nodemailer.createTransport({
+                        host: SMTP_HOST,
+                        port: parseInt(SMTP_PORT, 10),
+                        secure: parseInt(SMTP_PORT, 10) === 465, // true for 465, false for other ports
+                        auth: {
+                            user: SMTP_USER,
+                            pass: SMTP_PASSWORD,
+                        },
+                    });
+
+                    await transporter.sendMail({
+                        from: `Podcast Mixer Studio <${SMTP_FROM_EMAIL}>`,
                         to: userEmail,
                         subject: 'Ďakujeme za upgrade na Podcast Mixer Pro!',
                         html: `
@@ -115,9 +129,9 @@ export default async function handler(req: any, res: any) {
                             </div>
                         `,
                     });
-                    console.log(`Successfully sent 'Welcome Pro' email to ${userEmail}`);
+                    console.log(`Successfully sent 'Welcome Pro' email to ${userEmail} via custom SMTP.`);
                 } catch (emailError) {
-                    console.error(`Failed to send 'Welcome Pro' email to ${userEmail}`, emailError);
+                    console.error(`Failed to send 'Welcome Pro' email to ${userEmail} via custom SMTP.`, emailError);
                 }
             }
         }
