@@ -41,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         if (error) {
             setError(error.message);
         } else if (authMode === 'signup') {
-            setMessage(t('auth_check_email_detailed'));
+            setMessage(t('auth_check_email_troubleshoot'));
             setEmail('');
             setPassword('');
         } else {
