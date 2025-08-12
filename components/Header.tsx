@@ -1,10 +1,9 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
-    MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, FolderPlusIcon, KeyIcon, SparklesIcon, SaveIcon, SpinnerIcon,
+    MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, SparklesIcon, SaveIcon, SpinnerIcon,
     UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon
 } from './icons';
 import { I18nContext, Locale } from '../lib/i18n';
-import { useAuth } from '../context/AuthContext';
 
 
 interface HeaderProps {
@@ -33,19 +32,13 @@ const LanguageOption: React.FC<{
 
 export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenAuthModal, onSaveProject, isSaving, hasTracks }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
-  const { user, profile, signOut, isPro } = useAuth();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setIsLangOpen(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -115,48 +108,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenAuthModal, onS
              <span className="hidden sm:inline">{t('help_title')}</span>
           </button>
           
-          {user && hasTracks && (
+          {hasTracks && (
             <button
               onClick={onSaveProject}
               disabled={isSaving}
               title={t('save_project')}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-sm font-medium text-white rounded-md transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-500 text-sm font-medium text-white rounded-md transition-colors"
             >
               {isSaving ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
               <span className="hidden sm:inline">{isSaving ? t('saving') : t('save_project')}</span>
             </button>
           )}
 
-          {user ? (
-            <div className="relative" ref={userMenuRef}>
-                <button
-                    onClick={() => setIsUserMenuOpen(prev => !prev)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
-                >
-                    <span className="truncate max-w-[150px] hidden md:inline">{user.email}</span>
-                    {isPro && <span className="text-xs font-bold uppercase tracking-widest text-yellow-400 bg-yellow-900/50 px-2 py-1 rounded-md">PRO</span>}
-                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600">
-                        <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-600">{t('signed_in_as')}</div>
-                        <div className="px-4 py-3 text-sm text-gray-200 truncate">{user.email}</div>
-                        <div className="border-t border-gray-600">
-                            <button onClick={signOut} className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300">
-                                {t('log_out')}
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-          ) : (
-            <button
-                onClick={onOpenAuthModal}
-                className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors whitespace-nowrap"
-            >
-                <span className="text-sm">{t('log_in')}</span>
-            </button>
-          )}
+          <button
+              onClick={onOpenAuthModal}
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
+          >
+              <SparklesIcon className="w-5 h-5" />
+              <span className="text-sm">{t('header_get_pro')}</span>
+          </button>
       </div>
     </header>
   );

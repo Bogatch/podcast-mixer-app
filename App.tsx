@@ -10,10 +10,9 @@ import { encodeWav } from './lib/wavEncoder';
 import { encodeMp3 } from './lib/mp3Encoder';
 import JSZip from 'jszip';
 import { ReorderModal } from './components/ReorderModal';
-import { ExportModal, ExportOptions } from './components/ExportModal';
 import { HelpModal } from './components/HelpModal';
 import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { AuthModal } from './components/AuthModal';
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -94,7 +93,6 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
 
 const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
-  const { user, profile, saveProject, loadProject, isPro } = useAuth();
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [underlayTrack, setUnderlayTrack] = useState<Track | null>(null);
@@ -105,26 +103,18 @@ const AppContent: React.FC = () => {
   
   const [uploadingType, setUploadingType] = useState<'music' | 'spoken' | 'jingle' | 'underlay' | null>(null);
   const [isMixing, setIsMixing] = useState<boolean>(false);
-  const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [isActuallyExporting, setIsActuallyExporting] = useState<boolean>(false);
   const [mixedAudioUrl, setMixedAudioUrl] = useState<string | null>(null);
-  const [wavBlobForExport, setWavBlobForExport] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
 
   const [trimSilenceEnabled, setTrimSilenceEnabled] = useState<boolean>(true);
   const [silenceThreshold, setSilenceThreshold] = useState<number>(-45);
   const [normalizeOutput, setNormalizeOutput] = useState<boolean>(true);
   
   const [isReordering, setIsReordering] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  
-  const [localProjectToMigrate, setLocalProjectToMigrate] = useState<any>(null);
-
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
@@ -133,7 +123,6 @@ const AppContent: React.FC = () => {
   const resetMix = useCallback(() => {
     if (mixedAudioUrl) URL.revokeObjectURL(mixedAudioUrl);
     setMixedAudioUrl(null);
-    setWavBlobForExport(null);
   }, [mixedAudioUrl]);
 
   const handleError = (key: TranslationKey, params: { [key: string]: string | number } = {}) => {
@@ -148,13 +137,6 @@ const AppContent: React.FC = () => {
       setInfo(message);
       setTimeout(() => setInfo(null), duration);
   }
-
-  const handleCloseAuthModal = (success: boolean) => {
-    setIsAuthModalOpen(false);
-    if (success) {
-      handleInfo('pro_unlocked_message');
-    }
-  };
 
   const addTracks = useCallback(async (files: FileList, type: 'music' | 'spoken' | 'jingle') => {
     setUploadingType(type);
@@ -278,85 +260,27 @@ const AppContent: React.FC = () => {
   const trackIds = useMemo(() => tracks.map(t => t.id).join(','), [tracks]);
   const underlayId = useMemo(() => underlayTrack?.id, [underlayTrack]);
 
-  // Load project on user change or first load
+  // Load project from localStorage on first load
   useEffect(() => {
-    const loadInitialProject = async () => {
-        let loadedProject = null;
-        if (user) {
-            try {
-                loadedProject = await loadProject();
-                if (loadedProject) {
-                   handleInfo('info_cloud_project_loaded');
-                }
-            } catch (e) {
-                console.error("Failed to load project from Supabase", e);
-                handleError('error_cloud_load_failed');
-            }
-        } else {
-            try {
-                const savedSession = localStorage.getItem('podcastMixerSession');
-                if (savedSession) {
-                    loadedProject = JSON.parse(savedSession);
-                    if (loadedProject.tracks?.length > 0 || loadedProject.underlayTrack) {
-                        handleInfo('info_session_loaded');
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to load session from localStorage", e);
-                localStorage.removeItem('podcastMixerSession');
-            }
-        }
-        
-        if (loadedProject) {
-            applyLoadedProject(loadedProject);
-        } else {
-            // Reset state if no project is loaded (e.g., on logout)
-            applyLoadedProject({});
-        }
-    };
-    loadInitialProject();
-  }, [user]);
-
-  // Check for local project to migrate on login
-  useEffect(() => {
-    if (user) {
+    const loadInitialProject = () => {
         try {
             const savedSession = localStorage.getItem('podcastMixerSession');
             if (savedSession) {
-                const project = JSON.parse(savedSession);
-                if (project.tracks?.length > 0 || project.underlayTrack) {
-                    setLocalProjectToMigrate(project);
+                const loadedProject = JSON.parse(savedSession);
+                if (loadedProject.tracks?.length > 0 || loadedProject.underlayTrack) {
+                    applyLoadedProject(loadedProject);
+                    handleInfo('info_session_loaded');
                 }
             }
         } catch (e) {
-            console.error("Error checking for local project", e);
+            console.error("Failed to load session from localStorage", e);
+            localStorage.removeItem('podcastMixerSession');
         }
-    }
-  }, [user]);
+    };
+    loadInitialProject();
+  }, []);
 
-  const handleMigrateProject = async () => {
-    if (!localProjectToMigrate || !user) return;
-    try {
-        await handleSaveProject(localProjectToMigrate); // Save to cloud
-        applyLoadedProject(localProjectToMigrate); // Apply to current state
-        localStorage.removeItem('podcastMixerSession'); // Clear local copy
-        setLocalProjectToMigrate(null);
-        handleInfo('info_project_migrated');
-    } catch (e) {
-        handleError('error_migration_failed');
-    }
-  };
-
-  const handleIgnoreMigration = () => {
-    localStorage.removeItem('podcastMixerSession');
-    setLocalProjectToMigrate(null);
-    handleInfo('info_local_project_discarded');
-  };
-
-  const getProjectData = (projectToSave?: any) => {
-    if (projectToSave) {
-        return projectToSave;
-    }
+  const getProjectData = () => {
     return {
         tracks: tracks.map(t => ({
             id: t.id,
@@ -385,27 +309,17 @@ const AppContent: React.FC = () => {
     };
   };
 
-  const handleSaveProject = async (projectToSave? : any) => {
-    const projectData = getProjectData(projectToSave);
-    
-    if (user) { // Save to Supabase
-        setIsSaving(true);
-        try {
-            await saveProject(projectData);
-            handleInfo('info_cloud_project_saved');
-        } catch (e) {
-            handleError('error_cloud_save_failed');
-        } finally {
-            setIsSaving(false);
-        }
-    } else { // Save to localStorage
-        try {
-            localStorage.setItem('podcastMixerSession', JSON.stringify(projectData));
-            handleInfo('info_local_project_saved');
-        } catch (e) {
-            console.error("Failed to save session to localStorage", e);
-            handleError('error_local_save_failed');
-        }
+  const handleSaveProject = async () => {
+    const projectData = getProjectData();
+    setIsSaving(true);
+    try {
+        localStorage.setItem('podcastMixerSession', JSON.stringify(projectData));
+        handleInfo('info_local_project_saved');
+    } catch (e) {
+        console.error("Failed to save session to localStorage", e);
+        handleError('error_local_save_failed');
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -771,47 +685,11 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     try {
       const mixedBuffer = await renderMix(44100);
       const wavBlob = encodeWav(mixedBuffer);
-      setWavBlobForExport(wavBlob);
       setMixedAudioUrl(URL.createObjectURL(wavBlob));
     } catch (err) {
       handleError('error_mixing_failed');
     } finally {
       setIsMixing(false);
-    }
-  };
-
-  const handleExportAudio = async (options: ExportOptions) => {
-    if (isActuallyExporting || !isPro) return;
-
-    setIsActuallyExporting(true);
-    setError(null);
-    try {
-        const mixedBuffer = await renderMix(options.sampleRate);
-        let blob: Blob;
-        let extension: string;
-
-        if (options.format === 'mp3') {
-            blob = await encodeMp3(mixedBuffer, options.bitrate);
-            extension = 'mp3';
-        } else { // wav
-            blob = encodeWav(mixedBuffer);
-            extension = 'wav';
-        }
-
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        link.download = `final_mix_${timestamp}.${extension}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-
-    } catch (err) {
-        handleError('error_export_failed');
-    } finally {
-        setIsActuallyExporting(false);
-        setIsExportModalOpen(false); // Close modal on completion or error
     }
   };
 
@@ -832,51 +710,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     return tracks.filter(t => t.type === 'music').length >= 2;
   }, [tracks, underlayTrack]);
   
-  const handleExportProject = async () => {
-    if (!wavBlobForExport || !mixedAudioUrl || !isPro) {
-        handleError("error_export_first_mix");
-        return;
-    }
-
-    setIsExporting(true);
-    setError(null);
-    setInfo(null);
-
-    try {
-        const zip = new JSZip();
-
-        // 1. Add final mix
-        zip.file("final_mix.wav", wavBlobForExport);
-
-        // 2. Add source files
-        const sourceFolder = zip.folder("source_audio");
-        if (sourceFolder) {
-             const allSourceTracks = [...tracks, underlayTrack].filter((t): t is Track & { fileBuffer: ArrayBuffer } => !!t && !!t.fileBuffer);
-             for (const track of allSourceTracks) {
-                sourceFolder.file(track.fileName, track.fileBuffer);
-             }
-        }
-       
-        // 3. Generate and download zip
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(zipBlob);
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        link.download = `podcast_project_${timestamp}.zip`;
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-
-    } catch (err) {
-        handleError('error_project_export_failed');
-    } finally {
-        setIsExporting(false);
-    }
-  };
-
   const canMix = tracks.length > 0 && 
                  !tracks.some(t => !t.file) && 
                  (!underlayTrack || !!underlayTrack.file);
@@ -890,35 +723,17 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             onSave={handleUpdateTrackOrder}
         />
       )}
-      {isAuthModalOpen && (
-        <AuthModal onClose={() => setIsAuthModalOpen(false)} />
-      )}
-      {isExportModalOpen && isPro && (
-        <ExportModal
-          onClose={() => setIsExportModalOpen(false)}
-          onExport={handleExportAudio}
-          isExporting={isActuallyExporting}
-        />
+      {isPurchaseModalOpen && (
+        <AuthModal onClose={() => setIsPurchaseModalOpen(false)} />
       )}
       {isHelpModalOpen && (
         <HelpModal onClose={() => setIsHelpModalOpen(false)} />
       )}
-      {localProjectToMigrate && (
-         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-             <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md border border-gray-700 p-6 text-center">
-                 <h2 className="text-xl font-bold text-white">{t('migrate_title')}</h2>
-                 <p className="text-gray-400 mt-2 mb-6">{t('migrate_subtitle')}</p>
-                 <div className="flex justify-center space-x-4">
-                    <button onClick={handleIgnoreMigration} className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors">{t('migrate_discard')}</button>
-                    <button onClick={handleMigrateProject} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors">{t('migrate_import')}</button>
-                 </div>
-             </div>
-         </div>
-      )}
+
       <div className="max-w-7xl mx-auto">
         <Header 
           onOpenHelp={() => setIsHelpModalOpen(true)}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenAuthModal={() => setIsPurchaseModalOpen(true)}
           onSaveProject={handleSaveProject}
           isSaving={isSaving}
           hasTracks={tracks.length > 0 || !!underlayTrack}
@@ -951,10 +766,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onNormalizeOutputChange={(e) => { setNormalizeOutput(e); resetMix(); }}
               onMix={handleMix}
               isMixing={isMixing}
-              isExporting={isExporting}
-              onExportProject={handleExportProject}
-              onOpenExportModal={() => setIsExportModalOpen(true)}
-              onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onOpenAuthModal={() => setIsPurchaseModalOpen(true)}
               mixedAudioUrl={mixedAudioUrl}
               isDisabled={!canMix}
               totalDuration={estimatedDuration}

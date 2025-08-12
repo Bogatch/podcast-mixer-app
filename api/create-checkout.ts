@@ -1,5 +1,4 @@
 // This API route creates a Stripe Checkout session.
-// It was previously used for Paddle but is now repurposed for Stripe.
 // It securely uses server-side environment variables.
 
 import Stripe from 'stripe';
@@ -27,10 +26,10 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { email, userId } = await req.json();
+    const { email } = await req.json();
 
-    if (!email || !userId) {
-        return jsonResponse({ error: { message: 'Email and User ID are required.' } }, 400);
+    if (!email) {
+        return jsonResponse({ error: { message: 'Email is required.' } }, 400);
     }
 
     const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -49,7 +48,6 @@ export default async function handler(req: Request) {
       success_url: `${APP_URL}?payment=success`, // Redirect here on success
       cancel_url: `${APP_URL}?payment=cancel`,   // Redirect here on cancellation
       customer_email: email,
-      client_reference_id: userId, // CRUCIAL for linking payment to user in webhook
     });
 
     if (!session.id) {

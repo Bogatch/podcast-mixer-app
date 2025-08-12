@@ -1,18 +1,6 @@
-
 // This file now handles Stripe webhooks.
 // It was previously named for Paddle to minimize file changes, but its logic is entirely for Stripe.
-
-// This is a workaround for the build environment not having node types.
-// It tells TypeScript that 'Buffer' exists as a global type.
-declare class Buffer extends Uint8Array {
-  static concat(list: readonly Uint8Array[], totalLength?: number): Buffer;
-}
-
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../lib/database.types';
-// It's assumed the 'stripe' and 'nodemailer' npm packages are available in the Vercel environment.
 import Stripe from 'stripe';
-import nodemailer from 'nodemailer';
 
 // Helper to read body from Node.js request stream, which Vercel uses.
 async function getRawBody(req: any): Promise<Buffer> {
@@ -37,30 +25,21 @@ export default async function handler(req: any, res: any) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  // --- Environment variables for Stripe, Supabase, and SMTP ---
+  // --- Environment variables for Stripe and Make.com ---
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  // --- Custom SMTP Server configuration ---
-  const SMTP_HOST = process.env.SMTP_HOST;
-  const SMTP_PORT = process.env.SMTP_PORT;
-  const SMTP_USER = process.env.SMTP_USER;
-  const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-  const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL;
+  const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
-  if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Server configuration error: Missing environment variables for Stripe/Supabase.');
+  if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) {
+    console.error('Server configuration error: Missing environment variables for Stripe.');
     return res.status(500).json({ error: 'Server configuration error' });
   }
-  
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !SMTP_FROM_EMAIL) {
-    console.warn('Custom SMTP email configuration is missing. "Thank you" emails will not be sent.');
+
+  if (!MAKE_WEBHOOK_URL) {
+    console.warn('Make.com webhook URL is not configured. License emails will not be sent.');
   }
 
   const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
-  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const rawBody = await getRawBody(req);
   
   let event: Stripe.Event;
@@ -79,65 +58,30 @@ export default async function handler(req: any, res: any) {
   // --- Handle the Stripe event ---
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.client_reference_id;
+    const userEmail = session.customer_email;
 
-    if (!userId) {
-      console.error('CRITICAL: checkout.session.completed event without client_reference_id!', session);
-      // Still return 200 to acknowledge receipt of the event to Stripe.
-      return res.status(200).json({ received: true });
-    }
-
-    try {
-      // Update the user's profile to grant PRO access
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ is_pro: true })
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error(`Failed to update profile for user ${userId}`, updateError);
-        // Don't return 500 here, as Stripe would retry. The error is logged.
-      } else {
-        console.log(`Successfully upgraded user ${userId} to PRO.`);
-        
-        // --- Send "Thank You" Email via Custom SMTP ---
-        if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD && SMTP_FROM_EMAIL) {
-            const userEmail = session.customer_email;
-            if (userEmail) {
-                try {
-                    const transporter = nodemailer.createTransport({
-                        host: SMTP_HOST,
-                        port: parseInt(SMTP_PORT, 10),
-                        secure: parseInt(SMTP_PORT, 10) === 465, // true for 465, false for other ports
-                        auth: {
-                            user: SMTP_USER,
-                            pass: SMTP_PASSWORD,
-                        },
-                    });
-
-                    await transporter.sendMail({
-                        from: `Podcast Mixer Studio <${SMTP_FROM_EMAIL}>`,
-                        to: userEmail,
-                        subject: 'Ďakujeme za upgrade na Podcast Mixer Pro!',
-                        html: `
-                            <div style="font-family: sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px;">
-                                <h2 style="color: #0b4ea2;">Podcast Mixer Studio - PRO</h2>
-                                <p>Dobrý deň,</p>
-                                <p>Ďakujeme Vám za zakúpenie licencie PRO. Váš účet bol úspešne aktivovaný a teraz máte prístup ku všetkým prémiovým funkciám bez obmedzení.</p>
-                                <p>Prajeme Vám veľa úspechov pri tvorbe!</p>
-                                <p>S pozdravom,<br>Tím Podcast Mixer Studio</p>
-                            </div>
-                        `,
-                    });
-                    console.log(`Successfully sent 'Welcome Pro' email to ${userEmail} via custom SMTP.`);
-                } catch (emailError) {
-                    console.error(`Failed to send 'Welcome Pro' email to ${userEmail} via custom SMTP.`, emailError);
-                }
-            }
+    console.log(`Checkout session completed for email: ${userEmail}.`);
+    
+    // --- Trigger Make.com webhook for license key generation and email ---
+    if (MAKE_WEBHOOK_URL && userEmail) {
+        try {
+            await fetch(MAKE_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: userEmail,
+                    customerName: session.customer_details?.name,
+                    paymentId: session.payment_intent
+                })
+            });
+            console.log(`Successfully triggered Make.com webhook for email ${userEmail}.`);
+        } catch (webhookError) {
+            console.error(`Failed to trigger Make.com webhook for email ${userEmail}.`, webhookError);
         }
-      }
-    } catch (dbError) {
-      console.error('Database error during profile update:', dbError);
+    } else if (!MAKE_WEBHOOK_URL) {
+        console.warn('MAKE_WEBHOOK_URL is not set. Cannot trigger licensing flow.');
+    } else {
+        console.warn(`No email found in checkout session. Cannot trigger licensing flow.`);
     }
   } else {
     console.log(`Received unhandled event type: ${event.type}`);

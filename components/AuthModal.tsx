@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { XMarkIcon, SparklesIcon, EnvelopeIcon, KeyIcon, CreditCardIcon, SpinnerIcon, CheckIcon } from './icons';
+import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
 
@@ -18,58 +18,24 @@ const Feature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     const { t } = useContext(I18nContext);
-    const { user, signIn, signUp, createCheckout } = useAuth();
+    const { createCheckout } = useAuth();
     
-    const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
-    const handleAuthAction = async (e: React.FormEvent) => {
+    const handlePurchase = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setMessage('');
         setIsLoading(true);
 
-        const action = authMode === 'login' ? signIn : signUp;
-        const { error } = await action(email, password);
+        const result = await createCheckout(email);
 
-        setIsLoading(false);
-        if (error) {
-            setError(error.message);
-        } else if (authMode === 'signup') {
-            setMessage(t('auth_check_email_troubleshoot'));
-            setEmail('');
-            setPassword('');
-        } else {
-            onClose(); // Close on successful login
+        if (result.error) {
+            setError(result.error);
+            setIsLoading(false);
         }
-    };
-
-    const handleBuyLicense = async () => {
-        if (isCreatingCheckout) return;
-
-        if (!user) {
-            setError(t('auth_must_be_logged_in'));
-            setAuthMode('login');
-            return;
-        }
-        
-        setError('');
-        setIsCreatingCheckout(true);
-        
-        try {
-            await createCheckout();
-            // The context handles redirection, so we don't need to do anything here.
-            // If it fails, an error will be set in the context, but we can set a local one too.
-        } catch (err: any) {
-            setError(t(err.message || 'unlock_modal_checkout_failed'));
-        } finally {
-            setIsCreatingCheckout(false);
-        }
+        // On success, Stripe redirects, so no need to set loading to false.
     };
     
     return (
@@ -84,13 +50,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 <header className="p-6 flex items-center justify-between border-b border-gray-700">
                     <h2 className="text-2xl font-bold text-white flex items-center">
                         <SparklesIcon className="w-8 h-8 mr-3 text-yellow-400" />
-                        {t(user ? 'unlock_modal_title' : 'auth_login_title')}
+                        {t('purchase_modal_title')}
                     </h2>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
                         title={t('close')}
-                        disabled={isLoading || isCreatingCheckout}
+                        disabled={isLoading}
                     >
                         <XMarkIcon className="w-6 h-6" />
                     </button>
@@ -108,43 +74,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                                 <Feature>{t('unlock_feature_4')}</Feature>
                             </ul>
                         </div>
-                         <button
-                            onClick={handleBuyLicense}
-                            disabled={isCreatingCheckout || !user}
-                            className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
-                        >
-                             {isCreatingCheckout ? (
-                                <>
-                                    <SpinnerIcon className="w-6 h-6 mr-3 animate-spin" />
-                                    <span>{t('unlock_modal_creating_checkout')}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <CreditCardIcon className="w-6 h-6 mr-3" />
-                                    <span>{t('unlock_modal_buy_license')}</span>
-                                </>
-                            )}
-                        </button>
                     </div>
                     
-                    {/* Right Column: Auth Form */}
-                    <div className="flex flex-col space-y-6">
-                       <div className="flex justify-center border border-gray-700 rounded-lg p-1 bg-gray-900/50">
-                            <button
-                                onClick={() => setAuthMode('login')}
-                                className={`w-1/2 py-2 text-sm font-semibold rounded-md transition-colors ${authMode === 'login' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700/50'}`}
-                            >
-                                {t('log_in')}
-                            </button>
-                            <button
-                                onClick={() => setAuthMode('signup')}
-                                className={`w-1/2 py-2 text-sm font-semibold rounded-md transition-colors ${authMode === 'signup' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700/50'}`}
-                            >
-                                {t('sign_up')}
-                            </button>
+                    {/* Right Column: Purchase Form */}
+                    <div className="flex flex-col justify-center space-y-6">
+                        <div className='text-center'>
+                           <h3 className="text-xl font-semibold text-gray-200">{t('purchase_form_title')}</h3>
+                           <p className="text-sm text-gray-400 mt-2">{t('purchase_form_subtitle')}</p>
                         </div>
-
-                        <form onSubmit={handleAuthAction} className="space-y-4">
+                        <form onSubmit={handlePurchase} className="space-y-4">
                             <div>
                                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
                                <div className="relative">
@@ -159,46 +97,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                                        placeholder="your.email@example.com"
                                        className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                        required
-                                       disabled={isLoading || isCreatingCheckout}
+                                       disabled={isLoading}
                                    />
                                </div>
                             </div>
-                            <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_password')}</label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                       <KeyIcon className="h-5 w-5 text-gray-400" />
-                                   </div>
-                                    <input
-                                        id="password"
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base font-mono text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        required
-                                        minLength={6}
-                                        disabled={isLoading || isCreatingCheckout}
-                                    />
-                                </div>
-                            </div>
 
                             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                            {message && <p className="text-green-400 text-sm text-center">{message}</p>}
 
                             <div className="pt-2">
                                <button
                                     type="submit"
-                                    disabled={isLoading || isCreatingCheckout || !email || !password}
-                                    className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors disabled:bg-gray-600 disabled:cursor-wait"
+                                    disabled={isLoading || !email}
+                                    className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
                                 >
                                     {isLoading ? (
                                         <>
-                                            <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" />
-                                            <span>{authMode === 'login' ? t('auth_logging_in') : t('auth_signing_up')}</span>
+                                            <SpinnerIcon className="w-6 h-6 mr-3 animate-spin" />
+                                            <span>{t('unlock_modal_creating_checkout')}</span>
                                         </>
                                     ) : (
-                                        <span>{authMode === 'login' ? t('log_in') : t('sign_up')}</span>
+                                        <>
+                                            <CreditCardIcon className="w-6 h-6 mr-3" />
+                                            <span>{t('purchase_modal_buy_license')}</span>
+                                        </>
                                     )}
                                </button>
                             </div>
