@@ -1,12 +1,8 @@
 /// <reference types="node" />
 
 // This file now handles Stripe webhooks.
-// It was previously named for Paddle to minimize file changes, but its logic is entirely for Stripe.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type Stripe from 'stripe'; // Use type-only import for Stripe interfaces
-// Use `require` for robust compatibility with Vercel's Node.js runtime for CJS modules.
-const StripeConstructor = require('stripe');
-
+import Stripe from 'stripe';
 
 // Disable Vercel's body parser to access the raw body for signature verification.
 export const config = {
@@ -52,9 +48,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.warn('Make.com webhook URL is not configured. License emails will not be sent.');
   }
 
-  const stripe: Stripe = new StripeConstructor(STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil', typescript: true });
-  const rawBody = await getRawBody(req);
+  const stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: '2025-07-30.basil',
+  });
   
+  const rawBody = await getRawBody(req);
   let event: Stripe.Event;
 
   try {
