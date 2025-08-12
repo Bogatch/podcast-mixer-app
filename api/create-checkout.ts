@@ -21,8 +21,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('------------------------------------');
 
   if (!STRIPE_SECRET_KEY || !STRIPE_PRICE_ID || !APP_URL) {
-    console.error('Server configuration error: Required Stripe environment variables are missing.');
-    return res.status(500).json({ error: { message: 'Server configuration error. One or more required environment variables (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, APP_URL) are missing.' } });
+    const missingVars = [];
+    if (!STRIPE_SECRET_KEY) missingVars.push('STRIPE_SECRET_KEY');
+    if (!STRIPE_PRICE_ID) missingVars.push('STRIPE_PRICE_ID');
+    if (!APP_URL) missingVars.push('APP_URL');
+
+    const errorMessage = `Server configuration error. The following environment variables are missing in your Vercel project settings: ${missingVars.join(', ')}. Please add them to proceed.`;
+    console.error(errorMessage);
+    return res.status(500).json({ error: { message: errorMessage } });
   }
 
   try {
