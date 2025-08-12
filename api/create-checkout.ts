@@ -1,20 +1,14 @@
 /// <reference types="node" />
 
 // This API route creates a Stripe Checkout session.
-// It securely uses server-side environment variables.
+// It securely uses server-side environment variables and the Node.js runtime on Vercel.
 
 import Stripe from 'stripe';
 
-const jsonResponse = (body: object, status: number) => {
-    return new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json' },
-    });
-};
-
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return jsonResponse({ error: { message: 'Method Not Allowed' } }, 405);
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: { message: 'Method Not Allowed' } });
   }
 
   // IMPORTANT: These must be set as environment variables on your server (e.g., in Vercel).
@@ -24,14 +18,15 @@ export default async function handler(req: Request) {
 
   if (!STRIPE_SECRET_KEY || !STRIPE_PRICE_ID || !APP_URL) {
     console.error('Stripe secret key, price ID, or App URL is not configured on the server.');
-    return jsonResponse({ error: { message: 'Server configuration error.' } }, 500);
+    return res.status(500).json({ error: { message: 'Server configuration error.' } });
   }
 
   try {
-    const { email } = await req.json();
+    // Vercel automatically parses the JSON body for Node.js functions
+    const { email } = req.body;
 
     if (!email) {
-        return jsonResponse({ error: { message: 'Email is required.' } }, 400);
+        return res.status(400).json({ error: { message: 'Email is required.' } });
     }
 
     const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -53,13 +48,13 @@ export default async function handler(req: Request) {
     });
 
     if (!session.id) {
-        return jsonResponse({ error: { message: 'Could not create checkout session.' } }, 500);
+        return res.status(500).json({ error: { message: 'Could not create checkout session.' } });
     }
     
-    return jsonResponse({ sessionId: session.id }, 200);
+    return res.status(200).json({ sessionId: session.id });
 
   } catch (error: any) {
     console.error('Error creating Stripe checkout:', error);
-    return jsonResponse({ error: { message: 'An unexpected server error occurred.', details: error.message } }, 500);
+    return res.status(500).json({ error: { message: 'An unexpected server error occurred.', details: error.message } });
   }
 }
