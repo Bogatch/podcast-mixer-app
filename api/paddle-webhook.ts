@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
-// This file now handles Stripe webhooks.
+// NOTE: This file is named paddle-webhook.ts but handles Stripe webhooks.
+// This is for legacy reasons and should ideally be renamed to stripe-webhook.ts.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 
