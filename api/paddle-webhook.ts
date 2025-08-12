@@ -1,6 +1,15 @@
+/// <reference types="node" />
+
 // This file now handles Stripe webhooks.
 // It was previously named for Paddle to minimize file changes, but its logic is entirely for Stripe.
 import Stripe from 'stripe';
+
+// Disable Vercel's body parser to access the raw body for signature verification.
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 // Helper to read body from Node.js request stream, which Vercel uses.
 async function getRawBody(req: any): Promise<Buffer> {

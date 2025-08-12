@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 // This API route creates a Stripe Checkout session.
 // It securely uses server-side environment variables.
 

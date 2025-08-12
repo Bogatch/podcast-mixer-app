@@ -31,8 +31,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            return { error: errorData.error?.message || "Could not create checkout session." };
+            const responseText = await response.text();
+            let errorMessage;
+            
+            // If the server returns an HTML error page from Vercel/server crash
+            if (responseText.trim().startsWith('<')) {
+                 errorMessage = 'A server error occurred. Please try again later.';
+            } else {
+                // Otherwise, try to parse for a JSON error, but fall back to the raw text
+                try {
+                    const errorJson = JSON.parse(responseText);
+                    errorMessage = errorJson.error?.message || responseText;
+                } catch (e) {
+                    // The response was not JSON, use the raw text.
+                    errorMessage = responseText || 'An unknown server error occurred.';
+                }
+            }
+            return { error: errorMessage };
         }
 
         const data = await response.json();
@@ -47,10 +62,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }
         } else {
-            return { error: "Could not create checkout session." };
+             return { error: "Could not create checkout session." };
         }
     } catch (err: any) {
-        return { error: err.message || 'An unexpected error occurred.' };
+        let message = 'A network error occurred. Please check your connection and try again.';
+        if (err instanceof SyntaxError) { // This happens if response.json() fails on a 200 OK
+             message = 'Received an invalid response from the server.';
+        } else if (err.message) {
+            message = err.message;
+        }
+        return { error: message };
     }
     return {};
   };
