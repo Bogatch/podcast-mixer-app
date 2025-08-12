@@ -3,9 +3,7 @@
 // NOTE: This webhook endpoint is deprecated and should not be used.
 // Please configure your Stripe webhooks to point to /api/stripe-webhook instead.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default function handler(req: any, res: any) {
   res.setHeader('Allow', '');
   return res.status(410).json({ 
     error: { 
@@ -14,3 +12,5 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     }
   });
 }
+
+export {};

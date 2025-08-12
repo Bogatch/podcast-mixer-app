@@ -65,12 +65,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
              return { error: "Could not create checkout session." };
         }
     } catch (err: any) {
+        console.error("Error during createCheckout API call:", err);
         let message = 'A network error occurred. Please check your connection and try again.';
-        if (err instanceof SyntaxError) { // This happens if response.json() fails on a 200 OK
-             message = 'Received an invalid response from the server.';
+
+        if (err instanceof TypeError && err.message.includes('fetch')) {
+            message = 'Could not connect to the server. Please check your internet connection.';
+        } else if (err instanceof SyntaxError) {
+            message = 'Received an invalid response from the server. This could be a temporary issue.';
         } else if (err.message) {
             message = err.message;
         }
+        
         return { error: message };
     }
     return {};

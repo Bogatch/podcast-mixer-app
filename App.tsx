@@ -125,12 +125,20 @@ const AppContent: React.FC = () => {
     setMixedAudioUrl(null);
   }, [mixedAudioUrl]);
 
-  const handleError = (key: TranslationKey, params: { [key: string]: string | number } = {}) => {
-      const message = t(key, params);
-      console.error(message);
-      setError(message);
-      setTimeout(() => setError(null), 5000);
-  }
+  const handleError = (key: TranslationKey, params: { [key: string]: string | number } = {}, error?: any) => {
+      const baseMessage = t(key, params);
+      let finalMessage = baseMessage;
+
+      const errorMessage = error?.message || (typeof error === 'string' ? error : null);
+
+      if (errorMessage) {
+          finalMessage = `${baseMessage} | Details: ${errorMessage}`;
+      }
+
+      console.error(baseMessage, { errorDetails: error });
+      setError(finalMessage);
+      setTimeout(() => setError(null), 8000); // Longer timeout to read details
+  };
   
   const handleInfo = (key: TranslationKey, duration: number = 5000) => {
       const message = t(key);
@@ -160,7 +168,7 @@ const AppContent: React.FC = () => {
         };
         newTracks.push(newTrack);
       } catch (err) {
-        handleError('error_process_file', { fileName: file.name });
+        handleError('error_process_file', { fileName: file.name }, err);
         break;
       }
     }
@@ -191,7 +199,7 @@ const AppContent: React.FC = () => {
       };
       setUnderlayTrack(newTrack);
     } catch (err)      {
-      handleError('error_process_file', { fileName: file.name });
+      handleError('error_process_file', { fileName: file.name }, err);
     }
     setUploadingType(null);
   }, [resetMix, t]);
@@ -245,7 +253,7 @@ const AppContent: React.FC = () => {
         
         resetMix();
      } catch (err) {
-        handleError('error_relink_failed', { fileName: file.name });
+        handleError('error_relink_failed', { fileName: file.name }, err);
      }
   }, [resetMix, t]);
 
@@ -317,7 +325,7 @@ const AppContent: React.FC = () => {
         handleInfo('info_local_project_saved');
     } catch (e) {
         console.error("Failed to save session to localStorage", e);
-        handleError('error_local_save_failed');
+        handleError('error_local_save_failed', {}, e);
     } finally {
         setIsSaving(false);
     }
@@ -362,7 +370,7 @@ const AppContent: React.FC = () => {
             updates.set(track.id, { smartTrimStart, smartTrimEnd });
           }
         } catch (err) {
-          handleError('error_process_file', { fileName: track.name });
+          handleError('error_process_file', { fileName: track.name }, err);
         }
       }
 
@@ -442,7 +450,7 @@ const AppContent: React.FC = () => {
         setPreviewState({ trackId, sourceNode: source, timeoutId });
 
     } catch (err) {
-        handleError('error_preview_failed', { fileName: track.name });
+        handleError('error_preview_failed', { fileName: track.name }, err);
     }
   }, [tracks, previewState, t]);
   
@@ -687,7 +695,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       const wavBlob = encodeWav(mixedBuffer);
       setMixedAudioUrl(URL.createObjectURL(wavBlob));
     } catch (err) {
-      handleError('error_mixing_failed');
+      handleError('error_mixing_failed', {}, err);
     } finally {
       setIsMixing(false);
     }

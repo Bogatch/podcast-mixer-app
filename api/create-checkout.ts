@@ -66,3 +66,5 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: { message: message, details: error.toString() } });
   }
 }
+
+export {};
