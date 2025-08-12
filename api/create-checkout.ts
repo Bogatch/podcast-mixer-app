@@ -4,7 +4,8 @@
 // It securely uses server-side environment variables and the Node.js runtime on Vercel.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Stripe from 'stripe';
+// Use `require` for robust compatibility with Vercel's Node.js runtime for CJS modules.
+const Stripe = require('stripe');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -18,8 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const APP_URL = process.env.APP_URL; // Your app's public URL
 
   if (!STRIPE_SECRET_KEY || !STRIPE_PRICE_ID || !APP_URL) {
-    console.error('Stripe secret key, price ID, or App URL is not configured on the server.');
-    return res.status(500).json({ error: { message: 'Server configuration error.' } });
+    console.error('Server configuration error: Required Stripe environment variables are missing.');
+    return res.status(500).json({ error: { message: 'Server configuration error. Please ensure STRIPE_SECRET_KEY, STRIPE_PRICE_ID, and APP_URL are set in your Vercel project settings.' } });
   }
 
   try {
@@ -32,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const stripe = new Stripe(STRIPE_SECRET_KEY, {
         apiVersion: '2025-07-30.basil', // Use a fixed API version
+        typescript: true, // Recommended for TypeScript projects
     });
 
     // Create a Checkout Session.
@@ -56,6 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('Error creating Stripe checkout:', error);
-    return res.status(500).json({ error: { message: 'An unexpected server error occurred.', details: error.message } });
+    const message = error.raw?.message || error.message || 'An unexpected server error occurred.';
+    return res.status(500).json({ error: { message: message, details: error.toString() } });
   }
 }
