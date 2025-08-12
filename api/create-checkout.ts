@@ -3,9 +3,10 @@
 // This API route creates a Stripe Checkout session.
 // It securely uses server-side environment variables and the Node.js runtime on Vercel.
 
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: { message: 'Method Not Allowed' } });

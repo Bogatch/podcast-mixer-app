@@ -2,7 +2,9 @@
 
 // This file now handles Stripe webhooks.
 // It was previously named for Paddle to minimize file changes, but its logic is entirely for Stripe.
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
+
 
 // Disable Vercel's body parser to access the raw body for signature verification.
 export const config = {
@@ -12,7 +14,7 @@ export const config = {
 };
 
 // Helper to read body from Node.js request stream, which Vercel uses.
-async function getRawBody(req: any): Promise<Buffer> {
+async function getRawBody(req: VercelRequest): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
         req.on('data', (chunk: Buffer) => {
@@ -28,7 +30,7 @@ async function getRawBody(req: any): Promise<Buffer> {
 }
 
 // Vercel provides request and response objects compatible with Node.js http module
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
@@ -54,10 +56,12 @@ export default async function handler(req: any, res: any) {
   let event: Stripe.Event;
 
   try {
-    const signature = req.headers['stripe-signature'];
-    if (!signature) {
+    const sigHeader = req.headers['stripe-signature'];
+    if (!sigHeader) {
         return res.status(400).send('Webhook Error: No signature found.');
     }
+    
+    const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
     event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
   } catch (err: any) {
     console.error(`Webhook signature verification failed.`, err.message);
