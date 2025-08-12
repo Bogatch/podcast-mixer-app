@@ -1,6 +1,5 @@
 /// <reference types="node" />
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 
 // Disable Vercel's body parser to access the raw body for signature verification.
@@ -11,7 +10,7 @@ export const config = {
 };
 
 // Helper to read body from Node.js request stream, which Vercel uses.
-async function getRawBody(req: VercelRequest): Promise<Buffer> {
+async function getRawBody(req: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
         req.on('data', (chunk: Buffer) => {
@@ -27,7 +26,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 }
 
 // Vercel provides request and response objects compatible with Node.js http module
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
