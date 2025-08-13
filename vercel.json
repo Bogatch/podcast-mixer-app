@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "routes": [
+    {
+      "src": "/api/stripe-webhook",
+      "public": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/|.*\\.[a-zA-Z0-9]+$).*)",

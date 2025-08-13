@@ -69,7 +69,7 @@ export default async function handler(req: any, res: any) {
   // --- Handle the Stripe event ---
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    const userEmail = session.customer_email;
+    const userEmail = session.customer_details?.email || session.customer_email;
 
     console.log(`Checkout session completed for email: ${userEmail}.`);
     
