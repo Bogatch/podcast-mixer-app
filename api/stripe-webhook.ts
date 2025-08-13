@@ -1,5 +1,5 @@
-/// <reference types="node" />
 
+import { Buffer } from 'buffer';
 import Stripe from 'stripe';
 
 // Disable Vercel's body parser to access the raw body for signature verification.

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 
 // NOTE: This webhook endpoint is deprecated and should not be used.
 // Please configure your Stripe webhooks to point to /api/stripe-webhook instead.

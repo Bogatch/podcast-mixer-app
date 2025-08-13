@@ -809,7 +809,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           </div>
         </main>
         <footer className="text-center text-xs text-gray-500 mt-8 pb-4">
-          {t('footer_version')} 1.3.0 | © {new Date().getFullYear()} CustomRadio.sk
+          {t('footer_version')} 1.3.1 | © {new Date().getFullYear()} CustomRadio.sk
         </footer>
       </div>
     </div>
