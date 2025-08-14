@@ -83,6 +83,7 @@ export const TrackController: React.FC<TrackControllerProps> = ({
     const clampedValue = Math.min(track.duration, finalValue);
     const roundedValue = Math.round(clampedValue * 100) / 100;
     onVocalStartTimeChange(roundedValue);
+    setVocalStartTimeInput(roundedValue.toFixed(2));
   };
 
   const handleVocalTimeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -6,11 +6,19 @@ const LICENSE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZoe
 
 // This function is designed to run on Vercel's serverless environment.
 export default async function handler(req: any, res: any) {
-    // Set headers to prevent caching and ensure JSON content type
+    // Set headers for CORS, caching, and content type
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Content-Type', 'application/json');
+
+    // Handle CORS preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
 
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
@@ -18,26 +26,15 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        let email: string = '';
-        let key: string = '';
+        // Vercel automatically parses JSON bodies.
+        const { email, key } = req.body;
 
-        // Safely extract email and key from the request body, handling various cases
-        if (req.body && typeof req.body === 'object') {
-            email = String(req.body.email || '').trim().toLowerCase();
-            key = String(req.body.key || '').trim();
-        } else if (typeof req.body === 'string' && req.body.length > 0) {
-            try {
-                const parsedBody = JSON.parse(req.body);
-                email = String(parsedBody.email || '').trim().toLowerCase();
-                key = String(parsedBody.key || '').trim();
-            } catch (parseError) {
-                return res.status(400).json({ success: false, error: 'Invalid JSON in request body.' });
-            }
+        if (!email || typeof email !== 'string' || !key || typeof key !== 'string') {
+            return res.status(400).json({ success: false, error: 'Email and license key are required and must be strings.' });
         }
 
-        if (!email || !key) {
-            return res.status(400).json({ success: false, error: 'Email and license key are required.' });
-        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedKey = key.trim();
 
         // Fetch the latest license sheet from Google Sheets with a cache-busting parameter
         const sheetResponse = await fetch(`${LICENSE_SHEET_URL}&_=${new Date().getTime()}`);
@@ -49,16 +46,17 @@ export default async function handler(req: any, res: any) {
         }
 
         const csvText = await sheetResponse.text();
-        const rows = csvText.split(/\r?\n/).slice(1); // Skip header row
+        const rows = csvText.split(/\r?\n/).slice(1).filter(row => row.trim() !== ''); // Skip header row and filter empty rows
 
         const matchFound = rows.some(row => {
             const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
+            // Ensure row has at least 2 columns to prevent errors
             if (columns.length < 2) return false;
 
             const sheetEmail = (columns[0] || '').toLowerCase();
-            const sheetKey = columns[1] || '';
+            const sheetKey = (columns[1] || '').trim();
             
-            return sheetEmail === email && sheetKey === key;
+            return sheetEmail === normalizedEmail && sheetKey === normalizedKey;
         });
 
         if (matchFound) {
