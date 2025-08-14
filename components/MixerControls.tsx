@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
 import { I18nContext } from '../lib/i18n';
+import { usePro } from '../context/ProContext';
 
 interface MixerControlsProps {
   mixDuration: number;
@@ -21,7 +22,9 @@ interface MixerControlsProps {
   onMix: () => void;
   isDisabled: boolean;
   isMixing: boolean;
-  onOpenAuthModal: () => void;
+  onOpenUnlockModal: () => void;
+  onExportAudio: () => void;
+  onExportProject: () => void;
   mixedAudioUrl: string | null;
   totalDuration: number;
   demoMaxDuration: number;
@@ -54,7 +57,9 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   onMix,
   isDisabled,
   isMixing,
-  onOpenAuthModal,
+  onOpenUnlockModal,
+  onExportAudio,
+  onExportProject,
   mixedAudioUrl,
   totalDuration,
   demoMaxDuration,
@@ -63,10 +68,11 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   showUnderlayControl,
 }) => {
   const { t } = useContext(I18nContext);
+  const { isPro } = usePro();
 
   const canMix = !isDisabled && !isMixing;
   const canAttemptExport = !!mixedAudioUrl && !isMixing;
-  const isDemoLimitExceeded = totalDuration > demoMaxDuration;
+  const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
 
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
@@ -314,7 +320,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
             <div className="space-y-3">
               {isDemoLimitExceeded ? (
                 <button
-                  onClick={onOpenAuthModal}
+                  onClick={onOpenUnlockModal}
                   disabled={!canMix}
                   className="w-full flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-600 text-black font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-yellow-400"
                 >
@@ -351,20 +357,20 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
-                            onClick={onOpenAuthModal}
+                            onClick={isPro ? onExportAudio : onOpenUnlockModal}
                             disabled={!canAttemptExport}
                             className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-green-500"
                         >
-                            <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />
+                            {!isPro && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
                             <DownloadIcon className="w-5 h-5 mr-2" />
                             {t('output_export_audio')}
                         </button>
                         <button
-                            onClick={onOpenAuthModal}
+                            onClick={isPro ? onExportProject : onOpenUnlockModal}
                             disabled={!canAttemptExport}
                             className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500"
                           >
-                            <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />
+                             {!isPro && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
                             <ArchiveBoxIcon className="w-5 h-5 mr-2" />
                             <span>{t('output_export_project')}</span>
                           </button>

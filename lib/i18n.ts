@@ -14,6 +14,7 @@ export const translations = {
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
     'info_local_project_saved': 'Your project has been saved to this browser.',
+    'info_pro_activated': 'PRO version successfully activated! All features are now unlocked.',
 
     // Errors
     'error_export_failed': 'Export failed.',
@@ -27,6 +28,8 @@ export const translations = {
     'error_request_timeout': 'The request timed out. Please check your internet connection and try again.',
     'error_demo_duration_limit': 'Demo version is limited to {{minutes}} minutes. Please unlock the full version to mix longer tracks.',
     'error_local_save_failed': 'Failed to save project to browser storage.',
+    'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
+    'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
 
     // Header
@@ -34,6 +37,10 @@ export const translations = {
     'header_subtitle': 'Upload, arrange, and mix your audio tracks.',
     'header_help': 'Help & Function Guide',
     'header_get_pro': 'Get PRO Version',
+    'header_pro_version': 'PRO Version',
+    'header_deactivate': 'Deactivate License',
+    'download_mac': 'Download for Mac',
+    'download_win': 'Download for Windows',
     
     // Language Switcher
     'language': 'Language',
@@ -68,8 +75,8 @@ export const translations = {
     'output_normalize': 'Normalize Volume',
     'output_preview': 'Mix Preview',
     'output_audio_not_supported': 'Your browser does not support the audio element.',
-    'output_export_audio': 'Export Audio (PRO)',
-    'output_export_project': 'Export Project (PRO)',
+    'output_export_audio': 'Export Audio',
+    'output_export_project': 'Export Project',
     'output_mix': 'Generate Mix',
     'output_remix': 'Regenerate Mix',
     'output_processing': 'Processing...',
@@ -85,8 +92,7 @@ export const translations = {
     'tooltip_ai': 'These tools automatically analyze your tracks and adjust them for smoother transitions and a more professional sound.',
     'tooltip_ai_threshold': "Determines what volume level is considered 'silence'. Lower values (e.g., -50dB) are more sensitive and will remove very quiet passages.",
     'tooltip_normalize': 'Automatically adjusts the overall volume of the final mix to a standard level. This prevents the result from being too quiet or distorted.',
-    'tooltip_export_project': 'Export the entire project as a .zip archive, including the final mix and all source files. Available in the PRO desktop version.',
-    'tooltip_pro_feature': 'This is a premium feature, available in the full desktop version.',
+    'tooltip_coming_soon': 'Coming Soon!',
 
     // Monitoring Panel
     'monitoring_title': 'Track Overview',
@@ -125,7 +131,7 @@ export const translations = {
     'reorder_move_down': 'Move down',
     'reorder_move_bottom': 'Move to end',
     
-    // Export Modal (No longer used in UI, but keeping for reference)
+    // Export Modal
     'export_title': 'Export Final Mix',
     'export_format': 'File Format',
     'export_format_wav_label': 'WAV (Lossless)',
@@ -134,11 +140,14 @@ export const translations = {
     'export_samplerate': 'Sample Rate',
     'export_samplerate_info': '44.1 kHz is standard for music (CD), 48 kHz is standard for video.',
 
-    // Purchase Modal (replaces AuthModal)
-    'purchase_modal_title': 'Get Podcast Mixer PRO',
-    'purchase_form_title': 'Unlock Full Version',
-    'purchase_form_subtitle': 'License and download links will be sent to your email.',
+    // Unlock Modal
+    'unlock_modal_title': 'Get Podcast Mixer PRO',
     'unlock_modal_subtitle': 'Unlock all features to create and export your creations without limitations.',
+    'unlock_buy_license_tab': 'Buy License',
+    'unlock_enter_key_tab': 'Enter License Key',
+    'unlock_form_title': 'Activate PRO Version',
+    'unlock_form_subtitle': 'Use the email and license key you received after purchase.',
+    'purchase_form_subtitle': 'You will be redirected to our secure payment gateway.',
     'unlock_feature_1': 'Unlimited mix length',
     'unlock_feature_2': 'High-quality MP3 and lossless WAV export',
     'unlock_feature_3': 'Export project with all source files',
@@ -146,7 +155,12 @@ export const translations = {
     'purchase_modal_buy_license': 'Buy Now & Get License',
     'unlock_modal_creating_checkout': 'Redirecting to payment...',
     'unlock_modal_checkout_failed': 'Could not create checkout session. Please try again later.',
-    'auth_email': 'Your Email for License Delivery',
+    'auth_email': 'Your Email',
+    'auth_license_key': 'License Key (e.g., ABC-123-DEF)',
+    'verify_and_activate': 'Verify & Activate',
+    'verifying': 'Verifying...',
+    'activation_success_title': 'Activation Successful!',
+    'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
 
     // Help Modal
     'help_title': 'Help & Feature Guide',
@@ -182,16 +196,16 @@ export const translations = {
     'help_ai_threshold_desc': 'Determines the volume level (in dB) that is considered silence. Lower values (e.g., -50 dB) are more sensitive and will remove very quiet sounds. Higher values (e.g., -20 dB) will only remove complete silence.',
 
     'help_export_title': 'Final Output and Export',
-    'help_export_p1': 'After setting all parameters, you can create a preview of the mix. Exporting is available in the PRO desktop version.',
+    'help_export_p1': 'After setting all parameters, you can create a preview of the mix. Exporting is available in the PRO version.',
     'help_export_subtitle2': 'Mixing and Exporting',
     'help_export_mix_title': 'Generate Mix',
     'help_export_mix_desc': 'This button starts the mixing process and creates a preview of the resulting file that you can listen to.',
     'help_export_normalize_title': 'Normalize Volume',
     'help_export_normalize_desc': 'We recommend leaving this on. This feature automatically boosts or lowers the entire mix to a standard level, preventing an output that is too quiet or distorted.',
-    'help_export_audio_title': 'Export Audio (PRO)',
-    'help_export_audio_desc': 'In the PRO desktop app, you can export the result to MP3 format (smaller size, good quality) or WAV (lossless quality, larger size).',
-    'help_export_project_title': 'Export Project (PRO)',
-    'help_export_project_desc': 'In the PRO desktop app, you can create a ZIP archive containing the final mix and all original audio files. Ideal for backing up.',
+    'help_export_audio_title': 'Export Audio',
+    'help_export_audio_desc': 'In the PRO version, you can export the result to MP3 format (smaller size, good quality) or WAV (lossless quality, larger size).',
+    'help_export_project_title': 'Export Project',
+    'help_export_project_desc': 'In the PRO version, you can create a ZIP archive containing the final mix and all original audio files. Ideal for backing up.',
     
     // Footer
     'footer_version': 'Version',
@@ -209,6 +223,7 @@ export const translations = {
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
     'info_local_project_saved': 'Váš projekt bol uložený do tohto prehliadača.',
+    'info_pro_activated': 'PRO verzia bola úspešne aktivovaná! Všetky funkcie sú teraz odomknuté.',
     
     // Errors
     'error_export_failed': 'Export zlyhal.',
@@ -222,6 +237,8 @@ export const translations = {
     'error_request_timeout': 'Požiadavka vypršala. Skontrolujte prosím svoje internetové pripojenie a skúste to znova.',
     'error_demo_duration_limit': 'Demo verzia je obmedzená na {{minutes}} minút. Pre mixovanie dlhších stôp si prosím odomknite plnú verziu.',
     'error_local_save_failed': 'Nepodarilo sa uložiť projekt do úložiska prehliadača.',
+    'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
+    'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
     
     // Header
@@ -229,6 +246,10 @@ export const translations = {
     'header_subtitle': 'Nahrajte, usporiadajte a mixujte svoje zvukové stopy.',
     'header_help': 'Pomocník a sprievodca funkciami',
     'header_get_pro': 'Získať PRO Verziu',
+    'header_pro_version': 'PRO Verzia',
+    'header_deactivate': 'Deaktivovať Licenciu',
+    'download_mac': 'Stiahnuť pre Mac',
+    'download_win': 'Stiahnuť pre Windows',
 
     // Language Switcher
     'language': 'Jazyk',
@@ -263,8 +284,8 @@ export const translations = {
     'output_normalize': 'Normalizovať Hlasitosť',
     'output_preview': 'Náhľad mixu',
     'output_audio_not_supported': 'Váš prehliadač nepodporuje prehrávanie zvuku.',
-    'output_export_audio': 'Exportovať Audio (PRO)',
-    'output_export_project': 'Exportovať Projekt (PRO)',
+    'output_export_audio': 'Exportovať Audio',
+    'output_export_project': 'Exportovať Projekt',
     'output_mix': 'Generovať Mix',
     'output_remix': 'Znovu Generovať Mix',
     'output_processing': 'Spracúva sa...',
@@ -280,8 +301,7 @@ export const translations = {
     'tooltip_ai': 'Tieto nástroje automaticky analyzujú vaše stopy a upravujú ich pre plynulejšie prechody a profesionálnejší zvuk.',
     'tooltip_ai_threshold': "Určuje, aká úroveň hlasitosti sa považuje za 'ticho'. Nižšie hodnoty (napr. -50dB) sú citlivejšie a odstránia aj veľmi tiché pasáže.",
     'tooltip_normalize': 'Automaticky upraví celkovú hlasitosť finálneho mixu na štandardnú úroveň. Zabraňuje tomu, aby bol výsledok príliš tichý alebo skreslený.',
-    'tooltip_export_project': 'Exportovať celý projekt ako .zip archív, vrátane finálneho mixu a všetkých zdrojových súborov. Dostupné v PRO desktopovej verzii.',
-    'tooltip_pro_feature': 'Toto je prémiová funkcia, dostupná v plnej desktopovej verzii.',
+    'tooltip_coming_soon': 'Už čoskoro!',
 
     // Monitoring Panel
     'monitoring_title': 'Prehľad Stôp',
@@ -320,11 +340,23 @@ export const translations = {
     'reorder_move_down': 'Posunúť dole',
     'reorder_move_bottom': 'Posunúť na koniec',
     
-    // Purchase Modal (replaces AuthModal)
-    'purchase_modal_title': 'Získať Podcast Mixer PRO',
-    'purchase_form_title': 'Odomknúť Plnú Verziu',
-    'purchase_form_subtitle': 'Licenčný kľúč a odkazy na stiahnutie Vám budú zaslané na e-mail.',
+    // Export Modal
+    'export_title': 'Exportovať Finálny Mix',
+    'export_format': 'Formát súboru',
+    'export_format_wav_label': 'WAV (Bezstratový)',
+    'export_quality': 'Kvalita MP3 (Bitrate)',
+    'export_quality_info': '192 kbps je dobrý kompromis medzi kvalitou a veľkosťou.',
+    'export_samplerate': 'Vzorkovacia frekvencia',
+    'export_samplerate_info': '44.1 kHz je štandard pre hudbu (CD), 48 kHz je štandard pre video.',
+
+    // Unlock Modal
+    'unlock_modal_title': 'Získať Podcast Mixer PRO',
     'unlock_modal_subtitle': 'Odomknite všetky funkcie a exportujte svoje výtvory bez obmedzení.',
+    'unlock_buy_license_tab': 'Kúpiť Licenciu',
+    'unlock_enter_key_tab': 'Zadať Licenčný Kľúč',
+    'unlock_form_title': 'Aktivovať PRO Verziu',
+    'unlock_form_subtitle': 'Použite e-mail a licenčný kľúč, ktoré ste obdržali po nákupe.',
+    'purchase_form_subtitle': 'Budete presmerovaný na bezpečnú platobnú bránu.',
     'unlock_feature_1': 'Neobmedzená dĺžka mixu',
     'unlock_feature_2': 'Export do vysoko-kvalitného MP3 a bezstratového WAV',
     'unlock_feature_3': 'Export projektu so všetkými zdrojovými súbormi',
@@ -332,7 +364,12 @@ export const translations = {
     'purchase_modal_buy_license': 'Kúpiť a Získať Licenciu',
     'unlock_modal_creating_checkout': 'Presmerovávam na platbu...',
     'unlock_modal_checkout_failed': 'Nepodarilo sa vytvoriť platobnú bránu. Skúste to prosím neskôr.',
-    'auth_email': 'Váš E-mail pre Doručenie Licencie',
+    'auth_email': 'Váš E-mail',
+    'auth_license_key': 'Licenčný kľúč (napr. ABC-123-DEF)',
+    'verify_and_activate': 'Overiť a Aktivovať',
+    'verifying': 'Overuje sa...',
+    'activation_success_title': 'Aktivácia úspešná!',
+    'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
 
     // Help Modal
     'help_title': 'Pomocník a Sprievodca Funkciami',
@@ -368,16 +405,16 @@ export const translations = {
     'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyššie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
 
     'help_export_title': 'Konečný Výstup a Export',
-    'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Exportovanie je dostupné v PRO desktopovej verzii.',
+    'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Exportovanie je dostupné v PRO verzii.',
     'help_export_subtitle2': 'Mixovanie a Export',
     'help_export_mix_title': 'Generovať Mix:',
     'help_export_mix_desc': 'Toto tlačidlo spustí proces mixovania a vytvorí náhľad výsledného súboru, ktorý si môžete vypočuť.',
     'help_export_normalize_title': 'Normalizovať Hlasitosť:',
     'help_export_normalize_desc': 'Odporúčame nechať zapnuté. Táto funkcia automaticky zosilní alebo stíši celý mix na štandardnú úroveň, čím sa zabráni príliš tichému alebo skreslenému výstupu.',
-    'help_export_audio_title': 'Exportovať Audio (PRO):',
-    'help_export_audio_desc': 'V PRO desktopovej aplikácii môžete výsledok exportovať do formátu MP3 (menšia veľkosť, dobrá kvalita) alebo WAV (bezstratová kvalita, väčšia veľkosť).',
-    'help_export_project_title': 'Exportovať Projekt (PRO):',
-    'help_export_project_desc': 'V PRO desktopovej aplikácii môžete vytvoriť ZIP archív, ktorý obsahuje finálny mix a všetky pôvodné zvukové súbory. Ideálne pre zálohovanie.',
+    'help_export_audio_title': 'Exportovať Audio:',
+    'help_export_audio_desc': 'V PRO verzii môžete výsledok exportovať do formátu MP3 (menšia veľkosť, dobrá kvalita) alebo WAV (bezstratová kvalita, väčšia veľkosť).',
+    'help_export_project_title': 'Exportovať Projekt:',
+    'help_export_project_desc': 'V PRO verzii môžete vytvoriť ZIP archív, ktorý obsahuje finálny mix a všetky pôvodné zvukové súbory. Ideálne pre zálohovanie.',
 
     // Footer
     'footer_version': 'Verzia',

@@ -11,9 +11,12 @@ import { encodeMp3 } from './lib/mp3Encoder';
 import JSZip from 'jszip';
 import { ReorderModal } from './components/ReorderModal';
 import { HelpModal } from './components/HelpModal';
+import { ExportModal, ExportOptions } from './components/ExportModal';
 import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
 import { AuthProvider } from './context/AuthContext';
-import { AuthModal } from './components/AuthModal';
+import { ProProvider, usePro } from './context/ProContext';
+import { UnlockModal } from './components/UnlockModal';
+
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
 
@@ -93,6 +96,7 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
 
 const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
+  const { isPro, logout } = usePro();
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [underlayTrack, setUnderlayTrack] = useState<Track | null>(null);
@@ -113,12 +117,26 @@ const AppContent: React.FC = () => {
   const [normalizeOutput, setNormalizeOutput] = useState<boolean>(true);
   
   const [isReordering, setIsReordering] = useState(false);
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
   const decodedAudioBuffers = useRef<Map<string, AudioBuffer>>(new Map());
+
+  // Show activation info toast only once per activation
+  const hasShownActivationInfo = useRef(false);
+  useEffect(() => {
+    if (isPro && !hasShownActivationInfo.current) {
+      handleInfo('info_pro_activated');
+      hasShownActivationInfo.current = true;
+    }
+    if (!isPro) {
+      hasShownActivationInfo.current = false;
+    }
+  }, [isPro]);
 
   const resetMix = useCallback(() => {
     if (mixedAudioUrl) URL.revokeObjectURL(mixedAudioUrl);
@@ -131,13 +149,13 @@ const AppContent: React.FC = () => {
 
       const errorMessage = error?.message || (typeof error === 'string' ? error : null);
 
-      if (errorMessage) {
+      if (errorMessage && !baseMessage.includes('Details:')) {
           finalMessage = `${baseMessage} | Details: ${errorMessage}`;
       }
 
       console.error(baseMessage, { errorDetails: error });
       setError(finalMessage);
-      setTimeout(() => setError(null), 8000); // Longer timeout to read details
+      setTimeout(() => setError(null), 8000);
   };
   
   const handleInfo = (key: TranslationKey, duration: number = 5000) => {
@@ -684,6 +702,12 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       handleError("error_no_tracks_to_mix");
       return;
     }
+    
+    if (!isPro && estimatedDuration > DEMO_MAX_DURATION_SECONDS) {
+        handleError('error_demo_duration_limit', { minutes: DEMO_MAX_DURATION_SECONDS / 60 });
+        setIsUnlockModalOpen(true);
+        return;
+    }
 
     setIsMixing(true);
     setError(null);
@@ -700,6 +724,77 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       setIsMixing(false);
     }
   };
+
+  const handleExportAudio = async (options: ExportOptions) => {
+    setIsExporting(true);
+    try {
+        const mixedBuffer = await renderMix(options.sampleRate);
+        let blob: Blob;
+        let fileName: string;
+        
+        if (options.format === 'wav') {
+            blob = encodeWav(mixedBuffer);
+            fileName = 'podcast_mix.wav';
+        } else {
+            blob = await encodeMp3(mixedBuffer, options.bitrate);
+            fileName = 'podcast_mix.mp3';
+        }
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        setIsExportModalOpen(false);
+    } catch(err) {
+        handleError('error_export_failed', {}, err);
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
+  const handleExportProject = async () => {
+    if (!mixedAudioUrl) {
+        handleError('error_export_first_mix');
+        return;
+    }
+    setIsSaving(true);
+    try {
+        const zip = new JSZip();
+        const projectData = getProjectData();
+        zip.file("project.json", JSON.stringify(projectData, null, 2));
+
+        const mixedAudioBlob = await fetch(mixedAudioUrl).then(r => r.blob());
+        zip.file("mix_output.wav", mixedAudioBlob);
+
+        const sourceFilesFolder = zip.folder("source_files");
+        const allTracksWithFiles = [...tracks, underlayTrack].filter((t): t is Track => !!t && !!t.fileBuffer && !!t.fileName);
+
+        if (sourceFilesFolder) {
+            for (const track of allTracksWithFiles) {
+                sourceFilesFolder.file(track.fileName, track.fileBuffer!);
+            }
+        }
+        
+        const content = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(content);
+        link.download = "podcast_mixer_project.zip";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+    } catch(err) {
+        handleError('error_project_export_failed', {}, err);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
 
   const showDuckingControl = useMemo(() => {
     for (let i = 0; i < tracks.length - 1; i++) {
@@ -731,17 +826,24 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             onSave={handleUpdateTrackOrder}
         />
       )}
-      {isPurchaseModalOpen && (
-        <AuthModal onClose={() => setIsPurchaseModalOpen(false)} />
+      {isUnlockModalOpen && (
+        <UnlockModal onClose={() => setIsUnlockModalOpen(false)} />
       )}
       {isHelpModalOpen && (
         <HelpModal onClose={() => setIsHelpModalOpen(false)} />
+      )}
+      {isExportModalOpen && isPro && (
+        <ExportModal 
+          onClose={() => setIsExportModalOpen(false)}
+          onExport={handleExportAudio}
+          isExporting={isExporting}
+        />
       )}
 
       <div className="max-w-7xl mx-auto">
         <Header 
           onOpenHelp={() => setIsHelpModalOpen(true)}
-          onOpenAuthModal={() => setIsPurchaseModalOpen(true)}
+          onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
           onSaveProject={handleSaveProject}
           isSaving={isSaving}
           hasTracks={tracks.length > 0 || !!underlayTrack}
@@ -774,7 +876,9 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onNormalizeOutputChange={(e) => { setNormalizeOutput(e); resetMix(); }}
               onMix={handleMix}
               isMixing={isMixing}
-              onOpenAuthModal={() => setIsPurchaseModalOpen(true)}
+              onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
+              onExportAudio={() => setIsExportModalOpen(true)}
+              onExportProject={handleExportProject}
               mixedAudioUrl={mixedAudioUrl}
               isDisabled={!canMix}
               totalDuration={estimatedDuration}
@@ -809,7 +913,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           </div>
         </main>
         <footer className="text-center text-xs text-gray-500 mt-8 pb-4">
-          {t('footer_version')} 1.3.1 | © {new Date().getFullYear()} CustomRadio.sk
+          {t('footer_version')} 1.4.0 | © {new Date().getFullYear()} CustomRadio.sk
         </footer>
       </div>
     </div>
@@ -833,7 +937,9 @@ const App: React.FC = () => {
   return (
     <I18nContext.Provider value={{ t, setLocale, locale }}>
       <AuthProvider>
-        <AppContent />
+        <ProProvider>
+          <AppContent />
+        </ProProvider>
       </AuthProvider>
     </I18nContext.Provider>
   );

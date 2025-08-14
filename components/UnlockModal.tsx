@@ -1,0 +1,269 @@
+import React, { useContext, useState } from 'react';
+import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon, KeyIcon } from './icons';
+import { I18nContext } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
+import { usePro } from '../context/ProContext';
+
+interface UnlockModalProps {
+  onClose: () => void;
+}
+
+const Feature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <li className="flex items-start">
+        <div className="flex-shrink-0">
+            <CheckIcon className="w-5 h-5 text-green-400" />
+        </div>
+        <p className="ml-3 text-base text-gray-300">{children}</p>
+    </li>
+);
+
+const BuyLicenseForm: React.FC = () => {
+    const { t } = useContext(I18nContext);
+    const { createCheckout } = useAuth();
+    
+    const [email, setEmail] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handlePurchase = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        const result = await createCheckout(email);
+
+        if (result.error) {
+            setError(t('unlock_modal_checkout_failed'));
+            setIsLoading(false);
+        }
+    };
+    
+    return (
+        <form onSubmit={handlePurchase} className="space-y-4">
+            <div>
+               <label htmlFor="email_purchase" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
+               <div className="relative">
+                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                       <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                   </div>
+                   <input
+                       id="email_purchase"
+                       type="email"
+                       value={email}
+                       onChange={(e) => setEmail(e.target.value)}
+                       placeholder="your.email@example.com"
+                       className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       required
+                       disabled={isLoading}
+                   />
+               </div>
+            </div>
+
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+            <div className="pt-2">
+               <button
+                    type="submit"
+                    disabled={isLoading || !email}
+                    className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
+                >
+                    {isLoading ? (
+                        <>
+                            <SpinnerIcon className="w-6 h-6 mr-3 animate-spin" />
+                            <span>{t('unlock_modal_creating_checkout')}</span>
+                        </>
+                    ) : (
+                        <>
+                            <CreditCardIcon className="w-6 h-6 mr-3" />
+                            <span>{t('purchase_modal_buy_license')}</span>
+                        </>
+                    )}
+               </button>
+            </div>
+        </form>
+    );
+};
+
+const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onActivationSuccess }) => {
+    const { t } = useContext(I18nContext);
+    const { verifyLicense, isLoading } = usePro();
+    const [email, setEmail] = useState('');
+    const [licenseKey, setLicenseKey] = useState('');
+    const [error, setError] = useState('');
+
+    const handleActivation = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        const result = await verifyLicense(email, licenseKey);
+        if (!result.success) {
+            setError(t('error_invalid_license'));
+        } else {
+             onActivationSuccess();
+        }
+    };
+
+    return (
+        <form onSubmit={handleActivation} className="space-y-4">
+            <div>
+               <label htmlFor="email_activate" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
+               <div className="relative">
+                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                       <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                   </div>
+                   <input
+                       id="email_activate"
+                       type="email"
+                       value={email}
+                       onChange={(e) => setEmail(e.target.value)}
+                       placeholder="your.email@example.com"
+                       className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       required
+                       disabled={isLoading}
+                   />
+               </div>
+            </div>
+            <div>
+               <label htmlFor="license_key" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_license_key')}</label>
+               <div className="relative">
+                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                       <KeyIcon className="h-5 w-5 text-gray-400" />
+                   </div>
+                   <input
+                       id="license_key"
+                       type="text"
+                       value={licenseKey}
+                       onChange={(e) => setLicenseKey(e.target.value)}
+                       placeholder="XXX-XXX-XXX"
+                       className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       required
+                       disabled={isLoading}
+                   />
+               </div>
+            </div>
+
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+            <div className="pt-2">
+               <button
+                    type="submit"
+                    disabled={isLoading || !email || !licenseKey}
+                    className="w-full flex items-center justify-center px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
+                >
+                    {isLoading ? (
+                        <>
+                            <SpinnerIcon className="w-6 h-6 mr-3 animate-spin" />
+                            <span>{t('verifying')}</span>
+                        </>
+                    ) : (
+                        <>
+                            <CheckIcon className="w-6 h-6 mr-3" />
+                            <span>{t('verify_and_activate')}</span>
+                        </>
+                    )}
+               </button>
+            </div>
+        </form>
+    );
+};
+
+
+export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
+    const { t } = useContext(I18nContext);
+    const [activeTab, setActiveTab] = useState<'buy' | 'activate'>('buy');
+    const [isActivated, setIsActivated] = useState(false);
+    
+    const handleActivationSuccess = () => {
+        setIsActivated(true);
+    };
+
+    return (
+        <div
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            onClick={onClose}
+        >
+            <div
+                className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-yellow-500/30"
+                onClick={e => e.stopPropagation()}
+            >
+                <header className="p-6 flex items-center justify-between border-b border-gray-700">
+                    <h2 className="text-2xl font-bold text-white flex items-center">
+                        <SparklesIcon className="w-8 h-8 mr-3 text-yellow-400" />
+                        {t('unlock_modal_title')}
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                        title={t('close')}
+                    >
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </header>
+
+                <main className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 overflow-y-auto">
+                    {/* Left Column: Features */}
+                    <div className="space-y-6">
+                        <p className="text-lg text-gray-400">{t('unlock_modal_subtitle')}</p>
+                        <div className="bg-gray-900/50 p-6 rounded-lg">
+                            <ul className="space-y-3">
+                                <Feature>{t('unlock_feature_1')}</Feature>
+                                <Feature>{t('unlock_feature_2')}</Feature>
+                                <Feature>{t('unlock_feature_3')}</Feature>
+                                <Feature>{t('unlock_feature_4')}</Feature>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    {/* Right Column: Purchase / Activation Form */}
+                    <div className="flex flex-col justify-center space-y-6 bg-gray-800/50 p-8 rounded-lg">
+                        {isActivated ? (
+                             <div className="text-center space-y-4">
+                                <CheckIcon className="w-16 h-16 text-green-400 mx-auto" />
+                                <h3 className="text-2xl font-bold text-white">{t('activation_success_title')}</h3>
+                                <p className="text-gray-300">{t('activation_success_message')}</p>
+                                <button
+                                    onClick={onClose}
+                                    className="w-full mt-4 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-md transition-colors"
+                                >
+                                    {t('close')}
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex border-b border-gray-700">
+                                    <button
+                                        onClick={() => setActiveTab('buy')}
+                                        className={`w-1/2 py-3 text-center font-semibold transition-colors ${
+                                            activeTab === 'buy' ? 'text-yellow-400 border-b-2 border-yellow-400' : 'text-gray-400 hover:text-white'
+                                        }`}
+                                    >
+                                        {t('unlock_buy_license_tab')}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('activate')}
+                                        className={`w-1/2 py-3 text-center font-semibold transition-colors ${
+                                            activeTab === 'activate' ? 'text-yellow-400 border-b-2 border-yellow-400' : 'text-gray-400 hover:text-white'
+                                        }`}
+                                    >
+                                        {t('unlock_enter_key_tab')}
+                                    </button>
+                                </div>
+                                
+                                <div className="pt-4">
+                                    <div className='text-center mb-6'>
+                                        <h3 className="text-xl font-semibold text-gray-200">
+                                            {activeTab === 'buy' ? t('purchase_modal_buy_license') : t('unlock_form_title')}
+                                        </h3>
+                                        <p className="text-sm text-gray-400 mt-2">
+                                            {activeTab === 'buy' ? t('purchase_form_subtitle') : t('unlock_form_subtitle')}
+                                        </p>
+                                    </div>
+                                    {activeTab === 'buy' ? <BuyLicenseForm /> : <ActivateLicenseForm onActivationSuccess={handleActivationSuccess} />}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </main>
+            </div>
+        </div>
+    );
+};

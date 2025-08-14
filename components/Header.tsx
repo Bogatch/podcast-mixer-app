@@ -1,14 +1,16 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
     MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, SparklesIcon, SaveIcon, SpinnerIcon,
-    UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon
+    UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon,
+    CheckIcon, KeyIcon
 } from './icons';
 import { I18nContext, Locale } from '../lib/i18n';
+import { usePro } from '../context/ProContext';
 
 
 interface HeaderProps {
     onOpenHelp: () => void;
-    onOpenAuthModal: () => void;
+    onOpenUnlockModal: () => void;
     onSaveProject: () => void;
     isSaving: boolean;
     hasTracks: boolean;
@@ -30,8 +32,55 @@ const LanguageOption: React.FC<{
   </button>
 );
 
-export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenAuthModal, onSaveProject, isSaving, hasTracks }) => {
+const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUnlockModal }) => {
+    const { t } = useContext(I18nContext);
+    const { logout, isPro } = usePro();
+
+    const DownloadButton: React.FC<{ label: string }> = ({ label }) => (
+        <button
+          disabled // Disabled for now as per user request
+          title={t('tooltip_coming_soon')}
+          className="px-3 py-2 bg-gray-700/80 text-sm font-medium text-gray-300 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed hidden sm:block"
+        >
+          {label}
+        </button>
+    );
+
+    if (!isPro) {
+      return (
+         <button
+            onClick={onOpenUnlockModal}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
+        >
+            <SparklesIcon className="w-5 h-5" />
+            <span className="text-sm">{t('header_get_pro')}</span>
+        </button>
+      )
+    }
+
+    return (
+        <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
+              <CheckIcon className="w-5 h-5" />
+              <span className="text-sm">{t('header_pro_version')}</span>
+            </div>
+            <DownloadButton label={t('download_mac')} />
+            <DownloadButton label={t('download_win')} />
+            <button
+              onClick={logout}
+              title={t('header_deactivate')}
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+            >
+              <KeyIcon className="w-5 h-5 text-red-400" />
+            </button>
+        </div>
+    );
+};
+
+
+export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenUnlockModal, onSaveProject, isSaving, hasTracks }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
+  const { isPro } = usePro();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   
@@ -113,20 +162,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenAuthModal, onS
               onClick={onSaveProject}
               disabled={isSaving}
               title={t('save_project')}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-500 text-sm font-medium text-white rounded-md transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 disabled:bg-gray-600 text-sm font-medium text-white rounded-md transition-colors"
             >
               {isSaving ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
               <span className="hidden sm:inline">{isSaving ? t('saving') : t('save_project')}</span>
             </button>
           )}
 
-          <button
-              onClick={onOpenAuthModal}
-              className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
-          >
-              <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm">{t('header_get_pro')}</span>
-          </button>
+          <ProHeaderControls onOpenUnlockModal={onOpenUnlockModal} />
+
       </div>
     </header>
   );
