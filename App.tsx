@@ -16,6 +16,7 @@ import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
 import { AuthProvider } from './context/AuthContext';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
+import { GoogleGenAI, Type } from "@google/genai";
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -121,6 +122,9 @@ const AppContent: React.FC = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [suggestedTitle, setSuggestedTitle] = useState('');
+  const [suggestedDescription, setSuggestedDescription] = useState('');
+  const [isSuggestingContent, setIsSuggestingContent] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
@@ -141,6 +145,8 @@ const AppContent: React.FC = () => {
   const resetMix = useCallback(() => {
     if (mixedAudioUrl) URL.revokeObjectURL(mixedAudioUrl);
     setMixedAudioUrl(null);
+    setSuggestedTitle('');
+    setSuggestedDescription('');
   }, [mixedAudioUrl]);
 
   const handleError = (key: TranslationKey, params: { [key: string]: string | number } = {}, error?: any) => {
@@ -795,6 +801,65 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     }
   };
 
+  const handleSuggestContent = async () => {
+    if (tracks.length === 0) {
+      handleError("error_no_tracks_to_mix");
+      return;
+    }
+    if (!isPro) {
+      setIsUnlockModalOpen(true);
+      return;
+    }
+
+    setIsSuggestingContent(true);
+    setError(null);
+
+    const trackList = tracks.map(t => `- ${t.name} (type: ${t.type})`).join('\n');
+    const prompt = `
+      You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative title and a short, engaging description for a podcast episode. The show is about music, interviews and jingles.
+      
+      Track list:
+      ${trackList}
+
+      Provide the response in a JSON format.
+    `;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: {
+                type: Type.STRING,
+                description: 'A creative and catchy title for the podcast episode.'
+              },
+              description: {
+                type: Type.STRING,
+                description: 'A short, engaging description (2-3 sentences) for the podcast episode.'
+              }
+            }
+          }
+        }
+      });
+      
+      const resultText = response.text.trim();
+      const resultJson = JSON.parse(resultText);
+      
+      setSuggestedTitle(resultJson.title || '');
+      setSuggestedDescription(resultJson.description || '');
+
+    } catch (err) {
+      handleError('error_suggestion_failed', {}, err);
+    } finally {
+      setIsSuggestingContent(false);
+    }
+  };
+
 
   const showDuckingControl = useMemo(() => {
     for (let i = 0; i < tracks.length - 1; i++) {
@@ -886,6 +951,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               hasTracks={tracks.length > 0}
               showDuckingControl={showDuckingControl}
               showUnderlayControl={showUnderlayControl}
+              onSuggestContent={handleSuggestContent}
+              isSuggestingContent={isSuggestingContent}
+              suggestedTitle={suggestedTitle}
+              suggestedDescription={suggestedDescription}
             />
           </div>
           <div className="lg:col-span-2 bg-gray-800/50 rounded-lg p-6 shadow-2xl border border-gray-700">

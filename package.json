@@ -9,6 +9,7 @@
   "author": "CustomRadio.sk",
   "license": "UNLICENSED",
   "dependencies": {
+    "@google/genai": "^0.18.0",
     "jszip": "^3.10.1",
     "lamejs": "^1.2.1",
     "react": "^19.1.1",

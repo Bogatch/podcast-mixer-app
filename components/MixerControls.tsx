@@ -1,7 +1,7 @@
-import React, { useContext } from 'react';
-import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon } from './icons';
+import React, { useContext, useState, useRef, useEffect } from 'react';
+import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
-import { I18nContext } from '../lib/i18n';
+import { I18nContext, TranslationKey } from '../lib/i18n';
 import { usePro } from '../context/ProContext';
 
 interface MixerControlsProps {
@@ -31,6 +31,10 @@ interface MixerControlsProps {
   hasTracks: boolean;
   showDuckingControl: boolean;
   showUnderlayControl: boolean;
+  onSuggestContent: () => void;
+  isSuggestingContent: boolean;
+  suggestedTitle: string;
+  suggestedDescription: string;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -38,6 +42,49 @@ const formatDuration = (seconds: number): string => {
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes.toString().padStart(1, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
+
+const CopyableField: React.FC<{label: string, value: string, t: (key: TranslationKey) => string}> = ({ label, value, t }) => {
+    const [copied, setCopied] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+    }, [value]);
+
+    const handleCopy = () => {
+        if (copied) return;
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
+            <div className="relative">
+                <textarea
+                    ref={textareaRef}
+                    readOnly
+                    value={value}
+                    className="w-full bg-gray-900/70 border border-gray-600 rounded-md p-2 pr-10 text-sm text-gray-200 resize-none overflow-hidden"
+                    rows={1}
+                />
+                <button
+                    onClick={handleCopy}
+                    title={copied ? t('copied') : t('copy')}
+                    className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-white hover:bg-gray-600 transition-colors"
+                >
+                    {copied ? <CheckMarkIcon className="w-4 h-4 text-green-400" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 
 export const MixerControls: React.FC<MixerControlsProps> = ({
   mixDuration,
@@ -66,6 +113,10 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   hasTracks,
   showDuckingControl,
   showUnderlayControl,
+  onSuggestContent,
+  isSuggestingContent,
+  suggestedTitle,
+  suggestedDescription,
 }) => {
   const { t } = useContext(I18nContext);
   const { isPro } = usePro();
@@ -73,6 +124,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   const canMix = !isDisabled && !isMixing;
   const canAttemptExport = !!mixedAudioUrl && !isMixing;
   const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
+  const canSuggest = !isDisabled && !isMixing && !isSuggestingContent && hasTracks;
 
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
@@ -279,6 +331,54 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
             </div>
             )}
         </div>
+
+        {hasTracks && (
+            <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-gray-200 flex items-center">
+                        <LightBulbIcon className="w-5 h-5 mr-2 text-yellow-400" />
+                        {t('ai_content_assistant_title')}
+                    </h3>
+                    <InfoTooltip text={t('tooltip_ai_content')} position="right" />
+                </div>
+                
+                {!isPro ? (
+                    <button
+                    onClick={onOpenUnlockModal}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/40 border border-yellow-600/50 text-yellow-300 font-semibold rounded-md transition-colors"
+                    >
+                    <SparklesIcon className="w-5 h-5 mr-2" />
+                    <span>{t('header_get_pro')}</span>
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            onClick={onSuggestContent}
+                            disabled={!canSuggest}
+                            className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed"
+                        >
+                            {isSuggestingContent ? (
+                                <>
+                                    <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                                    {t('ai_content_suggesting_button')}
+                                </>
+                            ) : (
+                                <>
+                                    <SparklesIcon className="w-5 h-5 mr-2" />
+                                    {t('ai_content_suggest_button')}
+                                </>
+                            )}
+                        </button>
+                        {(suggestedTitle || suggestedDescription) && (
+                            <div className="space-y-3 pt-2">
+                                {suggestedTitle && <CopyableField label={t('ai_content_title_label')} value={suggestedTitle} t={t} />}
+                                {suggestedDescription && <CopyableField label={t('ai_content_description_label')} value={suggestedDescription} t={t} />}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+         )}
 
         <div>
             <h3 className="text-lg font-semibold mb-2 text-gray-200">{t('output_title')}</h3>

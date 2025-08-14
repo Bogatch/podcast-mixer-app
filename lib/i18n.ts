@@ -10,6 +10,8 @@ export const translations = {
     'exporting': 'Exporting...',
     'save_project': 'Save Project',
     'saving': 'Saving...',
+    'copy': 'Copy',
+    'copied': 'Copied!',
 
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
@@ -30,6 +32,7 @@ export const translations = {
     'error_local_save_failed': 'Failed to save project to browser storage.',
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
+    'error_suggestion_failed': 'Content suggestion failed. Please try again.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
 
     // Header
@@ -70,6 +73,11 @@ export const translations = {
     'ai_title': 'Smart Cutting (AI)',
     'ai_trim': 'Trim Silence / Smart Transitions',
     'ai_threshold': 'Silence Threshold',
+    'ai_content_assistant_title': 'AI Content Assistant',
+    'ai_content_suggest_button': 'Suggest Title & Description',
+    'ai_content_suggesting_button': 'Generating...',
+    'ai_content_title_label': 'Suggested Title',
+    'ai_content_description_label': 'Suggested Description',
     'output_title': 'Final Output',
     'output_estimated_duration': 'Estimated Result Duration',
     'output_normalize': 'Normalize Volume',
@@ -91,6 +99,7 @@ export const translations = {
     'tooltip_underlay_volume': 'Sets the volume of the background music that plays between main music tracks. Appears if you upload background music and have at least two music tracks.',
     'tooltip_ai': 'These tools automatically analyze your tracks and adjust them for smoother transitions and a more professional sound.',
     'tooltip_ai_threshold': "Determines what volume level is considered 'silence'. Lower values (e.g., -50dB) are more sensitive and will remove very quiet passages.",
+    'tooltip_ai_content': 'Uses AI to generate a title and description for your podcast episode based on the track names. (PRO feature)',
     'tooltip_normalize': 'Automatically adjusts the overall volume of the final mix to a standard level. This prevents the result from being too quiet or distorted.',
     'tooltip_coming_soon': 'Coming Soon!',
 
@@ -219,6 +228,8 @@ export const translations = {
     'exporting': 'Exportuje sa...',
     'save_project': 'Uložiť Projekt',
     'saving': 'Ukladá sa...',
+    'copy': 'Kopírovať',
+    'copied': 'Skopírované!',
     
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
@@ -239,6 +250,7 @@ export const translations = {
     'error_local_save_failed': 'Nepodarilo sa uložiť projekt do úložiska prehliadača.',
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
+    'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
     
     // Header
@@ -279,6 +291,11 @@ export const translations = {
     'ai_title': 'Inteligentné Strihanie (AI)',
     'ai_trim': 'Strihať ticho / Inteligentné prechody',
     'ai_threshold': 'Prah stíšenia',
+    'ai_content_assistant_title': 'AI Asistent Obsahu',
+    'ai_content_suggest_button': 'Navrhnúť Názov a Popis',
+    'ai_content_suggesting_button': 'Generuje sa...',
+    'ai_content_title_label': 'Navrhnutý Názov',
+    'ai_content_description_label': 'Navrhnutý Popis',
     'output_title': 'Konečný Výstup',
     'output_estimated_duration': 'Odhadovaná dĺžka výsledku',
     'output_normalize': 'Normalizovať Hlasitosť',
@@ -300,6 +317,7 @@ export const translations = {
     'tooltip_underlay_volume': 'Nastavuje hlasitosť hudby v pozadí, ktorá hrá medzi hlavnými hudobnými stopami. Zobrazí sa, ak nahráte hudbu do pozadia a máte aspoň dve hudobné stopy.',
     'tooltip_ai': 'Tieto nástroje automaticky analyzujú vaše stopy a upravujú ich pre plynulejšie prechody a profesionálnejší zvuk.',
     'tooltip_ai_threshold': "Určuje, aká úroveň hlasitosti sa považuje za 'ticho'. Nižšie hodnoty (napr. -50dB) sú citlivejšie a odstránia aj veľmi tiché pasáže.",
+    'tooltip_ai_content': 'Použije AI na vygenerovanie názvu a popisu pre vašu epizódu podcastu na základe názvov stôp. (PRO funkcia)',
     'tooltip_normalize': 'Automaticky upraví celkovú hlasitosť finálneho mixu na štandardnú úroveň. Zabraňuje tomu, aby bol výsledok príliš tichý alebo skreslený.',
     'tooltip_coming_soon': 'Už čoskoro!',
 
