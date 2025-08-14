@@ -10,24 +10,41 @@ export default async function handler(req: any, res: any) {
         return res.status(405).end('Method Not Allowed');
     }
 
-    const { email, key } = req.body;
-
-    if (!email || !key) {
-        return res.status(400).json({ success: false, error: 'Email and key are required.' });
-    }
-
     try {
-        // Add a timestamp to bypass caches
+        let body;
+        // Vercel's body parser might not have run, so we handle both object and string bodies.
+        if (typeof req.body === 'string' && req.body.length > 0) {
+            try {
+                body = JSON.parse(req.body);
+            } catch (e) {
+                return res.status(400).json({ success: false, error: 'Invalid JSON in request body.' });
+            }
+        } else {
+            body = req.body;
+        }
+
+        if (!body || typeof body !== 'object') {
+            return res.status(400).json({ success: false, error: 'Request body is missing or invalid.' });
+        }
+
+        const { email, key } = body;
+
+        if (!email || !key) {
+            return res.status(400).json({ success: false, error: 'Email and key are required.' });
+        }
+
+        // Add a timestamp to bypass caches, ensuring we get the latest sheet data
         const url = `${LICENSE_SHEET_URL}&_=${new Date().getTime()}`;
         const response = await fetch(url);
 
         if (!response.ok) {
-            console.error(`Failed to fetch license sheet, status: ${response.status}`);
+            console.error(`Failed to fetch license sheet, status: ${response.status}, statusText: ${response.statusText}`);
             return res.status(502).json({ success: false, error: 'Could not connect to the license data source.' });
         }
 
         const csvText = await response.text();
-        const rows = csvText.split(/\r?\n/).map(row => row.trim());
+        // Split into rows, skip header, trim, and filter out empty lines
+        const rows = csvText.split(/\r?\n/).slice(1).map(row => row.trim()).filter(Boolean);
 
         let matchFound = false;
         for (const row of rows) {
@@ -49,8 +66,8 @@ export default async function handler(req: any, res: any) {
             return res.status(200).json({ success: false, error: 'Invalid email or license key.' });
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in /api/verify-license:', error);
-        return res.status(500).json({ success: false, error: 'An internal server error occurred.' });
+        return res.status(500).json({ success: false, error: error.message || 'An internal server error occurred.' });
     }
 }
