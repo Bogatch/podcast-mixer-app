@@ -19,6 +19,11 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "lib/config.ts",
+    "lib/database.types.ts",
+    "lib/supabaseClient.ts",
+    "api/create-checkout.ts",
+    "api/stripe-webhook.ts"
   ]
 }
