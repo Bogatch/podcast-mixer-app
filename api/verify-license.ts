@@ -2,7 +2,7 @@
 // It acts as a server-side proxy to securely check license credentials
 // without running into browser CORS issues.
 
-const LICENSE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1ztjMQwyzIykZ3gXocz5-aQrosN5qbqlSAYiNOSD3P30/export?format=csv&gid=0';
+const LICENSE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZoeHd2RhHzYIdZR4vDvRLIgjcKS32nxhSHWz5-I6O9KEBxBxdc9CdefDXUFfRCtVYGQOibWy8zid8/pub?output=csv';
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -11,23 +11,27 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        let body;
-        // Vercel's body parser might not have run, so we handle both object and string bodies.
-        if (typeof req.body === 'string' && req.body.length > 0) {
-            try {
-                body = JSON.parse(req.body);
-            } catch (e) {
-                return res.status(400).json({ success: false, error: 'Invalid JSON in request body.' });
+        // Vercel automatically parses JSON bodies. This logic safely extracts
+        // the required fields, whether the body is pre-parsed or a raw string.
+        let email: string | undefined;
+        let key: string | undefined;
+
+        if (req.body) {
+            if (typeof req.body === 'object' && req.body !== null) {
+                // Body is already a parsed object (common case on Vercel)
+                email = req.body.email;
+                key = req.body.key;
+            } else if (typeof req.body === 'string' && req.body.length > 0) {
+                // Fallback for raw string body
+                try {
+                    const parsedBody = JSON.parse(req.body);
+                    email = parsedBody.email;
+                    key = parsedBody.key;
+                } catch (e) {
+                    return res.status(400).json({ success: false, error: 'Invalid JSON in request body.' });
+                }
             }
-        } else {
-            body = req.body;
         }
-
-        if (!body || typeof body !== 'object') {
-            return res.status(400).json({ success: false, error: 'Request body is missing or invalid.' });
-        }
-
-        const { email, key } = body;
 
         if (!email || !key) {
             return res.status(400).json({ success: false, error: 'Email and key are required.' });
@@ -50,10 +54,12 @@ export default async function handler(req: any, res: any) {
         for (const row of rows) {
             // Simple CSV parse: split by comma, trim whitespace, and remove quotes
             const columns = row.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
+            
+            // Safety check for malformed rows
             if (columns.length >= 2) {
                 const sheetEmail = columns[0];
                 const sheetKey = columns[1];
-                if (sheetEmail.toLowerCase() === String(email).trim().toLowerCase() && sheetKey.trim() === String(key).trim()) {
+                if (sheetEmail && sheetKey && sheetEmail.toLowerCase() === String(email).trim().toLowerCase() && sheetKey.trim() === String(key).trim()) {
                     matchFound = true;
                     break;
                 }
@@ -63,11 +69,13 @@ export default async function handler(req: any, res: any) {
         if (matchFound) {
             return res.status(200).json({ success: true });
         } else {
-            return res.status(200).json({ success: false, error: 'Invalid email or license key.' });
+            // Return 401 Unauthorized for a failed validation attempt.
+            return res.status(401).json({ success: false, error: 'Invalid email or license key.' });
         }
 
     } catch (error: any) {
         console.error('Error in /api/verify-license:', error);
+        // Ensure a JSON response is always sent on error to prevent client-side parsing failures.
         return res.status(500).json({ success: false, error: error.message || 'An internal server error occurred.' });
     }
 }
