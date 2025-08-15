@@ -17,6 +17,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
 import { GoogleGenAI, Type } from "@google/genai";
+import { QuestionMarkCircleIcon } from './components/icons';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -97,7 +98,7 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
 
 const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
-  const { isPro, logout } = usePro();
+  const { isPro } = usePro();
   
   const [tracks, setTracks] = useState<Track[]>([]);
   const [underlayTrack, setUnderlayTrack] = useState<Track | null>(null);
@@ -914,6 +915,13 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         />
         <main className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
+            <button
+              onClick={() => setIsHelpModalOpen(true)}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+            >
+              <QuestionMarkCircleIcon className="w-5 h-5" />
+              <span>{t('show_help_guide')}</span>
+            </button>
             <TrackUploader 
               onFilesSelect={addTracks} 
               onUnderlaySelect={addUnderlay}
@@ -989,7 +997,26 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 };
 
 const App: React.FC = () => {
-  const [locale, setLocale] = useState<Locale>('sk');
+    const [locale, setLocale] = useState<Locale>(() => {
+        try {
+            const savedLocale = localStorage.getItem('podcastMixerLocale');
+            if (savedLocale && translations[savedLocale as Locale]) {
+                return savedLocale as Locale;
+            }
+        } catch (e) {
+            console.error("Could not read locale from localStorage", e);
+        }
+        return 'en'; // Default to English
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('podcastMixerLocale', locale);
+        } catch (e) {
+            console.error("Could not save locale to localStorage", e);
+        }
+    }, [locale]);
+
 
   const t = useCallback((key: TranslationKey, params?: { [key: string]: string | number }) => {
     // Fallback to English if key not found in current locale

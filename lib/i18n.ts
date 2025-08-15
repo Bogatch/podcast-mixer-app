@@ -40,12 +40,10 @@ export const translations = {
     // Header
     'header_title': 'Podcast Mixer Studio',
     'header_subtitle': 'Upload, arrange, and mix your audio tracks.',
-    'header_help': 'Help & Function Guide',
     'header_get_pro': 'Get PRO Version',
     'header_pro_version': 'PRO Version',
     'header_deactivate': 'Deactivate License',
-    'download_mac': 'Download for Mac',
-    'download_win': 'Download for Windows',
+    'show_help_guide': 'Help & Function Guide',
     
     // Language Switcher
     'language': 'Language',
@@ -60,10 +58,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Add Files',
-    'uploader_music': 'Music',
-    'uploader_spoken': 'Spoken',
-    'uploader_jingle': 'Jingle',
-    'uploader_underlay': 'Background Music',
+    'uploader_music': '🎵 Music Track',
+    'uploader_spoken': '🎙️ Voice Track',
+    'uploader_jingle': '🔔 Intro / Jingle',
+    'uploader_underlay': '🎼 Background Music',
     'uploader_info': 'You can upload multiple files at once, except for background music (only one).',
 
     // MixerControls
@@ -153,7 +151,7 @@ export const translations = {
 
     // Unlock Modal
     'unlock_modal_title': 'Get Podcast Mixer PRO',
-    'unlock_modal_subtitle': 'Unlock all features to create and export your creations without limitations.',
+    'unlock_modal_subtitle': 'Unlock all features and export your projects without limitations.',
     'unlock_buy_license_tab': 'Buy License',
     'unlock_enter_key_tab': 'Enter License Key',
     'unlock_form_title': 'Activate PRO Version',
@@ -260,12 +258,10 @@ export const translations = {
     // Header
     'header_title': 'Podcast Mixer Studio',
     'header_subtitle': 'Nahrajte, usporiadajte a mixujte svoje zvukové stopy.',
-    'header_help': 'Pomocník a sprievodca funkciami',
     'header_get_pro': 'Získať PRO Verziu',
     'header_pro_version': 'PRO Verzia',
     'header_deactivate': 'Deaktivovať Licenciu',
-    'download_mac': 'Stiahnuť pre Mac',
-    'download_win': 'Stiahnuť pre Windows',
+    'show_help_guide': 'Pomocník a sprievodca funkciami',
 
     // Language Switcher
     'language': 'Jazyk',
@@ -280,10 +276,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Pridať Súbory',
-    'uploader_music': 'Hudba',
-    'uploader_spoken': 'Slovo',
-    'uploader_jingle': 'Znelka/Jingle',
-    'uploader_underlay': 'Hudba do pozadia',
+    'uploader_music': '🎵 Hudobný súbor',
+    'uploader_spoken': '🎙️ Hlasová stopa',
+    'uploader_jingle': '🔔 Znelka, alebo jingle',
+    'uploader_underlay': '🎼 Hudobný podkres',
     'uploader_info': 'Môžete nahrať viacero súborov naraz, okrem hudby do pozadia (iba jeden).',
 
     // MixerControls
@@ -373,7 +369,7 @@ export const translations = {
 
     // Unlock Modal
     'unlock_modal_title': 'Získať Podcast Mixer PRO',
-    'unlock_modal_subtitle': 'Odomknite všetky funkcie a exportujte svoje výtvory bez obmedzení.',
+    'unlock_modal_subtitle': 'Odomknite všetky funkcie a exportujte svoje projekty bez obmedzení.',
     'unlock_buy_license_tab': 'Kúpiť Licenciu',
     'unlock_enter_key_tab': 'Zadať Licenčný Kľúč',
     'unlock_form_title': 'Aktivovať PRO Verziu',
@@ -441,21 +437,52 @@ export const translations = {
     // Footer
     'footer_version': 'Verzia',
   },
-  de: {},
-  fr: {},
-  hu: {},
-  pl: {},
-  es: {},
-  it: {}
+  de: {
+    'uploader_music': '🎵 Musikspur',
+    'uploader_spoken': '🎙️ Sprachspur',
+    'uploader_jingle': '🔔 Intro / Jingle',
+    'uploader_underlay': '🎼 Hintergrundmusik',
+  },
+  fr: {
+    'uploader_music': '🎵 Piste Musicale',
+    'uploader_spoken': '🎙️ Piste Vocale',
+    'uploader_jingle': '🔔 Intro / Jingle',
+    'uploader_underlay': '🎼 Musique de Fond',
+  },
+  hu: {
+    'uploader_music': '🎵 Zenei Sáv',
+    'uploader_spoken': '🎙️ Hangsáv',
+    'uploader_jingle': '🔔 Intro / Szignál',
+    'uploader_underlay': '🎼 Aláfestő Zene',
+  },
+  pl: {
+    'uploader_music': '🎵 Ścieżka Muzyczna',
+    'uploader_spoken': '🎙️ Ścieżka Głosowa',
+    'uploader_jingle': '🔔 Intro / Dżingiel',
+    'uploader_underlay': '🎼 Podkład Muzyczny',
+  },
+  es: {
+    'uploader_music': '🎵 Pista de Música',
+    'uploader_spoken': '🎙️ Pista de Voz',
+    'uploader_jingle': '🔔 Intro / Jingle',
+    'uploader_underlay': '🎼 Música de Fondo',
+  },
+  it: {
+    'uploader_music': '🎵 Traccia Musicale',
+    'uploader_spoken': '🎙️ Traccia Vocale',
+    'uploader_jingle': '🔔 Intro / Jingle',
+    'uploader_underlay': '🎼 Sottofondo Musicale',
+  }
 };
 
 // Fill empty languages with slovak as fallback to avoid errors
 Object.keys(translations).forEach(lang => {
-    if (lang !== 'en' && lang !== 'sk' && Object.keys(translations[lang as Locale]).length === 0) {
+    if (lang !== 'en' && lang !== 'sk') {
+        const key = lang as Locale;
         // @ts-ignore
-        translations[lang as Locale] = translations['sk'];
+        translations[key] = { ...translations['sk'], ...translations[key] };
     }
-})
+});
 
 
 export type Locale = keyof typeof translations;
@@ -468,5 +495,5 @@ export const I18nContext = React.createContext<{
 }>({
     t: (key) => key,
     setLocale: () => {},
-    locale: 'sk',
+    locale: 'en',
 });

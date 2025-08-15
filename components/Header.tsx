@@ -33,7 +33,7 @@ const LanguageOption: React.FC<{
 
 const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
-    const { logout, isPro } = usePro();
+    const { logout, isPro, proUser } = usePro();
 
     if (!isPro) {
       return (
@@ -49,14 +49,21 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
 
     return (
         <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
-              <CheckIcon className="w-5 h-5" />
-              <span className="text-sm">{t('header_pro_version')}</span>
+             <div className="text-right">
+                <div className="flex items-center justify-center space-x-2 px-3 py-1.5 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
+                  <CheckIcon className="w-5 h-5" />
+                  <span className="text-sm">{t('header_pro_version')}</span>
+                </div>
+                {proUser?.email && (
+                    <p className="text-xs text-gray-500 mt-1 truncate max-w-[160px]" title={proUser.email}>
+                        {proUser.email}
+                    </p>
+                )}
             </div>
             <button
               onClick={logout}
               title={t('header_deactivate')}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+              className="flex items-center self-start space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
             >
               <KeyIcon className="w-5 h-5 text-red-400" />
             </button>
@@ -67,7 +74,6 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
 
 export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject, isSaving, hasTracks }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
-  const { isPro } = usePro();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   
@@ -108,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject
           <p className="text-sm sm:text-base text-gray-400">{t('header_subtitle')}</p>
         </div>
       </div>
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-start space-x-2 sm:space-x-3">
           <div className="relative" ref={langRef}>
             <button
               onClick={() => setIsLangOpen(!isLangOpen)}
