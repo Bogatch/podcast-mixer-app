@@ -907,7 +907,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
       <div className="max-w-7xl mx-auto">
         <Header 
-          onOpenHelp={() => setIsHelpModalOpen(true)}
           onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
           onSaveProject={handleSaveProject}
           isSaving={isSaving}
