@@ -95,7 +95,7 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
     const [codeError, setCodeError] = useState('');
     
     const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-    const codeIsValid = useMemo(() => /^[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(code), [code]);
+    const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{3}$/.test(code), [code]);
 
     const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -108,7 +108,7 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
         
         const formattedValue = parts.join('-');
         
-        setCode(formattedValue.toUpperCase());
+        setCode(formattedValue);
         if (codeError) setCodeError('');
     };
 
