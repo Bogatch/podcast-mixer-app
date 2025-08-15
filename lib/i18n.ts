@@ -34,6 +34,8 @@ export const translations = {
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
+    'validation_email_invalid': 'Please enter a valid email address.',
+    'validation_code_invalid': 'Code must be in the format XXX-XXX-XXX.',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -252,7 +254,9 @@ export const translations = {
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
-    
+    'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
+    'validation_code_invalid': 'Kód musí byť vo formáte XXX-XXX-XXX.',
+
     // Header
     'header_title': 'Podcast Mixer Studio',
     'header_subtitle': 'Nahrajte, usporiadajte a mixujte svoje zvukové stopy.',

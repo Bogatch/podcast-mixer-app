@@ -6,7 +6,7 @@ interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
   proUser: { email: string; key: string } | null;
-  verifyLicense: (email: string, key: string) => Promise<{ success: boolean; error?: string }>;
+  verifyLicense: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -35,30 +35,32 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const verifyLicense = useCallback(async (email: string, key: string): Promise<{ success: boolean; error?: string }> => {
+  const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
+    const webhookUrl = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+
     try {
-      const response = await fetch('/api/verify-license', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, key }),
+        body: JSON.stringify({ email, code }),
       });
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
-        const licenseData = { isPro: true, email: email.trim(), key: key.trim() };
+      if (response.ok && result.status === 'success') {
+        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
         setIsPro(true);
-        setProUser({ email: email.trim(), key: key.trim() });
+        setProUser({ email: email.trim(), key: code.trim() });
         return { success: true };
       } else {
-        return { success: false, error: result.error || "Invalid email or license key." };
+        return { success: false, error: result.message || "Invalid email or license key." };
       }
     } catch (error) {
-      console.error("Failed to call verification API:", error);
+      console.error("Failed to call verification webhook:", error);
       return { success: false, error: "Could not connect to the license server." };
     } finally {
       setIsLoading(false);

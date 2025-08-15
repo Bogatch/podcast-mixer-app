@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useMemo } from 'react';
 import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon, KeyIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
@@ -88,15 +88,55 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
     const { t } = useContext(I18nContext);
     const { verifyLicense, isLoading } = usePro();
     const [email, setEmail] = useState('');
-    const [licenseKey, setLicenseKey] = useState('');
-    const [error, setError] = useState('');
+    const [code, setCode] = useState('');
+
+    const [error, setError] = useState(''); // For server errors
+    const [emailError, setEmailError] = useState('');
+    const [codeError, setCodeError] = useState('');
+    
+    const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
+    const codeIsValid = useMemo(() => /^[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(code), [code]);
+
+    const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const rawValue = value.replace(/-/g, '').replace(/[^A-Za-z0-9]/g, '').substring(0, 9);
+        
+        const parts = [];
+        for (let i = 0; i < rawValue.length; i += 3) {
+            parts.push(rawValue.substring(i, i + 3));
+        }
+        
+        const formattedValue = parts.join('-');
+        
+        setCode(formattedValue.toUpperCase());
+        if (codeError) setCodeError('');
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(e.target.value);
+        if (emailError) setEmailError('');
+    }
 
     const handleActivation = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const result = await verifyLicense(email, licenseKey);
+        setEmailError('');
+        setCodeError('');
+
+        let hasClientError = false;
+        if (!emailIsValid) {
+            setEmailError(t('validation_email_invalid'));
+            hasClientError = true;
+        }
+        if (!codeIsValid) {
+            setCodeError(t('validation_code_invalid'));
+            hasClientError = true;
+        }
+        if (hasClientError) return;
+
+        const result = await verifyLicense(email, code);
         if (!result.success) {
-            setError(t('error_invalid_license'));
+            setError(result.error || t('error_invalid_license'));
         } else {
              onActivationSuccess();
         }
@@ -114,13 +154,14 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
                        id="email_activate"
                        type="email"
                        value={email}
-                       onChange={(e) => setEmail(e.target.value)}
+                       onChange={handleEmailChange}
                        placeholder="your.email@example.com"
                        className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                        required
                        disabled={isLoading}
                    />
                </div>
+               {emailError && <p className="text-red-400 text-xs mt-1">{emailError}</p>}
             </div>
             <div>
                <label htmlFor="license_key" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_license_key')}</label>
@@ -131,14 +172,16 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
                    <input
                        id="license_key"
                        type="text"
-                       value={licenseKey}
-                       onChange={(e) => setLicenseKey(e.target.value)}
+                       value={code}
+                       onChange={handleCodeChange}
                        placeholder="XXX-XXX-XXX"
                        className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                        required
                        disabled={isLoading}
+                       maxLength={11}
                    />
                </div>
+               {codeError && <p className="text-red-400 text-xs mt-1">{codeError}</p>}
             </div>
 
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
@@ -146,7 +189,7 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
             <div className="pt-2">
                <button
                     type="submit"
-                    disabled={isLoading || !email || !licenseKey}
+                    disabled={isLoading || !emailIsValid || !codeIsValid}
                     className="w-full flex items-center justify-center px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
                 >
                     {isLoading ? (
