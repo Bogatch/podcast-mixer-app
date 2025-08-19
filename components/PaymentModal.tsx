@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { XMarkIcon, SpinnerIcon, CreditCardIcon, CheckIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
@@ -103,16 +103,25 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
         })
-        .then((res) => {
+        .then(async (res) => {
+            const data = await res.json();
             if (!res.ok) {
-                 throw new Error('Failed to create payment intent');
+                // Throw an error with the message from the server's JSON response
+                throw new Error(data.error || t('unlock_modal_checkout_failed'));
             }
-            return res.json();
+            return data;
         })
-        .then((data) => setClientSecret(data.clientSecret))
+        .then((data) => {
+            if (!data.clientSecret) {
+                // Handle case where server responds 200 OK but without the secret
+                throw new Error('Could not initialize the payment form.');
+            }
+            setClientSecret(data.clientSecret);
+        })
         .catch(err => {
             console.error(err);
-            setError(t('unlock_modal_checkout_failed'));
+            // Display the specific error message from the catch block
+            setError(err.message);
         })
         .finally(() => {
             setIsLoading(false);
@@ -120,7 +129,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
     }, [email, isPaymentSuccessful, t]);
 
     const appearance = {
-        theme: 'night',
+        theme: 'night' as const,
         variables: {
             colorPrimary: '#f59e0b',
             colorBackground: '#1f2937',
@@ -130,7 +139,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
             borderRadius: '0.375rem',
         },
     };
-    const options = {
+    const options: StripeElementsOptions = {
         clientSecret,
         appearance,
     };
@@ -175,13 +184,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
                             <SpinnerIcon className="w-8 h-8 animate-spin text-yellow-400" />
                         </div>
                     ) : error ? (
-                        <div className="text-center text-red-400">{error}</div>
+                        <div className="text-center text-red-400 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
+                           <p className="font-semibold text-red-300">{t('unlock_modal_checkout_failed')}</p>
+                           <p className="text-sm mt-1">{error}</p>
+                        </div>
                     ) : clientSecret ? (
                         <Elements options={options} stripe={stripePromise}>
                             <CheckoutForm onSuccess={() => setPaymentSuccessful(true)} email={email} />
                         </Elements>
                     ) : (
-                         <div className="flex justify-center items-center h-48">
+                         <div className="flex justify-center items-center h-48 text-center text-red-400">
                             <p>{t('unlock_modal_checkout_failed')}</p>
                         </div>
                     )}

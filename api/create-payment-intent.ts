@@ -2,9 +2,6 @@ import Stripe from 'stripe';
 
 // This function is designed to run on Vercel's serverless environment.
 // It requires STRIPE_SECRET_KEY to be set as an environment variable.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
-});
 
 // Hardcoded price for the license.
 const LICENSE_PRICE_EUR = 2900; // in cents, so 29.00 EUR
@@ -25,15 +22,33 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
+  
+  // Defensive check for the Stripe secret key
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+    console.error('CRITICAL: STRIPE_SECRET_KEY environment variable is not set or is invalid.');
+    // Provide a user-friendly error without exposing server details.
+    return res.status(500).json({ error: 'The payment processor is not configured correctly on the server.' });
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-07-30.basil',
+  });
 
   try {
     const { email } = req.body;
 
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required.' });
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ error: 'A valid email address is required.' });
     }
 
-    const customer = await stripe.customers.create({ email });
+    // Check if a customer with this email already exists to avoid duplicates
+    const existingCustomers = await stripe.customers.list({ email: email, limit: 1 });
+    let customer;
+    if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+    } else {
+        customer = await stripe.customers.create({ email });
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: LICENSE_PRICE_EUR,
@@ -52,7 +67,7 @@ export default async function handler(req: any, res: any) {
       clientSecret: paymentIntent.client_secret,
     });
   } catch (error: any) {
-    console.error('Error creating PaymentIntent:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Stripe API error:', error.message);
+    res.status(500).json({ error: 'An error occurred while communicating with the payment provider.' });
   }
 }
