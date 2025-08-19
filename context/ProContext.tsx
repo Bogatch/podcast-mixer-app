@@ -37,7 +37,9 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    const apiUrl = '/api/verify-license';
+    // Bypassing the Vercel proxy function and calling the Make.com webhook directly.
+    // This avoids potential serverless function deployment/runtime issues.
+    const apiUrl = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
 
     try {
       const response = await fetch(apiUrl, {
@@ -45,25 +47,32 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: {
           'Content-Type': 'application/json',
         },
-        // The API endpoint expects a 'key' property, not 'code'.
         body: JSON.stringify({ email, key: code }),
       });
 
-      // The API endpoint should return a JSON response even on failure.
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (response.ok) { // A 2xx status from the webhook indicates success.
         const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
         setIsPro(true);
         setProUser({ email: email.trim(), key: code.trim() });
         return { success: true };
       } else {
-        // Use the error message from the API response.
-        return { success: false, error: result.error || "Invalid email or license key." };
+        // If not OK, try to get a more specific error message from the response body.
+        let errorMessage = "Invalid email or license key.";
+        try {
+            const responseText = await response.text();
+            if (responseText) {
+                // Use the webhook's response as the error message.
+                errorMessage = responseText;
+            }
+        } catch (e) {
+            console.warn("Could not read error response body from webhook.");
+        }
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error("Failed to call verification API:", error);
+      // This catch block handles network errors (e.g. CORS, DNS, no internet)
       return { success: false, error: "Could not connect to the license server." };
     } finally {
       setIsLoading(false);
