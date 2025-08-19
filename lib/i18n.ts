@@ -171,6 +171,12 @@ export const translations = {
     'activation_success_title': 'Activation Successful!',
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
 
+    // Payment Modal
+    'payment_modal_title': 'Complete Your Purchase',
+    'payment_modal_pay_button': 'Pay €29.00',
+    'payment_modal_error_title': 'Payment Error',
+    'payment_modal_error_init': 'Failed to initialize payment.',
+
     // Help Modal
     'help_title': 'Help & Feature Guide',
     'help_tracks_title': 'Uploading and Managing Tracks',
@@ -388,6 +394,12 @@ export const translations = {
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
+
+    // Payment Modal
+    'payment_modal_title': 'Dokončite Váš Nákup',
+    'payment_modal_pay_button': 'Zaplatiť 29,00 €',
+    'payment_modal_error_title': 'Chyba Platby',
+    'payment_modal_error_init': 'Nepodarilo sa inicializovať platbu.',
 
     // Help Modal
     'help_title': 'Pomocník a Sprievodca Funkciami',

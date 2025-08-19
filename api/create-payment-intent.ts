@@ -1,6 +1,6 @@
-const Stripe = require('stripe');
+import Stripe from 'stripe';
 
-const LICENSE_PRICE_EUR = 2900; // 29.00 EUR v centoch
+const LICENSE_PRICE_EUR = 2900; // 29.00 EUR in cents
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,33 +14,30 @@ export default async function handler(req, res) {
 
   try {
     if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Povolená je iba metóda POST' });
+      res.setHeader('Allow', 'POST');
+      return res.status(405).json({ error: 'Method Not Allowed. Only POST is supported.' });
     }
-
-    // Parsovanie tela požiadavky
-    let body;
-    try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    } catch (e) {
-      return res.status(400).json({ error: 'Neplatné JSON telo požiadavky' });
-    }
-
-    const { email } = body || {};
+    
+    const { email } = req.body || {};
     if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return res.status(400).json({ error: 'Je potrebné zadať platnú emailovú adresu' });
+      return res.status(400).json({ error: 'A valid email address is required.' });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey || !stripeSecretKey.startsWith('sk_')) {
-      console.error('KĽÚČOVÁ CHYBA: STRIPE_SECRET_KEY chýba alebo je neplatná');
-      return res.status(500).json({ error: 'Platobný procesor nie je správne nakonfigurovaný' });
+      console.error('CONFIGURATION ERROR: STRIPE_SECRET_KEY is missing or invalid.');
+      return res.status(500).json({ error: 'Payment processor is not configured correctly.' });
     }
 
     const stripe = new Stripe(stripeSecretKey);
 
+    // Find an existing customer or create a new one
     const existingCustomers = await stripe.customers.list({ email, limit: 1 });
-    const customer = existingCustomers.data.length > 0 ? existingCustomers.data[0] : await stripe.customers.create({ email });
+    const customer = existingCustomers.data.length > 0 
+      ? existingCustomers.data[0] 
+      : await stripe.customers.create({ email });
 
+    // Create a PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: LICENSE_PRICE_EUR,
       currency: 'eur',
@@ -51,10 +48,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ clientSecret: paymentIntent.client_secret });
   } catch (error) {
-    console.error('Chyba v /api/create-payment-intent:', {
+    console.error('Error in /api/create-payment-intent:', {
       message: error.message,
       stack: error.stack,
     });
-    return res.status(500).json({ error: 'Vyskytla sa neočakávaná chyba pri príprave platby' });
+    return res.status(500).json({ error: 'An unexpected error occurred while preparing the payment.' });
   }
 }
