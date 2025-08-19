@@ -1,57 +1,51 @@
 import Stripe from 'stripe';
+import { NextResponse } from 'next/server';
 
-const LICENSE_PRICE_EUR = 2900; // 29.00 EUR in cents
+const LICENSE_PRICE_EUR = 2900;
 
-export default async function handler(req, res) {
-  // Nastavenie CORS hlavičiek
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/json');
+function log(ctx: string, data: any) {
+  try { console.log(`[create-payment-intent] ${ctx}: ${JSON.stringify(data, null, 2)}`); }
+  catch { console.log(`[create-payment-intent] ${ctx}: [unserializable]`); }
+}
 
-  // Spracovanie CORS preflight požiadaviek
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+export async function OPTIONS() {
+  const res = new NextResponse(null, { status: 200 });
+  res.headers.set('Access-Control-Allow-Origin', '*');
+  res.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  return res;
+}
+
+export async function POST(req: Request) {
+  const resHeaders = new Headers({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+  });
 
   try {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
-      return res.status(405).json({ error: 'Method Not Allowed. Only POST is supported.' });
+    const contentType = req.headers.get('content-type') || '';
+    log('request-meta', { contentType });
+
+    const body = contentType.includes('application/json') ? await req.json() : {};
+    const email = (body?.email ?? '').toString().trim();
+    if (!email || !email.includes('@')) {
+      log('validation-error', { email });
+      return new NextResponse(JSON.stringify({ ok: false, error: 'INVALID_EMAIL' }), { status: 400, headers: resHeaders });
     }
 
-    // Parsovanie tela požiadavky
-    let body;
-    try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      if (!body || typeof body !== 'object') {
-        throw new Error('Invalid request body');
-      }
-    } catch (e) {
-      return res.status(400).json({ error: 'Neplatné JSON telo požiadavky' });
-    }
-
-    const { email } = body;
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-
-    // Validácia Stripe kľúča
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeSecretKey || !stripeSecretKey.startsWith('sk_')) {
-      console.error('CONFIGURATION ERROR: STRIPE_SECRET_KEY is missing or invalid.');
-      return res.status(500).json({ error: 'Payment processor is not configured correctly.' });
+    if (!stripeSecretKey?.startsWith('sk_')) {
+      log('config-error', { hasKey: !!stripeSecretKey, prefix: stripeSecretKey?.slice(0, 3) });
+      return new NextResponse(JSON.stringify({ ok: false, error: 'CONFIG_MISSING_STRIPE_SECRET_KEY' }), { status: 500, headers: resHeaders });
     }
 
-    const stripe = new Stripe(stripeSecretKey);
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
 
-    // Vyhľadanie existujúceho zákazníka alebo vytvorenie nového
-    const existingCustomers = await stripe.customers.list({ email, limit: 1 });
-    const customer = existingCustomers.data.length > 0 
-      ? existingCustomers.data[0] 
-      : await stripe.customers.create({ email });
+    const existing = await stripe.customers.list({ email, limit: 1 });
+    const customer = existing.data[0] ?? (await stripe.customers.create({ email }));
 
-    // Vytvorenie PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: LICENSE_PRICE_EUR,
       currency: 'eur',
@@ -60,12 +54,25 @@ export default async function handler(req, res) {
       metadata: { product: 'Podcast Mixer PRO License', user_email: email },
     });
 
-    return res.status(200).json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error('Error in /api/create-payment-intent:', {
-      message: error.message,
-      stack: error.stack,
-    });
-    return res.status(500).json({ error: 'An unexpected error occurred while preparing the payment.' });
+    log('success', { customerId: customer.id, paymentIntent: paymentIntent.id });
+
+    return new NextResponse(JSON.stringify({
+      ok: true,
+      clientSecret: paymentIntent.client_secret,
+      diagnostics: {
+        customerId: customer.id,
+        paymentIntentId: paymentIntent.id,
+        currency: paymentIntent.currency,
+        amount: paymentIntent.amount,
+      },
+    }), { status: 200, headers: resHeaders });
+  } catch (err: any) {
+    log('exception', { message: err?.message, type: err?.type, stack: err?.stack?.split('\n')?.slice(0, 3) });
+    const status = err?.statusCode || 500;
+    return new NextResponse(JSON.stringify({
+      ok: false,
+      error: err?.code || 'UNEXPECTED_ERROR',
+      message: err?.message || 'Unexpected error',
+    }), { status, headers: resHeaders });
   }
 }
