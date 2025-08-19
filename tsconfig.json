@@ -20,7 +20,6 @@
   ],
   "exclude": [
     "node_modules",
-    "lib/config.ts",
     "lib/database.types.ts",
     "lib/supabaseClient.ts",
     "api/create-checkout.ts",
