@@ -33,7 +33,7 @@ const CheckoutForm: React.FC<{onSuccess: () => void, email: string}> = ({ onSucc
         const { error } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                return_url: window.location.href,
+                return_url: `${window.location.origin}${window.location.pathname}`,
                 receipt_email: email,
             },
         });
@@ -76,57 +76,78 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isPaymentSuccessful, setPaymentSuccessful] = useState(false);
-    
+    const [receiptEmail, setReceiptEmail] = useState('');
+
     useEffect(() => {
-        const checkStatus = async () => {
-            if (!stripePromise) return;
-            const stripe = await stripePromise;
-            if (!stripe) return;
+        const initialize = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const clientSecretParam = params.get("payment_intent_client_secret");
 
-            const clientSecretParam = new URLSearchParams(window.location.search).get("payment_intent_client_secret");
-            if (!clientSecretParam) return;
+            if (clientSecretParam) {
+                // This is a redirect from Stripe.
+                setIsLoading(true);
+                const stripe = await stripePromise;
+                if (stripe) {
+                    const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecretParam);
+                    switch (paymentIntent?.status) {
+                        case 'succeeded':
+                            setPaymentSuccessful(true);
+                            setReceiptEmail(paymentIntent.receipt_email || 'your email');
+                            break;
+                        case 'processing':
+                            setError('Payment is processing. We will notify you when it is complete.');
+                            break;
+                        default:
+                            setError('Payment failed. Please try again.');
+                            break;
+                    }
+                } else {
+                    setError('Could not connect to payment provider.');
+                }
+                
+                // Clean up URL
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('payment_intent');
+                newUrl.searchParams.delete('payment_intent_client_secret');
+                newUrl.searchParams.delete('redirect_status');
+                window.history.replaceState({}, document.title, newUrl.pathname + newUrl.hash);
+                
+                setIsLoading(false);
 
-            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecretParam);
-
-            if (paymentIntent?.status === "succeeded") {
-                setPaymentSuccessful(true);
+            } else if (email) {
+                // This is a fresh modal opening, not a redirect.
+                setIsLoading(true);
+                setError('');
+                fetch('/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                })
+                .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || t('unlock_modal_checkout_failed'));
+                    return data;
+                })
+                .then((data) => {
+                    if (!data.clientSecret) throw new Error('Could not initialize the payment form.');
+                    setClientSecret(data.clientSecret);
+                })
+                .catch(err => {
+                    console.error(err);
+                    setError(err.message);
+                })
+                .finally(() => setIsLoading(false));
+            } else {
+                // Not a redirect and no email provided. This can happen if the modal
+                // is opened after a failed payment where the parent component's state was lost.
+                // We show an error and the user must close and try again.
+                setError(t('unlock_modal_checkout_failed'));
+                setIsLoading(false);
             }
         };
-        checkStatus();
-    }, []);
 
-    useEffect(() => {
-        if (!email || isPaymentSuccessful) return;
-
-        fetch('/api/create-payment-intent', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-        })
-        .then(async (res) => {
-            const data = await res.json();
-            if (!res.ok) {
-                // Throw an error with the message from the server's JSON response
-                throw new Error(data.error || t('unlock_modal_checkout_failed'));
-            }
-            return data;
-        })
-        .then((data) => {
-            if (!data.clientSecret) {
-                // Handle case where server responds 200 OK but without the secret
-                throw new Error('Could not initialize the payment form.');
-            }
-            setClientSecret(data.clientSecret);
-        })
-        .catch(err => {
-            console.error(err);
-            // Display the specific error message from the catch block
-            setError(err.message);
-        })
-        .finally(() => {
-            setIsLoading(false);
-        });
-    }, [email, isPaymentSuccessful, t]);
+        initialize();
+    }, [email, t]);
 
     const appearance = {
         theme: 'night' as const,
@@ -169,7 +190,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
                             <CheckIcon className="w-16 h-16 text-green-400 mx-auto" />
                             <h3 className="text-2xl font-bold text-white">{t('activation_success_title')}</h3>
                             <p className="text-gray-300">
-                                Thank you for your purchase! Your license key has been sent to <strong>{new URLSearchParams(window.location.search).get("redirect_status") === "succeeded" ? 'your email' : email}</strong>.
+                                Thank you for your purchase! Your license key has been sent to <strong>{receiptEmail}</strong>.
                                 Please use the "Enter License Key" tab to activate it.
                             </p>
                             <button
