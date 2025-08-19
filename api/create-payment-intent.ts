@@ -30,9 +30,7 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: 'The payment processor is not configured correctly on the server.' });
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
-  });
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   try {
     const { email } = req.body;
