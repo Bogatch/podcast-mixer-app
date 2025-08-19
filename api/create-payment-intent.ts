@@ -14,7 +14,6 @@ export default async function handler(req, res) {
 
   try {
     if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
       return res.status(405).json({ error: 'Povolená je iba metóda POST' });
     }
 
