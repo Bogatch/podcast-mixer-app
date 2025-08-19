@@ -3,11 +3,13 @@ import Stripe from 'stripe';
 const LICENSE_PRICE_EUR = 2900; // 29.00 EUR in cents
 
 export default async function handler(req, res) {
+  // Nastavenie CORS hlavičiek
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
 
+  // Spracovanie CORS preflight požiadaviek
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -17,12 +19,24 @@ export default async function handler(req, res) {
       res.setHeader('Allow', 'POST');
       return res.status(405).json({ error: 'Method Not Allowed. Only POST is supported.' });
     }
-    
-    const { email } = req.body || {};
+
+    // Parsovanie tela požiadavky
+    let body;
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      if (!body || typeof body !== 'object') {
+        throw new Error('Invalid request body');
+      }
+    } catch (e) {
+      return res.status(400).json({ error: 'Neplatné JSON telo požiadavky' });
+    }
+
+    const { email } = body;
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return res.status(400).json({ error: 'A valid email address is required.' });
     }
 
+    // Validácia Stripe kľúča
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey || !stripeSecretKey.startsWith('sk_')) {
       console.error('CONFIGURATION ERROR: STRIPE_SECRET_KEY is missing or invalid.');
@@ -31,13 +45,13 @@ export default async function handler(req, res) {
 
     const stripe = new Stripe(stripeSecretKey);
 
-    // Find an existing customer or create a new one
+    // Vyhľadanie existujúceho zákazníka alebo vytvorenie nového
     const existingCustomers = await stripe.customers.list({ email, limit: 1 });
     const customer = existingCustomers.data.length > 0 
       ? existingCustomers.data[0] 
       : await stripe.customers.create({ email });
 
-    // Create a PaymentIntent
+    // Vytvorenie PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: LICENSE_PRICE_EUR,
       currency: 'eur',
