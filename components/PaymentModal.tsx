@@ -90,11 +90,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
       body: JSON.stringify({ email }),
     })
     .then(async (res) => {
+      const data = await res.json().catch(() => {
+        // Handles cases where the server returns non-JSON (e.g., HTML error page, Vercel crash)
+        throw new Error(`Server returned a non-JSON response with status ${res.status}. Check the server logs for details.`);
+      });
+
       if (!res.ok) {
-          const data = await res.json().catch(() => ({ error: 'Failed to parse error response.'}));
-          throw new Error(data.error || t('payment_modal_error_init'));
+          // Now 'data.error' is an object { code, type, message }
+          const errorMessage = data.error?.message || t('payment_modal_error_init');
+          const errorDetails = `[Type: ${data.error?.type || 'unknown'}, Code: ${data.error?.code || 'unknown'}]`;
+          console.error("Payment initialization failed:", errorMessage, errorDetails);
+          throw new Error(`${errorMessage} - ${errorDetails}`);
       }
-      return res.json();
+      return data;
     })
     .then((data) => {
       setClientSecret(data.clientSecret);
@@ -153,7 +161,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ onClose, email }) =>
           {error && (
             <div className="text-center text-red-400 p-4 bg-red-500/10 rounded-md">
                 <p><strong>{t('payment_modal_error_title')}</strong></p>
-                <p>{error}</p>
+                <p className="text-xs mt-2 break-words">{error}</p>
             </div>
           )}
           {clientSecret && !error && (

@@ -17,9 +17,9 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   const resHeaders = new Headers({
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin', '*',
+    'Access-Control-Allow-Methods', 'POST, OPTIONS',
+    'Access-Control-Allow-Headers', 'Content-Type',
     'Content-Type': 'application/json',
   });
 
@@ -31,13 +31,13 @@ export async function POST(req: Request) {
     const email = (body?.email ?? '').toString().trim();
     if (!email || !email.includes('@')) {
       log('validation-error', { email });
-      return new Response(JSON.stringify({ ok: false, error: 'INVALID_EMAIL' }), { status: 400, headers: resHeaders });
+      return new Response(JSON.stringify({ ok: false, error: { type: 'validation', code: 'INVALID_EMAIL', message: 'A valid email is required.' } }), { status: 400, headers: resHeaders });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey?.startsWith('sk_')) {
       log('config-error', { hasKey: !!stripeSecretKey, prefix: stripeSecretKey?.slice(0, 3) });
-      return new Response(JSON.stringify({ ok: false, error: 'CONFIG_MISSING_STRIPE_SECRET_KEY' }), { status: 500, headers: resHeaders });
+      return new Response(JSON.stringify({ ok: false, error: { type: 'config', code: 'CONFIG_MISSING_STRIPE_SECRET_KEY', message: 'Server configuration error.' } }), { status: 500, headers: resHeaders });
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-04-10' });
@@ -58,20 +58,32 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({
       ok: true,
       clientSecret: paymentIntent.client_secret,
-      diagnostics: {
-        customerId: customer.id,
-        paymentIntentId: paymentIntent.id,
-        currency: paymentIntent.currency,
-        amount: paymentIntent.amount,
-      },
     }), { status: 200, headers: resHeaders });
   } catch (err: any) {
-    log('exception', { message: err?.message, type: err?.type, stack: err?.stack?.split('\n')?.slice(0, 3) });
-    const status = err?.statusCode || 500;
-    return new Response(JSON.stringify({
-      ok: false,
-      error: err?.code || 'UNEXPECTED_ERROR',
-      message: err?.message || 'Unexpected error',
-    }), { status, headers: resHeaders });
+      let errorMessage = 'An unexpected error occurred.';
+      let errorCode = 'UNEXPECTED_ERROR';
+      let errorType = 'api';
+      let errorStatus = 500;
+
+      if (err instanceof Stripe.errors.StripeError) {
+          errorType = 'stripe';
+          errorStatus = err.statusCode || 500;
+          errorCode = err.code || `STRIPE_${err.type.toUpperCase()}`;
+          errorMessage = err.message || 'An error occurred with our payment provider.';
+          log('stripe-error', { type: err.type, code: err.code, message: err.message });
+      } else {
+          errorMessage = err.message || 'An internal server error occurred.';
+          errorCode = err.code || 'INTERNAL_API_ERROR';
+          log('api-exception', { message: err?.message, stack: err?.stack?.split('\n')?.slice(0, 3) });
+      }
+
+      return new Response(JSON.stringify({
+          ok: false,
+          error: {
+              code: errorCode,
+              type: errorType,
+              message: errorMessage,
+          },
+      }), { status: errorStatus, headers: resHeaders });
   }
 }
