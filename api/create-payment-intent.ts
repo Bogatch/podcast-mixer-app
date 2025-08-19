@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ ok: false, error: { type: 'config', code: 'CONFIG_MISSING_STRIPE_SECRET_KEY', message: 'Server configuration error.' } }), { status: 500, headers: resHeaders });
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-04-10' });
 
     const existing = await stripe.customers.list({ email, limit: 1 });
     const customer = existing.data[0] ?? (await stripe.customers.create({ email }));
