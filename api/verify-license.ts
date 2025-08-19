@@ -1,3 +1,5 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
 // This file replaces the client-side fetch to Google Sheets.
 // It acts as a server-side proxy to securely check license credentials
 // without running into browser CORS issues.
@@ -5,15 +7,14 @@
 const LICENSE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZoeHd2RhHzYIdZR4vDvRLIgjcKS32nxhSHWz5-I6O9KEBxBxdc9CdefDXUFfRCtVYGQOibWy8zid8/pub?output=csv';
 
 // This function is designed to run on Vercel's serverless environment.
-export default async function handler(req: any, res: any) {
-    // Set headers for CORS, caching, and content type
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // Set headers for CORS, caching
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.setHeader('Content-Type', 'application/json');
 
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
@@ -26,6 +27,10 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
+        if (!req.body) {
+            return res.status(400).json({ success: false, error: 'Missing request body.' });
+        }
+        
         // Vercel automatically parses JSON bodies.
         const { email, key } = req.body;
 
