@@ -22,17 +22,17 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
-  
-  // Defensive check for the Stripe secret key
-  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
-    console.error('CRITICAL: STRIPE_SECRET_KEY environment variable is not set or is invalid.');
-    // Provide a user-friendly error without exposing server details.
-    return res.status(500).json({ error: 'The payment processor is not configured correctly on the server.' });
-  }
-
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   try {
+    // Defensive check for the Stripe secret key
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+      console.error('CRITICAL: STRIPE_SECRET_KEY environment variable is not set or is invalid.');
+      // Provide a user-friendly error without exposing server details.
+      return res.status(500).json({ error: 'The payment processor is not configured correctly on the server.' });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    
     const { email } = req.body;
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
