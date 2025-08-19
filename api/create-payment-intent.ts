@@ -7,23 +7,23 @@ import Stripe from 'stripe';
 const LICENSE_PRICE_EUR = 2900; // in cents, so 29.00 EUR
 
 export default async function handler(req: any, res: any) {
-  // Set headers for CORS and content type
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/json');
-  
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-
   try {
+    // Set headers for CORS and content type
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Handle CORS preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
     // Defensive check for the Stripe secret key
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
       console.error('CRITICAL: STRIPE_SECRET_KEY environment variable is not set or is invalid.');
@@ -65,7 +65,13 @@ export default async function handler(req: any, res: any) {
       clientSecret: paymentIntent.client_secret,
     });
   } catch (error: any) {
-    console.error('Stripe API error:', error.message);
-    res.status(500).json({ error: 'An error occurred while communicating with the payment provider.' });
+    console.error('Error in /api/create-payment-intent:', {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause,
+    });
+    // Ensure a valid JSON response is sent even on catastrophic failure
+    // This prevents the "Unexpected token 'A'..." error on the client.
+    res.status(500).json({ error: 'An unexpected server error occurred while preparing the payment form.' });
   }
 }
