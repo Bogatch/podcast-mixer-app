@@ -3,7 +3,7 @@
   "version": "1.3.0",
   "description": "Nástroj na nahrávanie a vizuálne mixovanie zvukových stôp pre podcasty.",
   "scripts": {
-    "build:ui": "mkdir -p dist && cp index.html metadata.json dist/ && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --format=esm --external:react --external:react-dom/client --external:jszip --external:@google/genai --external:@stripe/react-stripe-js --external:@stripe/stripe-js",
+    "build:ui": "mkdir -p dist && cp index.html metadata.json dist/ && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap --format=esm --external:react --external:react-dom/client --external:jszip --external:@google/genai",
     "build": "npm run build:ui"
   },
   "author": "CustomRadio.sk",
@@ -12,8 +12,7 @@
     "@google/genai": "^0.12.0",
     "jszip": "^3.10.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "stripe": "^15.12.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "esbuild": "^0.20.2",

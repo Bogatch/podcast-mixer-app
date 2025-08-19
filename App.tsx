@@ -13,6 +13,7 @@ import { ReorderModal } from './components/ReorderModal';
 import { HelpModal } from './components/HelpModal';
 import { ExportModal, ExportOptions } from './components/ExportModal';
 import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
+import { AuthProvider } from './context/AuthContext';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -1030,9 +1031,11 @@ const App: React.FC = () => {
 
   return (
     <I18nContext.Provider value={{ t, setLocale, locale }}>
-      <ProProvider>
-        <AppContent />
-      </ProProvider>
+      <AuthProvider>
+        <ProProvider>
+          <AppContent />
+        </ProProvider>
+      </AuthProvider>
     </I18nContext.Provider>
   );
 }
