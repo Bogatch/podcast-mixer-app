@@ -37,30 +37,33 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    const webhookUrl = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+    const apiUrl = '/api/verify-license';
 
     try {
-      const response = await fetch(webhookUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, code }),
+        // The API endpoint expects a 'key' property, not 'code'.
+        body: JSON.stringify({ email, key: code }),
       });
 
+      // The API endpoint should return a JSON response even on failure.
       const result = await response.json();
 
-      if (response.ok && result.status === 'success') {
+      if (response.ok && result.success) {
         const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
         setIsPro(true);
         setProUser({ email: email.trim(), key: code.trim() });
         return { success: true };
       } else {
-        return { success: false, error: result.message || "Invalid email or license key." };
+        // Use the error message from the API response.
+        return { success: false, error: result.error || "Invalid email or license key." };
       }
     } catch (error) {
-      console.error("Failed to call verification webhook:", error);
+      console.error("Failed to call verification API:", error);
       return { success: false, error: "Could not connect to the license server." };
     } finally {
       setIsLoading(false);
