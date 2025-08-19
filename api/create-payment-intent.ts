@@ -3,13 +3,11 @@ const Stripe = require('stripe');
 const LICENSE_PRICE_EUR = 2900; // 29.00 EUR v centoch
 
 export default async function handler(req, res) {
-  // Nastavenie CORS hlavičiek
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
 
-  // Spracovanie CORS preflight požiadaviek
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -33,7 +31,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Je potrebné zadať platnú emailovú adresu' });
     }
 
-    // Validácia Stripe kľúča
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey || !stripeSecretKey.startsWith('sk_')) {
       console.error('KĽÚČOVÁ CHYBA: STRIPE_SECRET_KEY chýba alebo je neplatná');
@@ -42,7 +39,6 @@ export default async function handler(req, res) {
 
     const stripe = new Stripe(stripeSecretKey);
 
-    // Vytvorenie zákazníka a platobného zámeru
     const existingCustomers = await stripe.customers.list({ email, limit: 1 });
     const customer = existingCustomers.data.length > 0 ? existingCustomers.data[0] : await stripe.customers.create({ email });
 
@@ -60,6 +56,6 @@ export default async function handler(req, res) {
       message: error.message,
       stack: error.stack,
     });
-    return res.status(500).json({ error: 'Vyskytla sa neočakávaná chyba pri príprave platobného formulára' });
+    return res.status(500).json({ error: 'Vyskytla sa neočakávaná chyba pri príprave platby' });
   }
 }
