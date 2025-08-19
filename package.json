@@ -4,7 +4,8 @@
   "description": "Nástroj na nahrávanie a vizuálne mixovanie zvukových stôp pre podcasty.",
   "scripts": {
     "build:js": "esbuild index.tsx --bundle --outfile=bundle.js --minify --sourcemap --format=esm --external:react --external:react-dom/client --external:jszip --external:@google/genai",
-    "build": "npm run build:js"
+    "build": "npm run build:js",
+    "build:ui": "npm run build"
   },
   "author": "CustomRadio.sk",
   "license": "UNLICENSED",
