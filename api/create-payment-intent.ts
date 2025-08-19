@@ -1,5 +1,4 @@
 import Stripe from 'stripe';
-import { NextResponse } from 'next/server';
 
 const LICENSE_PRICE_EUR = 2900;
 
@@ -9,7 +8,7 @@ function log(ctx: string, data: any) {
 }
 
 export async function OPTIONS() {
-  const res = new NextResponse(null, { status: 200 });
+  const res = new Response(null, { status: 200 });
   res.headers.set('Access-Control-Allow-Origin', '*');
   res.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -32,16 +31,16 @@ export async function POST(req: Request) {
     const email = (body?.email ?? '').toString().trim();
     if (!email || !email.includes('@')) {
       log('validation-error', { email });
-      return new NextResponse(JSON.stringify({ ok: false, error: 'INVALID_EMAIL' }), { status: 400, headers: resHeaders });
+      return new Response(JSON.stringify({ ok: false, error: 'INVALID_EMAIL' }), { status: 400, headers: resHeaders });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey?.startsWith('sk_')) {
       log('config-error', { hasKey: !!stripeSecretKey, prefix: stripeSecretKey?.slice(0, 3) });
-      return new NextResponse(JSON.stringify({ ok: false, error: 'CONFIG_MISSING_STRIPE_SECRET_KEY' }), { status: 500, headers: resHeaders });
+      return new Response(JSON.stringify({ ok: false, error: 'CONFIG_MISSING_STRIPE_SECRET_KEY' }), { status: 500, headers: resHeaders });
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-04-10' });
 
     const existing = await stripe.customers.list({ email, limit: 1 });
     const customer = existing.data[0] ?? (await stripe.customers.create({ email }));
@@ -56,7 +55,7 @@ export async function POST(req: Request) {
 
     log('success', { customerId: customer.id, paymentIntent: paymentIntent.id });
 
-    return new NextResponse(JSON.stringify({
+    return new Response(JSON.stringify({
       ok: true,
       clientSecret: paymentIntent.client_secret,
       diagnostics: {
@@ -69,7 +68,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     log('exception', { message: err?.message, type: err?.type, stack: err?.stack?.split('\n')?.slice(0, 3) });
     const status = err?.statusCode || 500;
-    return new NextResponse(JSON.stringify({
+    return new Response(JSON.stringify({
       ok: false,
       error: err?.code || 'UNEXPECTED_ERROR',
       message: err?.message || 'Unexpected error',
