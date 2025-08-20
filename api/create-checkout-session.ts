@@ -45,7 +45,7 @@ export default async function handler(req: any, res: any) {
             return res.status(500).json({ ok: false, error: { type: 'config', code: 'CONFIG_MISSING_STRIPE_SECRET_KEY', message: 'Server configuration error.' } });
         }
         
-        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' });
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-04-10' });
         
         const origin = req.headers.origin || 'https://podcast-mixer.studio';
 
