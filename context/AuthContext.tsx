@@ -12,15 +12,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { error: 'Please enter a valid email address.' };
     }
 
-    // Hardcoded Stripe Payment Link as requested by the user.
-    const stripePaymentLink = 'https://buy.stripe.com/bJe14ogcG5bi9QR47g00000';
-
     try {
-      const url = `${stripePaymentLink}?prefilled_email=${encodeURIComponent(email)}`;
-      window.location.href = url;
+      const response = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.url) {
+        console.error("Failed to create checkout session:", data);
+        return { error: data.message || 'Could not create checkout session. Please try again later.' };
+      }
+      
+      window.location.href = data.url;
+
     } catch (err: any) {
-      console.error("Error during redirect to Stripe:", err);
-      return { error: 'Could not redirect to payment page. Please try again.' };
+      console.error("Error calling create-checkout API:", err);
+      return { error: 'Could not connect to the payment server. Please try again.' };
     }
 
     // Return a promise that never resolves to keep the UI in a loading state
