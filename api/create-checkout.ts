@@ -1,14 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 
-const stripeKey = process.env.STRIPE_SECRET_KEY;
-
-// Stripe recommends initializing the client outside the request handler.
-const stripe = new Stripe(String(stripeKey), {
-  apiVersion: '2025-07-30.basil',
-  typescript: true,
-});
-
 const LICENSE_PRICE_EUR_CENTS = 2900;
 const PRODUCT_NAME = 'Podcast Mixer PRO License';
 
@@ -30,10 +22,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+
         if (!stripeKey || !stripeKey.startsWith('sk_')) {
             console.error('Stripe secret key is not configured or invalid.');
             return res.status(500).json({ ok: false, error: 'Server configuration error.' });
         }
+
+        // Initialize Stripe inside the handler to catch potential key errors
+        const stripe = new Stripe(stripeKey, {
+            apiVersion: '2025-07-30.basil',
+            typescript: true,
+        });
 
         const { email } = req.body;
         const quantity = 1; // The UI does not support quantity selection.
