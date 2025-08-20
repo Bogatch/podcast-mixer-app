@@ -13,7 +13,6 @@ import { ReorderModal } from './components/ReorderModal';
 import { HelpModal } from './components/HelpModal';
 import { ExportModal, ExportOptions } from './components/ExportModal';
 import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
-import { AuthProvider } from './context/AuthContext';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -311,6 +310,19 @@ const AppContent: React.FC = () => {
         }
     };
     loadInitialProject();
+  }, []);
+
+  // Handle redirects from Stripe
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('payment_success')) {
+      handleInfo('info_payment_success', 10000);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    if (urlParams.has('payment_cancel')) {
+      handleError('error_payment_cancelled');
+      window.history.replaceState(null, '', window.location.pathname);
+    }
   }, []);
 
   const getProjectData = () => {
@@ -1031,11 +1043,9 @@ const App: React.FC = () => {
 
   return (
     <I18nContext.Provider value={{ t, setLocale, locale }}>
-      <AuthProvider>
-        <ProProvider>
-          <AppContent />
-        </ProProvider>
-      </AuthProvider>
+      <ProProvider>
+        <AppContent />
+      </ProProvider>
     </I18nContext.Provider>
   );
 }

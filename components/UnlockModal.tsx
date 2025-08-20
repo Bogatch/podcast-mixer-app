@@ -1,7 +1,6 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon, KeyIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
-import { useAuth } from '../context/AuthContext';
 import { usePro } from '../context/ProContext';
 
 interface UnlockModalProps {
@@ -17,29 +16,47 @@ const Feature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     </li>
 );
 
-const BuyLicenseForm: React.FC = () => {
+const PurchaseForm: React.FC = () => {
     const { t } = useContext(I18nContext);
-    const { createCheckout } = useAuth();
-    
     const [email, setEmail] = useState('');
-    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const handlePurchase = async (e: React.FormEvent) => {
+    const [error, setError] = useState('');
+    
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+            return;
+        }
         setIsLoading(true);
+        setError('');
 
-        const result = await createCheckout(email);
+        try {
+            const response = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            
+            const data = await response.json();
 
-        if (result.error) {
-            setError(t('unlock_modal_checkout_failed'));
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error?.message || t('unlock_modal_checkout_failed'));
+            }
+
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(t('unlock_modal_checkout_failed'));
+            }
+
+        } catch (err: any) {
+            setError(err.message);
             setIsLoading(false);
         }
     };
-    
+
     return (
-        <form onSubmit={handlePurchase} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                <label htmlFor="email_purchase" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
                <div className="relative">
@@ -59,19 +76,16 @@ const BuyLicenseForm: React.FC = () => {
                </div>
             </div>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
             <div className="pt-2">
                <button
                     type="submit"
-                    disabled={isLoading || !email}
+                    disabled={!email || isLoading}
                     className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
                 >
                     {isLoading ? (
-                        <>
-                            <SpinnerIcon className="w-6 h-6 mr-3 animate-spin" />
-                            <span>{t('unlock_modal_creating_checkout')}</span>
-                        </>
+                        <SpinnerIcon className="w-6 h-6 animate-spin" />
                     ) : (
                         <>
                             <CreditCardIcon className="w-6 h-6 mr-3" />
@@ -84,6 +98,7 @@ const BuyLicenseForm: React.FC = () => {
     );
 };
 
+
 const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onActivationSuccess }) => {
     const { t } = useContext(I18nContext);
     const { verifyLicense, isLoading } = usePro();
@@ -95,7 +110,7 @@ const ActivateLicenseForm: React.FC<{onActivationSuccess: () => void}> = ({ onAc
     const [codeError, setCodeError] = useState('');
     
     const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-    const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{2,3}$/.test(code), [code]);
+    const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{3}$/.test(code), [code]);
 
     const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -300,7 +315,7 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
                                             {activeTab === 'buy' ? t('purchase_form_subtitle') : t('unlock_form_subtitle')}
                                         </p>
                                     </div>
-                                    {activeTab === 'buy' ? <BuyLicenseForm /> : <ActivateLicenseForm onActivationSuccess={handleActivationSuccess} />}
+                                    {activeTab === 'buy' ? <PurchaseForm /> : <ActivateLicenseForm onActivationSuccess={handleActivationSuccess} />}
                                 </div>
                             </>
                         )}

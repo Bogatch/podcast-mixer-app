@@ -17,6 +17,7 @@ export const translations = {
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
     'info_local_project_saved': 'Your project has been saved to this browser.',
     'info_pro_activated': 'PRO version successfully activated! All features are now unlocked.',
+    'info_payment_success': 'Thank you for your purchase! Your license key has been sent to your email. Please use the "Enter License Key" tab to activate it.',
 
     // Errors
     'error_export_failed': 'Export failed.',
@@ -33,6 +34,7 @@ export const translations = {
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
+    'error_payment_cancelled': 'Your payment was cancelled. You can try again at any time.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
     'validation_email_invalid': 'Please enter a valid email address.',
     'validation_code_invalid': 'Code must be in the format XXX-XXX-XXX.',
@@ -171,6 +173,12 @@ export const translations = {
     'activation_success_title': 'Activation Successful!',
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
 
+    // Payment Modal
+    'payment_modal_title': 'Complete Your Purchase',
+    'payment_modal_pay_button': 'Pay €29.00',
+    'payment_modal_error_title': 'Payment Error',
+    'payment_modal_error_init': 'Failed to initialize payment.',
+
     // Help Modal
     'help_title': 'Help & Feature Guide',
     'help_tracks_title': 'Uploading and Managing Tracks',
@@ -235,6 +243,7 @@ export const translations = {
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
     'info_local_project_saved': 'Váš projekt bol uložený do tohto prehliadača.',
     'info_pro_activated': 'PRO verzia bola úspešne aktivovaná! Všetky funkcie sú teraz odomknuté.',
+    'info_payment_success': 'Ďakujeme za Váš nákup! Váš licenčný kľúč bol odoslaný na Váš e-mail. Prosím, použite záložku "Zadať Licenčný Kľúč" na jeho aktiváciu.',
     
     // Errors
     'error_export_failed': 'Export zlyhal.',
@@ -251,6 +260,7 @@ export const translations = {
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
+    'error_payment_cancelled': 'Vaša platba bola zrušená. Môžete to skúsiť znova kedykoľvek.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
     'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
     'validation_code_invalid': 'Kód musí byť vo formáte XXX-XXX-XXX.',
@@ -388,6 +398,12 @@ export const translations = {
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
+
+    // Payment Modal
+    'payment_modal_title': 'Dokončite Váš Nákup',
+    'payment_modal_pay_button': 'Zaplatiť 29,00 €',
+    'payment_modal_error_title': 'Chyba Platby',
+    'payment_modal_error_init': 'Nepodarilo sa inicializovať platbu.',
 
     // Help Modal
     'help_title': 'Pomocník a Sprievodca Funkciami',
