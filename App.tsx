@@ -15,7 +15,6 @@ import { ExportModal, ExportOptions } from './components/ExportModal';
 import { I18nContext, translations, Locale, TranslationKey } from './lib/i18n';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
-import { GoogleGenAI, Type } from "@google/genai";
 import { QuestionMarkCircleIcon } from './components/icons';
 
 
@@ -827,44 +826,25 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     setIsSuggestingContent(true);
     setError(null);
 
-    const trackList = tracks.map(t => `- ${t.name} (type: ${t.type})`).join('\n');
-    const prompt = `
-      You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative title and a short, engaging description for a podcast episode. The show is about music, interviews and jingles.
-      
-      Track list:
-      ${trackList}
-
-      Provide the response in a JSON format.
-    `;
-
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: {
-                type: Type.STRING,
-                description: 'A creative and catchy title for the podcast episode.'
-              },
-              description: {
-                type: Type.STRING,
-                description: 'A short, engaging description (2-3 sentences) for the podcast episode.'
-              }
-            }
-          }
-        }
+      const trackData = tracks.map(t => ({ name: t.name, type: t.type }));
+      
+      const response = await fetch('/api/suggest-content', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tracks: trackData }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to get suggestion from server.');
+      }
       
-      const resultText = response.text.trim();
-      const resultJson = JSON.parse(resultText);
-      
-      setSuggestedTitle(resultJson.title || '');
-      setSuggestedDescription(resultJson.description || '');
+      setSuggestedTitle(result.title || '');
+      setSuggestedDescription(result.description || '');
 
     } catch (err) {
       handleError('error_suggestion_failed', {}, err);

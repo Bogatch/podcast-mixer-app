@@ -40,7 +40,7 @@ export default async function handler(req: any, res: any) {
             return res.status(500).json({ ok: false, error: { type: 'config', code: 'CONFIG_MISSING_STRIPE_SECRET_KEY', message: 'Server configuration error.' } });
         }
 
-        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-04-10' });
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' });
 
         const existing = await stripe.customers.list({ email, limit: 1 });
         const customer = existing.data[0] ?? (await stripe.customers.create({ email }));
