@@ -374,12 +374,16 @@ const AppContent: React.FC = () => {
   const handleSaveProject = async (name: string, idToUpdate?: number) => {
     setIsSaving(true);
     try {
-        const project: SavedProject = {
-            id: idToUpdate,
+        const project: Omit<SavedProject, 'id'> & { id?: number } = {
             name,
             createdAt: new Date().toISOString(),
             projectData: getProjectData()
         };
+
+        if (idToUpdate) {
+            project.id = idToUpdate;
+        }
+
         const savedId = await db.saveProject(project);
         setProjectId(idToUpdate ?? savedId);
         setProjectName(name);
