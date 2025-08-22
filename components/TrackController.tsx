@@ -1,4 +1,4 @@
-import React, { useRef, useContext, useState, useEffect } from 'react';
+import React, { useRef, useContext } from 'react';
 import type { Track } from '../types';
 import { TrashIcon, MusicNoteIcon, UserIcon, MarkerPinIcon, PlayIcon, PauseIcon, DragHandleIcon, BellIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
@@ -48,18 +48,9 @@ export const TrackController: React.FC<TrackControllerProps> = ({
   onDragOver
 }) => {
   const { t } = useContext(I18nContext);
-  const [vocalStartTimeInput, setVocalStartTimeInput] = useState(track.vocalStartTime?.toFixed(2) || '0.00');
   const trackColor = COLORS[track.type];
   const Icon = ICONS[track.type];
   const relinkInputRef = useRef<HTMLInputElement>(null);
-  const vocalTimeInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (document.activeElement !== vocalTimeInputRef.current) {
-      setVocalStartTimeInput(track.vocalStartTime?.toFixed(2) ?? '0.00');
-    }
-  }, [track.vocalStartTime]);
-
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -67,29 +58,9 @@ export const TrackController: React.FC<TrackControllerProps> = ({
     }
   };
 
-  const handleVocalTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target;
-    if (value === '' || /^\d*[,.]?\d*$/.test(value)) {
-      setVocalStartTimeInput(value);
-    }
-  };
-
-  const handleVocalTimeInputBlur = () => {
-    const sanitizedValue = vocalStartTimeInput.replace(',', '.');
-    let finalValue = parseFloat(sanitizedValue);
-    if (isNaN(finalValue) || finalValue < 0) {
-      finalValue = 0;
-    }
-    const clampedValue = Math.min(track.duration, finalValue);
-    const roundedValue = Math.round(clampedValue * 100) / 100;
-    onVocalStartTimeChange(roundedValue);
-    setVocalStartTimeInput(roundedValue.toFixed(2));
-  };
-
-  const handleVocalTimeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur();
-    }
+  const handleVocalTimeChange = (value: number) => {
+    const clampedValue = Math.max(0, Math.min(track.duration, value));
+    onVocalStartTimeChange(clampedValue);
   };
   
   const handleVocalTimeAdjust = (amount: number) => {
@@ -181,19 +152,20 @@ export const TrackController: React.FC<TrackControllerProps> = ({
               max={track.duration}
               step="0.1"
               value={track.vocalStartTime}
-              onChange={(e) => onVocalStartTimeChange(parseFloat(e.target.value))}
+              onChange={(e) => handleVocalTimeChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-red-500"
             />
             <div className="flex items-center flex-shrink-0">
                 <input
                   id={`vocal-start-${track.id}`}
-                  ref={vocalTimeInputRef}
-                  type="text"
-                  value={vocalStartTimeInput}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={track.duration}
+                  value={track.vocalStartTime?.toFixed(2) ?? '0.00'}
                   onFocus={(e) => e.target.select()}
-                  onChange={handleVocalTimeInputChange}
-                  onBlur={handleVocalTimeInputBlur}
-                  onKeyDown={handleVocalTimeInputKeyDown}
+                  onChange={(e) => handleVocalTimeChange(parseFloat(e.target.value) || 0)}
+                  onBlur={(e) => onVocalStartTimeChange(Math.round(parseFloat(e.target.value) * 100) / 100)}
                   className="w-20 bg-gray-800/60 text-red-400 font-mono text-sm sm:text-base text-center py-1 rounded-l-md border-y border-l border-gray-600 focus:ring-red-500 focus:border-red-500 focus:z-10 relative"
                 />
                 <div className="flex flex-col -ml-px">

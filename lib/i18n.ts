@@ -9,14 +9,20 @@ export const translations = {
     'export': 'Export',
     'exporting': 'Exporting...',
     'save_project': 'Save Project',
+    'save_session': 'Save Session',
     'saving': 'Saving...',
     'copy': 'Copy',
     'copied': 'Copied!',
 
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
-    'info_local_project_saved': 'Your project has been saved to this browser.',
+    'info_local_project_saved': 'Your current session has been saved to this browser.',
     'info_pro_activated': 'PRO version successfully activated! All features are now unlocked.',
+    'info_project_saved': 'Project "{{projectName}}" has been saved.',
+    'info_project_loaded': 'Project "{{projectName}}" has been loaded.',
+    'info_project_deleted': 'Project "{{projectName}}" has been deleted.',
+    'info_normalizing_started': 'Normalizing track volumes... this may take a moment.',
+    'info_normalizing_finished': 'All track volumes have been normalized.',
 
     // Errors
     'error_export_failed': 'Export failed.',
@@ -33,17 +39,21 @@ export const translations = {
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
+    'error_project_name_required': 'Please enter a project name.',
+    'error_project_load_failed': 'Failed to load project "{{projectName}}". The data may be corrupted.',
+    'error_project_delete_failed': 'Failed to delete project "{{projectName}}".',
+    'error_normalize_track_failed': 'Normalization failed for track {{fileName}}.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
-    'validation_email_invalid': 'Please enter a valid email address.',
-    'validation_code_invalid': 'Code must be in the format XXX-XXX-XXX.',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
     'header_subtitle': 'Upload, arrange, and mix your audio tracks.',
+    'header_help': 'Help & Function Guide',
     'header_get_pro': 'Get PRO Version',
     'header_pro_version': 'PRO Version',
     'header_deactivate': 'Deactivate License',
-    'show_help_guide': 'Help & Function Guide',
+    'download_mac': 'Download for Mac',
+    'download_win': 'Download for Windows',
     
     // Language Switcher
     'language': 'Language',
@@ -58,10 +68,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Add Files',
-    'uploader_music': '🎵 Music Track',
-    'uploader_spoken': '🎙️ Voice Track',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Background Music',
+    'uploader_music': 'Music',
+    'uploader_spoken': 'Spoken',
+    'uploader_jingle': 'Jingle',
+    'uploader_underlay': 'Background Music',
     'uploader_info': 'You can upload multiple files at once, except for background music (only one).',
 
     // MixerControls
@@ -73,6 +83,8 @@ export const translations = {
     'ai_title': 'Smart Cutting (AI)',
     'ai_trim': 'Trim Silence / Smart Transitions',
     'ai_threshold': 'Silence Threshold',
+    'normalize_tracks_button': 'Normalize Track Volumes',
+    'normalizing': 'Normalizing...',
     'ai_content_assistant_title': 'AI Content Assistant',
     'ai_content_suggest_button': 'Suggest Title & Description',
     'ai_content_suggesting_button': 'Generating...',
@@ -85,6 +97,7 @@ export const translations = {
     'output_audio_not_supported': 'Your browser does not support the audio element.',
     'output_export_audio': 'Export Audio',
     'output_export_project': 'Export Project',
+    'export_project_progress': 'Exporting... {{progress}}%',
     'output_mix': 'Generate Mix',
     'output_remix': 'Regenerate Mix',
     'output_processing': 'Processing...',
@@ -151,7 +164,7 @@ export const translations = {
 
     // Unlock Modal
     'unlock_modal_title': 'Get Podcast Mixer PRO',
-    'unlock_modal_subtitle': 'Unlock all features and export your projects without limitations.',
+    'unlock_modal_subtitle': 'Unlock all features to create and export your creations without limitations.',
     'unlock_buy_license_tab': 'Buy License',
     'unlock_enter_key_tab': 'Enter License Key',
     'unlock_form_title': 'Activate PRO Version',
@@ -165,11 +178,13 @@ export const translations = {
     'unlock_modal_creating_checkout': 'Redirecting to payment...',
     'unlock_modal_checkout_failed': 'Could not create checkout session. Please try again later.',
     'auth_email': 'Your Email',
-    'auth_license_key': 'License Key (e.g., AbC-123-dEf)',
+    'auth_license_key': 'License Key (e.g., ABC-123-DEF)',
     'verify_and_activate': 'Verify & Activate',
     'verifying': 'Verifying...',
     'activation_success_title': 'Activation Successful!',
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
+    'validation_email_invalid': 'Please enter a valid email address.',
+    'validation_code_invalid': 'The license key must be in the format XXX-XXX-XXX.',
 
     // Help Modal
     'help_title': 'Help & Feature Guide',
@@ -216,6 +231,17 @@ export const translations = {
     'help_export_project_title': 'Export Project',
     'help_export_project_desc': 'In the PRO version, you can create a ZIP archive containing the final mix and all original audio files. Ideal for backing up.',
     
+    // Project Manager
+    'project_manager_title': 'Project Manager',
+    'project_name_label': 'Project Name',
+    'save_as_new_project': 'Save as New',
+    'update_project': 'Update Project',
+    'load_project': 'Load',
+    'delete_project': 'Delete',
+    'confirm_delete_project': 'Are you sure you want to delete the project "{{projectName}}"? This action cannot be undone.',
+    'no_saved_projects': 'No saved projects found.',
+    'saved_projects': 'Saved Projects',
+    
     // Footer
     'footer_version': 'Version',
   },
@@ -227,14 +253,20 @@ export const translations = {
     'export': 'Exportovať',
     'exporting': 'Exportuje sa...',
     'save_project': 'Uložiť Projekt',
+    'save_session': 'Uložiť Reláciu',
     'saving': 'Ukladá sa...',
     'copy': 'Kopírovať',
     'copied': 'Skopírované!',
     
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
-    'info_local_project_saved': 'Váš projekt bol uložený do tohto prehliadača.',
+    'info_local_project_saved': 'Vaša aktuálna relácia bola uložená do tohto prehliadača.',
     'info_pro_activated': 'PRO verzia bola úspešne aktivovaná! Všetky funkcie sú teraz odomknuté.',
+    'info_project_saved': 'Projekt "{{projectName}}" bol uložený.',
+    'info_project_loaded': 'Projekt "{{projectName}}" bol načítaný.',
+    'info_project_deleted': 'Projekt "{{projectName}}" bol zmazaný.',
+    'info_normalizing_started': 'Normalizujem hlasitosti stôp... môže to chvíľu trvať.',
+    'info_normalizing_finished': 'Hlasitosti všetkých stôp boli normalizované.',
     
     // Errors
     'error_export_failed': 'Export zlyhal.',
@@ -251,17 +283,21 @@ export const translations = {
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
+    'error_project_name_required': 'Zadajte názov projektu.',
+    'error_project_load_failed': 'Načítanie projektu "{{projectName}}" zlyhalo. Dáta môžu byť poškodené.',
+    'error_project_delete_failed': 'Nepodarilo sa zmazať projekt "{{projectName}}".',
+    'error_normalize_track_failed': 'Normalizácia stopy {{fileName}} zlyhala.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
-    'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
-    'validation_code_invalid': 'Kód musí byť vo formáte XXX-XXX-XXX.',
-
+    
     // Header
     'header_title': 'Podcast Mixer Studio',
     'header_subtitle': 'Nahrajte, usporiadajte a mixujte svoje zvukové stopy.',
+    'header_help': 'Pomocník a sprievodca funkciami',
     'header_get_pro': 'Získať PRO Verziu',
     'header_pro_version': 'PRO Verzia',
     'header_deactivate': 'Deaktivovať Licenciu',
-    'show_help_guide': 'Pomocník a sprievodca funkciami',
+    'download_mac': 'Stiahnuť pre Mac',
+    'download_win': 'Stiahnuť pre Windows',
 
     // Language Switcher
     'language': 'Jazyk',
@@ -276,10 +312,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Pridať Súbory',
-    'uploader_music': '🎵 Hudobný súbor',
-    'uploader_spoken': '🎙️ Hlasová stopa',
-    'uploader_jingle': '🔔 Znelka, alebo jingle',
-    'uploader_underlay': '🎼 Hudobný podkres',
+    'uploader_music': 'Hudba',
+    'uploader_spoken': 'Slovo',
+    'uploader_jingle': 'Znelka/Jingle',
+    'uploader_underlay': 'Hudba do pozadia',
     'uploader_info': 'Môžete nahrať viacero súborov naraz, okrem hudby do pozadia (iba jeden).',
 
     // MixerControls
@@ -290,7 +326,9 @@ export const translations = {
     'mixer_underlay_volume': 'Hlasitosť hudby v pozadí',
     'ai_title': 'Inteligentné Strihanie (AI)',
     'ai_trim': 'Strihať ticho / Inteligentné prechody',
-    'ai_threshold': 'Prah stíšenia',
+    'ai_threshold': 'Prah ticha',
+    'normalize_tracks_button': 'Normalizovať Hlasitosti Stôp',
+    'normalizing': 'Normalizujem...',
     'ai_content_assistant_title': 'AI Asistent Obsahu',
     'ai_content_suggest_button': 'Navrhnúť Názov a Popis',
     'ai_content_suggesting_button': 'Generuje sa...',
@@ -303,6 +341,7 @@ export const translations = {
     'output_audio_not_supported': 'Váš prehliadač nepodporuje prehrávanie zvuku.',
     'output_export_audio': 'Exportovať Audio',
     'output_export_project': 'Exportovať Projekt',
+    'export_project_progress': 'Exportuje sa... {{progress}}%',
     'output_mix': 'Generovať Mix',
     'output_remix': 'Znovu Generovať Mix',
     'output_processing': 'Spracúva sa...',
@@ -369,7 +408,7 @@ export const translations = {
 
     // Unlock Modal
     'unlock_modal_title': 'Získať Podcast Mixer PRO',
-    'unlock_modal_subtitle': 'Odomknite všetky funkcie a exportujte svoje projekty bez obmedzení.',
+    'unlock_modal_subtitle': 'Odomknite všetky funkcie a exportujte svoje výtvory bez obmedzení.',
     'unlock_buy_license_tab': 'Kúpiť Licenciu',
     'unlock_enter_key_tab': 'Zadať Licenčný Kľúč',
     'unlock_form_title': 'Aktivovať PRO Verziu',
@@ -383,11 +422,13 @@ export const translations = {
     'unlock_modal_creating_checkout': 'Presmerovávam na platbu...',
     'unlock_modal_checkout_failed': 'Nepodarilo sa vytvoriť platobnú bránu. Skúste to prosím neskôr.',
     'auth_email': 'Váš E-mail',
-    'auth_license_key': 'Licenčný kľúč (napr. AbC-123-dEf)',
+    'auth_license_key': 'Licenčný kľúč (napr. ABC-123-DEF)',
     'verify_and_activate': 'Overiť a Aktivovať',
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
+    'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
+    'validation_code_invalid': 'Licenčný kľúč musí byť vo formáte XXX-XXX-XXX.',
 
     // Help Modal
     'help_title': 'Pomocník a Sprievodca Funkciami',
@@ -419,7 +460,7 @@ export const translations = {
     'help_ai_p1': 'Tieto nástroje využívajú jednoduchú analýzu zvuku na automatické vylepšenie vášho mixu.',
     'help_ai_trim_title': 'Strihať ticho:',
     'help_ai_trim_desc': 'Ak je funkcia zapnutá, aplikácia automaticky odstráni tiché pasáže na začiatku a na konci každej stopy. Tým sa zabezpečia plynulejšie a rýchlejšie prechody.',
-    'help_ai_threshold_title': 'Prah stíšenia:',
+    'help_ai_threshold_title': 'Prah ticha:',
     'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyššie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
 
     'help_export_title': 'Konečný Výstup a Export',
@@ -434,55 +475,35 @@ export const translations = {
     'help_export_project_title': 'Exportovať Projekt:',
     'help_export_project_desc': 'V PRO verzii môžete vytvoriť ZIP archív, ktorý obsahuje finálny mix a všetky pôvodné zvukové súbory. Ideálne pre zálohovanie.',
 
+    // Project Manager
+    'project_manager_title': 'Správca Projektov',
+    'project_name_label': 'Názov Projektu',
+    'save_as_new_project': 'Uložiť ako Nový',
+    'update_project': 'Aktualizovať Projekt',
+    'load_project': 'Načítať',
+    'delete_project': 'Zmazať',
+    'confirm_delete_project': 'Naozaj chcete zmazať projekt "{{projectName}}"? Táto akcia sa nedá vrátiť späť.',
+    'no_saved_projects': 'Nenašli sa žiadne uložené projekty.',
+    'saved_projects': 'Uložené Projekty',
+    
     // Footer
     'footer_version': 'Verzia',
   },
-  de: {
-    'uploader_music': '🎵 Musikspur',
-    'uploader_spoken': '🎙️ Sprachspur',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Hintergrundmusik',
-  },
-  fr: {
-    'uploader_music': '🎵 Piste Musicale',
-    'uploader_spoken': '🎙️ Piste Vocale',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Musique de Fond',
-  },
-  hu: {
-    'uploader_music': '🎵 Zenei Sáv',
-    'uploader_spoken': '🎙️ Hangsáv',
-    'uploader_jingle': '🔔 Intro / Szignál',
-    'uploader_underlay': '🎼 Aláfestő Zene',
-  },
-  pl: {
-    'uploader_music': '🎵 Ścieżka Muzyczna',
-    'uploader_spoken': '🎙️ Ścieżka Głosowa',
-    'uploader_jingle': '🔔 Intro / Dżingiel',
-    'uploader_underlay': '🎼 Podkład Muzyczny',
-  },
-  es: {
-    'uploader_music': '🎵 Pista de Música',
-    'uploader_spoken': '🎙️ Pista de Voz',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Música de Fondo',
-  },
-  it: {
-    'uploader_music': '🎵 Traccia Musicale',
-    'uploader_spoken': '🎙️ Traccia Vocale',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Sottofondo Musicale',
-  }
+  de: {},
+  fr: {},
+  hu: {},
+  pl: {},
+  es: {},
+  it: {}
 };
 
 // Fill empty languages with slovak as fallback to avoid errors
 Object.keys(translations).forEach(lang => {
-    if (lang !== 'en' && lang !== 'sk') {
-        const key = lang as Locale;
+    if (lang !== 'en' && lang !== 'sk' && Object.keys(translations[lang as Locale]).length === 0) {
         // @ts-ignore
-        translations[key] = { ...translations['sk'], ...translations[key] };
+        translations[lang as Locale] = translations['sk'];
     }
-});
+})
 
 
 export type Locale = keyof typeof translations;
@@ -495,5 +516,5 @@ export const I18nContext = React.createContext<{
 }>({
     t: (key) => key,
     setLocale: () => {},
-    locale: 'en',
+    locale: 'sk',
 });

@@ -1,6 +1,6 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
-    MicIcon, ChevronDownIcon, SparklesIcon, SaveIcon, SpinnerIcon,
+    MicIcon, QuestionMarkCircleIcon, ChevronDownIcon, SparklesIcon, SaveIcon, SpinnerIcon,
     UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon,
     CheckIcon, KeyIcon
 } from './icons';
@@ -9,9 +9,10 @@ import { usePro } from '../context/ProContext';
 
 
 interface HeaderProps {
+    onOpenHelp: () => void;
     onOpenUnlockModal: () => void;
-    onSaveProject: () => void;
-    isSaving: boolean;
+    onSaveSession: () => void;
+    isSavingSession: boolean;
     hasTracks: boolean;
 }
 
@@ -33,7 +34,17 @@ const LanguageOption: React.FC<{
 
 const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
-    const { logout, isPro, proUser } = usePro();
+    const { logout, isPro } = usePro();
+
+    const DownloadButton: React.FC<{ label: string }> = ({ label }) => (
+        <button
+          disabled // Disabled for now as per user request
+          title={t('tooltip_coming_soon')}
+          className="px-3 py-2 bg-gray-700/80 text-sm font-medium text-gray-300 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed hidden sm:block"
+        >
+          {label}
+        </button>
+    );
 
     if (!isPro) {
       return (
@@ -49,21 +60,16 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
 
     return (
         <div className="flex items-center space-x-2 sm:space-x-3">
-             <div className="text-right">
-                <div className="flex items-center justify-center space-x-2 px-3 py-1.5 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
-                  <CheckIcon className="w-5 h-5" />
-                  <span className="text-sm">{t('header_pro_version')}</span>
-                </div>
-                {proUser?.email && (
-                    <p className="text-xs text-gray-500 mt-1 truncate max-w-[160px]" title={proUser.email}>
-                        {proUser.email}
-                    </p>
-                )}
+            <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
+              <CheckIcon className="w-5 h-5" />
+              <span className="text-sm">{t('header_pro_version')}</span>
             </div>
+            <DownloadButton label={t('download_mac')} />
+            <DownloadButton label={t('download_win')} />
             <button
               onClick={logout}
               title={t('header_deactivate')}
-              className="flex items-center self-start space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
             >
               <KeyIcon className="w-5 h-5 text-red-400" />
             </button>
@@ -72,8 +78,9 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
 };
 
 
-export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject, isSaving, hasTracks }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenHelp, onOpenUnlockModal, onSaveSession, isSavingSession, hasTracks }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
+  const { isPro } = usePro();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   
@@ -114,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject
           <p className="text-sm sm:text-base text-gray-400">{t('header_subtitle')}</p>
         </div>
       </div>
-      <div className="flex items-start space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="relative" ref={langRef}>
             <button
               onClick={() => setIsLangOpen(!isLangOpen)}
@@ -141,16 +148,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject
               </div>
             )}
           </div>
+          <button 
+            onClick={onOpenHelp}
+            title={t('header_help')}
+            className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+          >
+             <QuestionMarkCircleIcon className="w-5 h-5"/>
+             <span className="hidden sm:inline">{t('help_title')}</span>
+          </button>
           
           {hasTracks && (
             <button
-              onClick={onSaveProject}
-              disabled={isSaving}
-              title={t('save_project')}
+              onClick={onSaveSession}
+              disabled={isSavingSession}
+              title={t('save_session')}
               className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 disabled:bg-gray-600 text-sm font-medium text-white rounded-md transition-colors"
             >
-              {isSaving ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
-              <span className="hidden sm:inline">{isSaving ? t('saving') : t('save_project')}</span>
+              {isSavingSession ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
+              <span className="hidden sm:inline">{isSavingSession ? t('saving') : t('save_session')}</span>
             </button>
           )}
 

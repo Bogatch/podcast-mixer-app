@@ -1,5 +1,5 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon } from './icons';
+import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon, DocumentChartBarIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
 import { I18nContext, TranslationKey } from '../lib/i18n';
 import { usePro } from '../context/ProContext';
@@ -25,6 +25,8 @@ interface MixerControlsProps {
   onOpenUnlockModal: () => void;
   onExportAudio: () => void;
   onExportProject: () => void;
+  isExportingProject: boolean;
+  exportProgress: number | null;
   mixedAudioUrl: string | null;
   totalDuration: number;
   demoMaxDuration: number;
@@ -35,6 +37,8 @@ interface MixerControlsProps {
   isSuggestingContent: boolean;
   suggestedTitle: string;
   suggestedDescription: string;
+  onNormalizeTracks: () => void;
+  isNormalizing: boolean;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -107,6 +111,8 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   onOpenUnlockModal,
   onExportAudio,
   onExportProject,
+  isExportingProject,
+  exportProgress,
   mixedAudioUrl,
   totalDuration,
   demoMaxDuration,
@@ -117,12 +123,14 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   isSuggestingContent,
   suggestedTitle,
   suggestedDescription,
+  onNormalizeTracks,
+  isNormalizing,
 }) => {
   const { t } = useContext(I18nContext);
   const { isPro } = usePro();
 
   const canMix = !isDisabled && !isMixing;
-  const canAttemptExport = !!mixedAudioUrl && !isMixing;
+  const canAttemptExport = !!mixedAudioUrl && !isMixing && !isExportingProject;
   const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
   const canSuggest = !isDisabled && !isMixing && !isSuggestingContent && hasTracks;
 
@@ -151,16 +159,19 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
                 disabled={isMixing}
               />
-              <input
-                type="number"
-                value={mixDuration.toFixed(1)}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => onMixDurationChange(Math.max(0, Math.min(10, parseFloat(e.target.value) || 0)))}
-                className="w-24 bg-gray-800/60 text-teal-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-teal-500 focus:border-teal-500"
-                min="0"
-                max="10"
-                step="0.1"
-              />
+              <div className="relative w-24">
+                <input
+                    type="number"
+                    value={mixDuration.toFixed(1)}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => onMixDurationChange(Math.max(0, Math.min(10, parseFloat(e.target.value) || 0)))}
+                    className="w-full bg-gray-800/60 text-teal-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-teal-500 focus:border-teal-500"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">s</span>
+              </div>
             </div>
           </div>
         )}
@@ -186,16 +197,19 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
                   disabled={isMixing}
                 />
-                <input
-                  type="number"
-                  value={(duckingAmount * 100).toFixed(0)}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => onDuckingAmountChange(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100)}
-                  className="w-24 bg-gray-800/60 text-pink-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-pink-500 focus:border-pink-500"
-                  min="0"
-                  max="100"
-                  step="1"
-                />
+                <div className="relative w-24">
+                  <input
+                    type="number"
+                    value={(duckingAmount * 100).toFixed(0)}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => onDuckingAmountChange(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100)}
+                    className="w-full bg-gray-800/60 text-pink-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-pink-500 focus:border-pink-500"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                </div>
               </div>
             </div>
             <div className="mb-6">
@@ -217,16 +231,19 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
                   disabled={isMixing}
                 />
-                <input
-                  type="number"
-                  value={rampUpDuration.toFixed(1)}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => onRampUpDurationChange(Math.max(0.1, Math.min(5, parseFloat(e.target.value) || 0)))}
-                  className="w-24 bg-gray-800/60 text-sky-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-sky-500 focus:border-sky-500"
-                  min="0.1"
-                  max="5"
-                  step="0.1"
-                />
+                 <div className="relative w-24">
+                  <input
+                    type="number"
+                    value={rampUpDuration.toFixed(1)}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => onRampUpDurationChange(Math.max(0.1, Math.min(5, parseFloat(e.target.value) || 0)))}
+                    className="w-full bg-gray-800/60 text-sky-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-sky-500 focus:border-sky-500"
+                    min="0.1"
+                    max="5"
+                    step="0.1"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">s</span>
+                </div>
               </div>
             </div>
           </>
@@ -253,16 +270,19 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 disabled={isMixing}
               />
+              <div className="relative w-24">
                <input
                 type="number"
                 value={(underlayVolume * 100).toFixed(0)}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => onUnderlayVolumeChange(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100)}
-                className="w-24 bg-gray-800/60 text-amber-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full bg-gray-800/60 text-amber-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-amber-500 focus:border-amber-500"
                 min="0"
                 max="100"
                 step="1"
               />
+               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+              </div>
             </div>
           </div>
         )}
@@ -277,59 +297,81 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
               </h3>
               <InfoTooltip text={t('tooltip_ai')} position="right" />
             </div>
-            <div className="flex items-center justify-between mb-4">
-              <label htmlFor="auto-trim-enable" className="text-sm font-medium text-gray-400">
-                  {t('ai_trim')}
-              </label>
-              <button
-                  id="auto-trim-enable"
-                  onClick={() => onTrimSilenceChange(!trimSilenceEnabled)}
-                  className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${
-                  trimSilenceEnabled ? 'bg-purple-600' : 'bg-gray-600'
-                  }`}
-                  disabled={isMixing}
-              >
-                  <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                      trimSilenceEnabled ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                  />
-              </button>
-            </div>
-            
-            {trimSilenceEnabled && (
-            <div>
-                <div className="flex items-center space-x-2">
-                  <label htmlFor="auto-trim-threshold" className="block text-sm font-medium text-gray-400">
-                    {t('ai_threshold')}
-                  </label>
-                  <InfoTooltip text={t('tooltip_ai_threshold')} position="right" />
-                </div>
-                <div className="flex items-center space-x-4 mt-2">
-                <input
-                    id="auto-trim-threshold"
-                    type="range"
-                    min="-60"
-                    max="-5"
-                    step="1"
-                    value={silenceThreshold}
-                    onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                <label htmlFor="auto-trim-enable" className="text-sm font-medium text-gray-400">
+                    {t('ai_trim')}
+                </label>
+                <button
+                    id="auto-trim-enable"
+                    onClick={() => onTrimSilenceChange(!trimSilenceEnabled)}
+                    className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${
+                    trimSilenceEnabled ? 'bg-purple-600' : 'bg-gray-600'
+                    }`}
                     disabled={isMixing}
-                />
-                <input
-                  type="number"
-                  value={silenceThreshold.toFixed(0)}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => onSilenceThresholdChange(Math.max(-60, Math.min(-5, parseFloat(e.target.value) || 0)))}
-                  className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-purple-500 focus:border-purple-500"
-                  min="-60"
-                  max="-5"
-                  step="1"
-                />
+                >
+                    <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                        trimSilenceEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                    />
+                </button>
                 </div>
+                
+                {trimSilenceEnabled && (
+                <div>
+                    <div className="flex items-center space-x-2">
+                    <label htmlFor="auto-trim-threshold" className="block text-sm font-medium text-gray-400">
+                        {t('ai_threshold')}
+                    </label>
+                    <InfoTooltip text={t('tooltip_ai_threshold')} position="right" />
+                    </div>
+                    <div className="flex items-center space-x-4 mt-2">
+                    <input
+                        id="auto-trim-threshold"
+                        type="range"
+                        min="-60"
+                        max="-5"
+                        step="1"
+                        value={silenceThreshold}
+                        onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                        disabled={isMixing}
+                    />
+                     <div className="relative w-24">
+                        <input
+                        type="number"
+                        value={silenceThreshold.toFixed(0)}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => onSilenceThresholdChange(Math.max(-60, Math.min(-5, parseFloat(e.target.value) || 0)))}
+                        className="w-full bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border-gray-600 focus:ring-purple-500 focus:border-purple-500"
+                        min="-60"
+                        max="-5"
+                        step="1"
+                        />
+                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">dB</span>
+                    </div>
+                    </div>
+                </div>
+                )}
+                 <button
+                    onClick={onNormalizeTracks}
+                    disabled={!hasTracks || isNormalizing || isMixing}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed"
+                >
+                    {isNormalizing ? (
+                        <>
+                            <SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                            {t('normalizing')}
+                        </>
+                    ) : (
+                        <>
+                            <DocumentChartBarIcon className="w-5 h-5 mr-2" />
+                            {t('normalize_tracks_button')}
+                        </>
+                    )}
+                </button>
             </div>
-            )}
         </div>
 
         {hasTracks && (
@@ -468,11 +510,16 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                         <button
                             onClick={isPro ? onExportProject : onOpenUnlockModal}
                             disabled={!canAttemptExport}
-                            className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500"
+                            className="w-full relative flex items-center justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 overflow-hidden"
                           >
-                             {!isPro && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
-                            <ArchiveBoxIcon className="w-5 h-5 mr-2" />
-                            <span>{t('output_export_project')}</span>
+                             {isExportingProject && (
+                                <div className="absolute top-0 left-0 h-full bg-indigo-700/70" style={{ width: `${exportProgress || 0}%`}}></div>
+                             )}
+                             <span className="relative flex items-center justify-center">
+                                {!isPro && !isExportingProject && <SparklesIcon className="w-5 h-5 mr-2 text-yellow-300" />}
+                                {isExportingProject ? <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" /> : <ArchiveBoxIcon className="w-5 h-5 mr-2" />}
+                                <span>{isExportingProject ? t('export_project_progress', { progress: exportProgress || 0 }) : t('output_export_project')}</span>
+                             </span>
                           </button>
                     </div>
                 </div>
