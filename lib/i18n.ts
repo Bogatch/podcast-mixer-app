@@ -174,6 +174,7 @@ export const translations = {
 
     // Export Progress Modal
     'export_progress_title': 'Exporting Project',
+    'export_audio_progress_title': 'Exporting Audio',
     'export_progress_message': 'Please wait, this may take a few moments for large projects...',
 
     // Unlock Modal
@@ -419,6 +420,7 @@ export const translations = {
 
     // Export Progress Modal
     'export_progress_title': 'Exportuje sa Projekt',
+    'export_audio_progress_title': 'Exportuje sa Audio',
     'export_progress_message': 'Prosím čakajte, pri veľkých projektoch to môže chvíľu trvať...',
 
     // Unlock Modal

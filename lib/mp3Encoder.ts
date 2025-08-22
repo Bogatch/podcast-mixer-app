@@ -2,9 +2,10 @@
  * Asynchronously encodes an AudioBuffer to an MP3 Blob using a Web Worker to prevent UI freezing.
  * @param audioBuffer The AudioBuffer to encode.
  * @param bitrate The desired bitrate in kbps.
+ * @param onProgress A callback function that receives the encoding progress (0-100).
  * @returns A Promise that resolves with the encoded MP3 Blob.
  */
-export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Promise<Blob> {
+export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192, onProgress?: (progress: number) => void): Promise<Blob> {
     return new Promise((resolve, reject) => {
         const workerCode = `
             self.importScripts('https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js');
@@ -34,8 +35,9 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
                     }
             
                     const samplesPerFrame = 1152;
+                    const totalSamples = leftInt16.length;
                     
-                    for (let i = 0; i < leftInt16.length; i += samplesPerFrame) {
+                    for (let i = 0; i < totalSamples; i += samplesPerFrame) {
                         const leftChunk = leftInt16.subarray(i, i + samplesPerFrame);
                         let rightChunk = undefined;
             
@@ -50,6 +52,8 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
                         if (mp3buf.length > 0) {
                             mp3Data.push(new Int8Array(mp3buf));
                         }
+                        // Report progress
+                        self.postMessage({ status: 'progress', progress: (i / totalSamples) * 100 });
                     }
                     
                     const d = mp3encoder.flush();
@@ -58,6 +62,7 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
                     }
             
                     const mp3Blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+                    self.postMessage({ status: 'progress', progress: 100 });
                     self.postMessage({ status: 'done', blob: mp3Blob });
                 } catch (error) {
                     self.postMessage({ status: 'error', message: error.message });
@@ -75,6 +80,13 @@ export function encodeMp3(audioBuffer: AudioBuffer, bitrate: number = 192): Prom
         };
 
         worker.onmessage = (e) => {
+            if (e.data.status === 'progress') {
+                if (onProgress) {
+                    onProgress(e.data.progress);
+                }
+                return; // Don't terminate worker yet
+            }
+            
             if (e.data.status === 'done') {
                 resolve(e.data.blob);
             } else {

@@ -1,12 +1,13 @@
 import React, { useContext } from 'react';
 import { SpinnerIcon } from './icons';
-import { I18nContext } from '../lib/i18n';
+import { I18nContext, TranslationKey } from '../lib/i18n';
 
 interface ExportProgressModalProps {
   progress: number;
+  titleKey: TranslationKey;
 }
 
-export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({ progress }) => {
+export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({ progress, titleKey }) => {
   const { t } = useContext(I18nContext);
   const roundedProgress = Math.round(progress);
 
@@ -15,12 +16,12 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({ progre
       <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-8 border border-gray-700 text-center space-y-6">
         <div className="flex items-center justify-center space-x-4">
             <SpinnerIcon className="w-8 h-8 text-blue-400 animate-spin" />
-            <h2 className="text-2xl font-bold text-white">{t('export_progress_title')}</h2>
+            <h2 className="text-2xl font-bold text-white">{t(titleKey)}</h2>
         </div>
         <p className="text-gray-400">{t('export_progress_message')}</p>
         <div className="w-full bg-gray-700 rounded-full h-4">
           <div
-            className="bg-blue-600 h-4 rounded-full transition-width duration-150"
+            className="bg-blue-600 h-4 rounded-full transition-all duration-150 ease-linear"
             style={{ width: `${roundedProgress}%` }}
           ></div>
         </div>

@@ -149,6 +149,8 @@ const AppContent: React.FC = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportProgressTitleKey, setExportProgressTitleKey] = useState<TranslationKey>('export_progress_title');
+
 
   // AI Content
   const [suggestedTitle, setSuggestedTitle] = useState('');
@@ -791,7 +793,9 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
   };
 
   const handleExportAudio = async (options: ExportOptions) => {
+    setExportProgressTitleKey('export_audio_progress_title');
     setIsExporting(true);
+    setExportProgress(0);
     try {
         const mixedBuffer = await renderMix(options.sampleRate);
         let blob: Blob;
@@ -800,8 +804,9 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         if (options.format === 'wav') {
             blob = encodeWav(mixedBuffer);
             fileName = `${projectName}.wav`;
+            setExportProgress(100);
         } else {
-            blob = await encodeMp3(mixedBuffer, options.bitrate);
+            blob = await encodeMp3(mixedBuffer, options.bitrate, (p) => setExportProgress(p));
             fileName = `${projectName}.mp3`;
         }
 
@@ -817,7 +822,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     } catch(err) {
         handleError('error_export_failed', {}, err);
     } finally {
-        setIsExporting(false);
+        setTimeout(() => {
+          setIsExporting(false);
+          setExportProgress(0);
+        }, 500);
     }
   };
 
@@ -826,6 +834,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         handleError('error_export_first_mix');
         return;
     }
+    setExportProgressTitleKey('export_progress_title');
     setIsExporting(true);
     setExportProgress(0);
     try {
@@ -982,7 +991,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             currentProjectId={projectId}
         />
       )}
-      {isExporting && exportProgress > 0 && <ExportProgressModal progress={exportProgress} />}
+      {isExporting && <ExportProgressModal progress={exportProgress} titleKey={exportProgressTitleKey} />}
 
 
       <div className="max-w-7xl mx-auto">
