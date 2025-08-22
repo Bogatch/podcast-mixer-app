@@ -6,7 +6,6 @@ import { MixerControls } from './components/MixerControls';
 import { TrackUploader } from './components/TrackUploader';
 import { Header } from './components/Header';
 import { EmptyState } from './components/EmptyState';
-import { ProjectManager } from './components/ProjectManager';
 import { encodeWav } from './lib/wavEncoder';
 import { encodeMp3 } from './lib/mp3Encoder';
 import JSZip from 'jszip';
@@ -18,6 +17,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
 import { GoogleGenAI, Type } from "@google/genai";
+import { QuestionMarkCircleIcon } from './components/icons';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -106,20 +106,18 @@ const AppContent: React.FC = () => {
   const [duckingAmount, setDuckingAmount] = useState(0.7);
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
-  const [trimSilenceEnabled, setTrimSilenceEnabled] = useState<boolean>(true);
-  const [silenceThreshold, setSilenceThreshold] = useState<number>(-45);
-  const [normalizeOutput, setNormalizeOutput] = useState<boolean>(true);
   
   const [uploadingType, setUploadingType] = useState<'music' | 'spoken' | 'jingle' | 'underlay' | null>(null);
   const [isMixing, setIsMixing] = useState<boolean>(false);
   const [mixedAudioUrl, setMixedAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  
-  const [isSavingSession, setIsSavingSession] = useState(false);
-  const [isExportingProject, setIsExportingProject] = useState(false);
-  const [exportProgress, setExportProgress] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
+  const [trimSilenceEnabled, setTrimSilenceEnabled] = useState<boolean>(true);
+  const [silenceThreshold, setSilenceThreshold] = useState<number>(-45);
+  const [normalizeOutput, setNormalizeOutput] = useState<boolean>(true);
+  
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -128,12 +126,6 @@ const AppContent: React.FC = () => {
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [suggestedDescription, setSuggestedDescription] = useState('');
   const [isSuggestingContent, setIsSuggestingContent] = useState(false);
-  const [isNormalizing, setIsNormalizing] = useState(false);
-  
-  // Project Management State
-  const [projectName, setProjectName] = useState<string>('');
-  const [savedProjects, setSavedProjects] = useState<string[]>([]);
-  const [isProjectLoaded, setIsProjectLoaded] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
@@ -173,11 +165,11 @@ const AppContent: React.FC = () => {
       setTimeout(() => setError(null), 8000);
   };
   
-  const handleInfo = (key: TranslationKey, params?: { [key: string]: string | number }, duration: number = 5000) => {
-      const message = t(key, params);
+  const handleInfo = (key: TranslationKey, duration: number = 5000) => {
+      const message = t(key);
       setInfo(message);
       setTimeout(() => setInfo(null), duration);
-  };
+  }
 
   const addTracks = useCallback(async (files: FileList, type: 'music' | 'spoken' | 'jingle') => {
     setUploadingType(type);
@@ -300,63 +292,29 @@ const AppContent: React.FC = () => {
   
   const trackIds = useMemo(() => tracks.map(t => t.id).join(','), [tracks]);
   const underlayId = useMemo(() => underlayTrack?.id, [underlayTrack]);
-  
-  const settingsToPersist = useMemo(() => ({
-    mixDuration, duckingAmount, rampUpDuration, underlayVolume, trimSilenceEnabled, silenceThreshold, normalizeOutput
-  }), [mixDuration, duckingAmount, rampUpDuration, underlayVolume, trimSilenceEnabled, silenceThreshold, normalizeOutput]);
-  
-  // Load/Save persistent mixer settings
+
+  // Load project from localStorage on first load
   useEffect(() => {
-    try {
-        const savedSettings = localStorage.getItem('podcastMixer_settings');
-        if (savedSettings) {
-            const loadedSettings = JSON.parse(savedSettings);
-            setMixDuration(loadedSettings.mixDuration ?? 2);
-            setDuckingAmount(loadedSettings.duckingAmount ?? 0.7);
-            setRampUpDuration(loadedSettings.rampUpDuration ?? 1.5);
-            setUnderlayVolume(loadedSettings.underlayVolume ?? 0.5);
-            setTrimSilenceEnabled(loadedSettings.trimSilenceEnabled ?? true);
-            setSilenceThreshold(loadedSettings.silenceThreshold ?? -45);
-            setNormalizeOutput(loadedSettings.normalizeOutput ?? true);
-        }
-    } catch (e) { console.error("Failed to load settings", e); }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('podcastMixer_settings', JSON.stringify(settingsToPersist));
-  }, [settingsToPersist]);
-
-
-  // Load project list and session on first load
-  useEffect(() => {
-    try {
-        const savedProjectsList = localStorage.getItem('podcastMixer_projectList');
-        if (savedProjectsList) {
-            setSavedProjects(JSON.parse(savedProjectsList));
-        }
-
-        const savedSession = localStorage.getItem('podcastMixerSession');
-        if (savedSession) {
-            const loadedProject = JSON.parse(savedSession);
-            if (loadedProject.tracks?.length > 0 || loadedProject.underlayTrack) {
-                applyLoadedProject(loadedProject);
-                if (loadedProject.projectName) {
-                    setProjectName(loadedProject.projectName);
-                    setIsProjectLoaded(true);
+    const loadInitialProject = () => {
+        try {
+            const savedSession = localStorage.getItem('podcastMixerSession');
+            if (savedSession) {
+                const loadedProject = JSON.parse(savedSession);
+                if (loadedProject.tracks?.length > 0 || loadedProject.underlayTrack) {
+                    applyLoadedProject(loadedProject);
+                    handleInfo('info_session_loaded');
                 }
-                handleInfo('info_session_loaded');
             }
+        } catch (e) {
+            console.error("Failed to load session from localStorage", e);
+            localStorage.removeItem('podcastMixerSession');
         }
-    } catch (e) {
-        console.error("Failed to load session/projects from localStorage", e);
-        localStorage.removeItem('podcastMixerSession');
-        localStorage.removeItem('podcastMixer_projectList');
-    }
+    };
+    loadInitialProject();
   }, []);
 
-  const getProjectData = (name = projectName) => {
+  const getProjectData = () => {
     return {
-        projectName: name,
         tracks: tracks.map(t => ({
             id: t.id,
             name: t.name,
@@ -372,13 +330,21 @@ const AppContent: React.FC = () => {
             duration: underlayTrack.duration,
             type: underlayTrack.type,
         } : null,
-        mixerSettings: settingsToPersist
+        mixerSettings: {
+            mixDuration,
+            duckingAmount,
+            rampUpDuration,
+            underlayVolume,
+            trimSilenceEnabled,
+            silenceThreshold,
+            normalizeOutput,
+        }
     };
   };
 
-  const handleSaveSession = async () => {
+  const handleSaveProject = async () => {
     const projectData = getProjectData();
-    setIsSavingSession(true);
+    setIsSaving(true);
     try {
         localStorage.setItem('podcastMixerSession', JSON.stringify(projectData));
         handleInfo('info_local_project_saved');
@@ -386,66 +352,7 @@ const AppContent: React.FC = () => {
         console.error("Failed to save session to localStorage", e);
         handleError('error_local_save_failed', {}, e);
     } finally {
-        setIsSavingSession(false);
-    }
-  };
-
-  const handleSaveProjectAs = () => {
-    if (!projectName.trim()) {
-        handleError('error_project_name_required');
-        return;
-    }
-    try {
-        const projectData = getProjectData();
-        localStorage.setItem(`podcastMixerProject_${projectName}`, JSON.stringify(projectData));
-        if (!savedProjects.includes(projectName)) {
-            const newProjectList = [...savedProjects, projectName];
-            setSavedProjects(newProjectList);
-            localStorage.setItem('podcastMixer_projectList', JSON.stringify(newProjectList));
-        }
-        setIsProjectLoaded(true);
-        handleInfo('info_project_saved', { projectName });
-    } catch(e) {
-        handleError('error_local_save_failed', {}, e);
-    }
-  };
-
-  const handleUpdateProject = () => {
-    if (!projectName.trim()) {
-        handleError('error_project_name_required');
-        return;
-    }
-    handleSaveProjectAs(); // It functions as an overwrite
-  };
-
-  const handleLoadProject = (name: string) => {
-    try {
-        const projectString = localStorage.getItem(`podcastMixerProject_${name}`);
-        if (projectString) {
-            const projectData = JSON.parse(projectString);
-            applyLoadedProject(projectData);
-            setProjectName(name);
-            setIsProjectLoaded(true);
-            handleInfo('info_project_loaded', { projectName: name });
-        }
-    } catch (e) {
-        handleError('error_project_load_failed', { projectName: name }, e);
-    }
-  };
-  
-  const handleDeleteProject = (name: string) => {
-    try {
-        localStorage.removeItem(`podcastMixerProject_${name}`);
-        const newProjectList = savedProjects.filter(p => p !== name);
-        setSavedProjects(newProjectList);
-        localStorage.setItem('podcastMixer_projectList', JSON.stringify(newProjectList));
-        if (projectName === name) {
-            setProjectName('');
-            setIsProjectLoaded(false);
-        }
-        handleInfo('info_project_deleted', { projectName: name });
-    } catch (e) {
-        handleError('error_project_delete_failed', { projectName: name }, e);
+        setIsSaving(false);
     }
   };
 
@@ -825,74 +732,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     }
   };
 
-  const handleNormalizeTracks = async () => {
-    setIsNormalizing(true);
-    handleInfo('info_normalizing_started');
-
-    // Use a consistent AudioContext
-    if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const audioContext = audioContextRef.current;
-    
-    const tracksToProcess = [...tracks, underlayTrack].filter((t): t is Track => !!t && !!t.fileBuffer);
-    const processedTrackUpdates: { id: string, fileBuffer: ArrayBuffer, duration: number }[] = [];
-
-    for (const track of tracksToProcess) {
-        try {
-            const originalBuffer = await audioContext.decodeAudioData(track.fileBuffer!.slice(0));
-            
-            let maxPeak = 0;
-            for (let i = 0; i < originalBuffer.numberOfChannels; i++) {
-                const data = originalBuffer.getChannelData(i);
-                for (let j = 0; j < data.length; j++) {
-                    const peak = Math.abs(data[j]);
-                    if (peak > maxPeak) maxPeak = peak;
-                }
-            }
-
-            if (maxPeak > 0.001 && maxPeak < 0.99) { // Don't amplify clipped or silent audio
-                const gainValue = 0.98 / maxPeak; // Target -0.177 dBFS
-                
-                const gainContext = new OfflineAudioContext(originalBuffer.numberOfChannels, originalBuffer.length, originalBuffer.sampleRate);
-                const source = gainContext.createBufferSource();
-                source.buffer = originalBuffer;
-                const gainNode = gainContext.createGain();
-                gainNode.gain.value = gainValue;
-                
-                source.connect(gainNode);
-                gainNode.connect(gainContext.destination);
-                source.start();
-                const normalizedBuffer = await gainContext.startRendering();
-
-                decodedAudioBuffers.current.set(track.id, normalizedBuffer);
-
-                const wavBlob = encodeWav(normalizedBuffer);
-                const arrayBuffer = await wavBlob.arrayBuffer();
-                processedTrackUpdates.push({ id: track.id, fileBuffer: arrayBuffer, duration: normalizedBuffer.duration });
-            }
-        } catch (err) {
-            handleError('error_normalize_track_failed', { fileName: track.name }, err);
-        }
-    }
-
-    if (processedTrackUpdates.length > 0) {
-        setTracks(current => current.map(t => {
-            const update = processedTrackUpdates.find(u => u.id === t.id);
-            return update ? { ...t, fileBuffer: update.fileBuffer, duration: update.duration } : t;
-        }));
-        setUnderlayTrack(current => {
-            if (!current) return null;
-            const update = processedTrackUpdates.find(u => u.id === current.id);
-            return update ? { ...current, fileBuffer: update.fileBuffer, duration: update.duration } : current;
-        });
-        resetMix(); // The mix is now invalid
-        handleInfo('info_normalizing_finished');
-    }
-
-    setIsNormalizing(false);
-  };
-
   const handleExportAudio = async (options: ExportOptions) => {
     setIsExporting(true);
     try {
@@ -929,8 +768,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         handleError('error_export_first_mix');
         return;
     }
-    setIsExportingProject(true);
-    setExportProgress(0);
+    setIsSaving(true);
     try {
         const zip = new JSZip();
         const projectData = getProjectData();
@@ -948,13 +786,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             }
         }
         
-        const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
-            setExportProgress(Math.round(metadata.percent));
-        });
-
+        const content = await zip.generateAsync({ type: "blob" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(content);
-        link.download = `${projectName || 'podcast_project'}.zip`;
+        link.download = "podcast_mixer_project.zip";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -963,8 +798,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     } catch(err) {
         handleError('error_project_export_failed', {}, err);
     } finally {
-        setIsExportingProject(false);
-        setExportProgress(null);
+        setIsSaving(false);
     }
   };
 
@@ -1074,14 +908,20 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
       <div className="max-w-7xl mx-auto">
         <Header 
-          onOpenHelp={() => setIsHelpModalOpen(true)}
           onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
-          onSaveSession={handleSaveSession}
-          isSavingSession={isSavingSession}
+          onSaveProject={handleSaveProject}
+          isSaving={isSaving}
           hasTracks={tracks.length > 0 || !!underlayTrack}
         />
         <main className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
+            <button
+              onClick={() => setIsHelpModalOpen(true)}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+            >
+              <QuestionMarkCircleIcon className="w-5 h-5" />
+              <span>{t('show_help_guide')}</span>
+            </button>
             <TrackUploader 
               onFilesSelect={addTracks} 
               onUnderlaySelect={addUnderlay}
@@ -1111,8 +951,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
               onExportAudio={() => setIsExportModalOpen(true)}
               onExportProject={handleExportProject}
-              isExportingProject={isExportingProject}
-              exportProgress={exportProgress}
               mixedAudioUrl={mixedAudioUrl}
               isDisabled={!canMix}
               totalDuration={estimatedDuration}
@@ -1124,19 +962,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               isSuggestingContent={isSuggestingContent}
               suggestedTitle={suggestedTitle}
               suggestedDescription={suggestedDescription}
-              onNormalizeTracks={handleNormalizeTracks}
-              isNormalizing={isNormalizing}
-            />
-             <ProjectManager
-              projectName={projectName}
-              onProjectNameChange={setProjectName}
-              savedProjects={savedProjects}
-              onSaveAs={handleSaveProjectAs}
-              onUpdate={handleUpdateProject}
-              onLoad={handleLoadProject}
-              onDelete={handleDeleteProject}
-              isProjectLoaded={isProjectLoaded}
-              hasTracks={tracks.length > 0 || !!underlayTrack}
             />
           </div>
           <div className="lg:col-span-2 bg-gray-800/50 rounded-lg p-6 shadow-2xl border border-gray-700">
@@ -1164,7 +989,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           </div>
         </main>
         <footer className="text-center text-xs text-gray-500 mt-8 pb-4">
-          {t('footer_version')} 1.5.0 | © {new Date().getFullYear()} CustomRadio.sk
+          {t('footer_version')} 1.4.0 | © {new Date().getFullYear()} CustomRadio.sk
         </footer>
       </div>
     </div>
@@ -1172,7 +997,26 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 };
 
 const App: React.FC = () => {
-  const [locale, setLocale] = useState<Locale>('sk');
+    const [locale, setLocale] = useState<Locale>(() => {
+        try {
+            const savedLocale = localStorage.getItem('podcastMixerLocale');
+            if (savedLocale && translations[savedLocale as Locale]) {
+                return savedLocale as Locale;
+            }
+        } catch (e) {
+            console.error("Could not read locale from localStorage", e);
+        }
+        return 'en'; // Default to English
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('podcastMixerLocale', locale);
+        } catch (e) {
+            console.error("Could not save locale to localStorage", e);
+        }
+    }, [locale]);
+
 
   const t = useCallback((key: TranslationKey, params?: { [key: string]: string | number }) => {
     // Fallback to English if key not found in current locale

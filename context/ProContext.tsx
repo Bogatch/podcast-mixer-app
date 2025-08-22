@@ -6,7 +6,7 @@ interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
   proUser: { email: string; key: string } | null;
-  verifyLicense: (email: string, key: string) => Promise<{ success: boolean; error?: string }>;
+  verifyLicense: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -35,30 +35,44 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const verifyLicense = useCallback(async (email: string, key: string): Promise<{ success: boolean; error?: string }> => {
+  const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
+    // Bypassing the Vercel proxy function and calling the Make.com webhook directly.
+    // This avoids potential serverless function deployment/runtime issues.
+    const apiUrl = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+
     try {
-      const response = await fetch('/api/verify-license', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, key }),
+        body: JSON.stringify({ email, key: code }),
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        const licenseData = { isPro: true, email: email.trim(), key: key.trim() };
+      if (response.ok) { // A 2xx status from the webhook indicates success.
+        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
         setIsPro(true);
-        setProUser({ email: email.trim(), key: key.trim() });
+        setProUser({ email: email.trim(), key: code.trim() });
         return { success: true };
       } else {
-        return { success: false, error: result.error || "Invalid email or license key." };
+        // If not OK, try to get a more specific error message from the response body.
+        let errorMessage = "Invalid email or license key.";
+        try {
+            const responseText = await response.text();
+            if (responseText) {
+                // Use the webhook's response as the error message.
+                errorMessage = responseText;
+            }
+        } catch (e) {
+            console.warn("Could not read error response body from webhook.");
+        }
+        return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error("Failed to call verification API:", error);
+      // This catch block handles network errors (e.g. CORS, DNS, no internet)
       return { success: false, error: "Could not connect to the license server." };
     } finally {
       setIsLoading(false);
