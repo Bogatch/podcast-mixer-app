@@ -1,6 +1,6 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
-    MicIcon, ChevronDownIcon, SparklesIcon, SaveIcon, SpinnerIcon,
+    MicIcon, ChevronDownIcon, SparklesIcon,
     UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon,
     CheckIcon, KeyIcon
 } from './icons';
@@ -10,9 +10,6 @@ import { usePro } from '../context/ProContext';
 
 interface HeaderProps {
     onOpenUnlockModal: () => void;
-    onSaveProject: () => void;
-    isSaving: boolean;
-    hasTracks: boolean;
 }
 
 const LanguageOption: React.FC<{
@@ -72,7 +69,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
 };
 
 
-export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject, isSaving, hasTracks }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -142,18 +139,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal, onSaveProject
             )}
           </div>
           
-          {hasTracks && (
-            <button
-              onClick={onSaveProject}
-              disabled={isSaving}
-              title={t('save_project')}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 disabled:bg-gray-600 text-sm font-medium text-white rounded-md transition-colors"
-            >
-              {isSaving ? <SpinnerIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5" />}
-              <span className="hidden sm:inline">{isSaving ? t('saving') : t('save_project')}</span>
-            </button>
-          )}
-
           <ProHeaderControls onOpenUnlockModal={onOpenUnlockModal} />
 
       </div>

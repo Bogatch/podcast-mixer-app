@@ -9,4 +9,16 @@ export interface Track {
   smartTrimStart?: number; // Time in seconds where content starts
   smartTrimEnd?: number;   // Time in seconds where content ends
   fileBuffer?: ArrayBuffer; // In-memory buffer of the file content
+  normalizationGain?: number; // Gain applied for volume leveling
+}
+
+export interface SavedProject {
+  id?: number;
+  name: string;
+  createdAt: string;
+  projectData: {
+    tracks: Omit<Track, 'file'>[];
+    underlayTrack: Omit<Track, 'file'> | null;
+    mixerSettings: any;
+  }
 }

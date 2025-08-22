@@ -69,21 +69,25 @@ export const TrackController: React.FC<TrackControllerProps> = ({
 
   const handleVocalTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    if (value === '' || /^\d*[,.]?\d*$/.test(value)) {
+    if (value === '' || /^\d*[,.]?\d{0,2}$/.test(value)) {
       setVocalStartTimeInput(value);
     }
   };
 
-  const handleVocalTimeInputBlur = () => {
+  const commitVocalTimeChange = () => {
     const sanitizedValue = vocalStartTimeInput.replace(',', '.');
     let finalValue = parseFloat(sanitizedValue);
     if (isNaN(finalValue) || finalValue < 0) {
       finalValue = 0;
     }
     const clampedValue = Math.min(track.duration, finalValue);
-    const roundedValue = Math.round(clampedValue * 100) / 100;
-    onVocalStartTimeChange(roundedValue);
-    setVocalStartTimeInput(roundedValue.toFixed(2));
+    onVocalStartTimeChange(clampedValue);
+    setVocalStartTimeInput(clampedValue.toFixed(2));
+  };
+
+
+  const handleVocalTimeInputBlur = () => {
+    commitVocalTimeChange();
   };
 
   const handleVocalTimeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -93,11 +97,11 @@ export const TrackController: React.FC<TrackControllerProps> = ({
   };
   
   const handleVocalTimeAdjust = (amount: number) => {
-    const currentValue = track.vocalStartTime ?? 0;
+    const currentValue = parseFloat(vocalStartTimeInput.replace(',', '.')) || track.vocalStartTime || 0;
     const newValue = currentValue + amount;
     const clampedValue = Math.max(0, Math.min(track.duration, newValue));
-    const roundedValue = Math.round(clampedValue * 100) / 100;
-    onVocalStartTimeChange(roundedValue);
+    onVocalStartTimeChange(clampedValue);
+    setVocalStartTimeInput(clampedValue.toFixed(2));
   };
 
   if (!track.file) {

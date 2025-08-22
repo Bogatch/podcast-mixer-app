@@ -8,15 +8,18 @@ export const translations = {
     'cancel': 'Cancel',
     'export': 'Export',
     'exporting': 'Exporting...',
-    'save_project': 'Save Project',
+    'save_project': 'Save/Load Project',
     'saving': 'Saving...',
     'copy': 'Copy',
     'copied': 'Copied!',
+    'loading': 'Loading...',
 
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
     'info_local_project_saved': 'Your project has been saved to this browser.',
     'info_pro_activated': 'PRO version successfully activated! All features are now unlocked.',
+    'info_project_saved': 'Project successfully saved.',
+    'info_project_loaded': 'Project successfully loaded.',
 
     // Errors
     'error_export_failed': 'Export failed.',
@@ -30,12 +33,27 @@ export const translations = {
     'error_request_timeout': 'The request timed out. Please check your internet connection and try again.',
     'error_demo_duration_limit': 'Demo version is limited to {{minutes}} minutes. Please unlock the full version to mix longer tracks.',
     'error_local_save_failed': 'Failed to save project to browser storage.',
+    'error_project_save_failed': 'Failed to save the project. Your browser storage might be full.',
+    'error_project_load_failed': 'Failed to load the project.',
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
     'validation_email_invalid': 'Please enter a valid email address.',
     'validation_code_invalid': 'Code must be in the format XXX-XXX-XXX.',
+    
+    // Save Project Modal
+    'save_project_modal_title': 'Save or Load Project',
+    'save_project_modal_name_label': 'Project Name',
+    'save_project_modal_placeholder': 'e.g., Episode 1: The Beginning',
+    'save_project_modal_save_as_new': 'Save as New',
+    'save_project_modal_overwrite': 'Overwrite',
+    'save_project_modal_saved_projects_title': 'Saved Projects',
+    'no_saved_projects': 'No saved projects found.',
+    'load_project': 'Load',
+    'delete_project': 'Delete',
+    'confirm_delete_project': 'Are you sure you want to permanently delete this project?',
+    'saved_at': 'Saved:',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -70,6 +88,7 @@ export const translations = {
     'mixer_ducking': 'Music Ducking Under Spoken Word',
     'mixer_ramp_up': 'Music Return Time',
     'mixer_underlay_volume': 'Background Music Volume',
+    'mixer_normalize_tracks': 'Smart Leveling',
     'ai_title': 'Smart Cutting (AI)',
     'ai_trim': 'Trim Silence / Smart Transitions',
     'ai_threshold': 'Silence Threshold',
@@ -100,8 +119,12 @@ export const translations = {
     'tooltip_ai': 'These tools automatically analyze your tracks and adjust them for smoother transitions and a more professional sound.',
     'tooltip_ai_threshold': "Determines what volume level is considered 'silence'. Lower values (e.g., -50dB) are more sensitive and will remove very quiet passages.",
     'tooltip_ai_content': 'Uses AI to generate a title and description for your podcast episode based on the track names. (PRO feature)',
+    'tooltip_normalize_tracks': "Automatically adjusts the volume of each individual track to a consistent level before mixing. Highly recommended to keep enabled.",
     'tooltip_normalize': 'Automatically adjusts the overall volume of the final mix to a standard level. This prevents the result from being too quiet or distorted.',
     'tooltip_coming_soon': 'Coming Soon!',
+    'tooltip_disabled_no_tracks': 'This option is available once you upload audio tracks.',
+    'tooltip_disabled_ducking': 'This option is available when you have a spoken track followed by a music track in the timeline.',
+    'tooltip_disabled_underlay': 'This option is available when you upload Background Music and have at least two Music Tracks.',
 
     // Monitoring Panel
     'monitoring_title': 'Track Overview',
@@ -148,6 +171,10 @@ export const translations = {
     'export_quality_info': '192 kbps is a good compromise between quality and size.',
     'export_samplerate': 'Sample Rate',
     'export_samplerate_info': '44.1 kHz is standard for music (CD), 48 kHz is standard for video.',
+
+    // Export Progress Modal
+    'export_progress_title': 'Exporting Project',
+    'export_progress_message': 'Please wait, this may take a few moments for large projects...',
 
     // Unlock Modal
     'unlock_modal_title': 'Get Podcast Mixer PRO',
@@ -226,15 +253,18 @@ export const translations = {
     'cancel': 'Zrušiť',
     'export': 'Exportovať',
     'exporting': 'Exportuje sa...',
-    'save_project': 'Uložiť Projekt',
+    'save_project': 'Uložiť/Načítať Projekt',
     'saving': 'Ukladá sa...',
     'copy': 'Kopírovať',
     'copied': 'Skopírované!',
-    
+    'loading': 'Načítava sa...',
+
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
     'info_local_project_saved': 'Váš projekt bol uložený do tohto prehliadača.',
     'info_pro_activated': 'PRO verzia bola úspešne aktivovaná! Všetky funkcie sú teraz odomknuté.',
+    'info_project_saved': 'Projekt bol úspešne uložený.',
+    'info_project_loaded': 'Projekt bol úspešne načítaný.',
     
     // Errors
     'error_export_failed': 'Export zlyhal.',
@@ -248,12 +278,27 @@ export const translations = {
     'error_request_timeout': 'Požiadavka vypršala. Skontrolujte prosím svoje internetové pripojenie a skúste to znova.',
     'error_demo_duration_limit': 'Demo verzia je obmedzená na {{minutes}} minút. Pre mixovanie dlhších stôp si prosím odomknite plnú verziu.',
     'error_local_save_failed': 'Nepodarilo sa uložiť projekt do úložiska prehliadača.',
+    'error_project_save_failed': 'Nepodarilo sa uložiť projekt. Úložisko vášho prehliadača môže byť plné.',
+    'error_project_load_failed': 'Nepodarilo sa načítať projekt.',
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
     'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
     'validation_code_invalid': 'Kód musí byť vo formáte XXX-XXX-XXX.',
+
+    // Save Project Modal
+    'save_project_modal_title': 'Uložiť alebo Načítať Projekt',
+    'save_project_modal_name_label': 'Názov Projektu',
+    'save_project_modal_placeholder': 'napr. Epizóda 1: Začiatok',
+    'save_project_modal_save_as_new': 'Uložiť ako Nový',
+    'save_project_modal_overwrite': 'Prepísať',
+    'save_project_modal_saved_projects_title': 'Uložené Projekty',
+    'no_saved_projects': 'Nenašli sa žiadne uložené projekty.',
+    'load_project': 'Načítať',
+    'delete_project': 'Zmazať',
+    'confirm_delete_project': 'Naozaj chcete natrvalo odstrániť tento projekt?',
+    'saved_at': 'Uložené:',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -288,6 +333,7 @@ export const translations = {
     'mixer_ducking': 'Stíšenie hudby pod slovom',
     'mixer_ramp_up': 'Čas návratu hudby',
     'mixer_underlay_volume': 'Hlasitosť hudby v pozadí',
+    'mixer_normalize_tracks': 'Smart Leveling',
     'ai_title': 'Inteligentné Strihanie (AI)',
     'ai_trim': 'Strihať ticho / Inteligentné prechody',
     'ai_threshold': 'Prah stíšenia',
@@ -318,8 +364,12 @@ export const translations = {
     'tooltip_ai': 'Tieto nástroje automaticky analyzujú vaše stopy a upravujú ich pre plynulejšie prechody a profesionálnejší zvuk.',
     'tooltip_ai_threshold': "Určuje, aká úroveň hlasitosti sa považuje za 'ticho'. Nižšie hodnoty (napr. -50dB) sú citlivejšie a odstránia aj veľmi tiché pasáže.",
     'tooltip_ai_content': 'Použije AI na vygenerovanie názvu a popisu pre vašu epizódu podcastu na základe názvov stôp. (PRO funkcia)',
+    'tooltip_normalize_tracks': "Automaticky upraví hlasitosť každej jednotlivej stopy na konzistentnú úroveň pred mixovaním. Dôrazne odporúčame nechať zapnuté.",
     'tooltip_normalize': 'Automaticky upraví celkovú hlasitosť finálneho mixu na štandardnú úroveň. Zabraňuje tomu, aby bol výsledok príliš tichý alebo skreslený.',
     'tooltip_coming_soon': 'Už čoskoro!',
+    'tooltip_disabled_no_tracks': 'Táto možnosť je dostupná po nahratí zvukových stôp.',
+    'tooltip_disabled_ducking': 'Táto možnosť je dostupná, keď máte na časovej osi hlasovú stopu nasledovanú hudobnou stopou.',
+    'tooltip_disabled_underlay': 'Táto možnosť je dostupná, keď nahráte hudobný podklad a máte aspoň dve hudobné stopy.',
 
     // Monitoring Panel
     'monitoring_title': 'Prehľad Stôp',
@@ -366,6 +416,10 @@ export const translations = {
     'export_quality_info': '192 kbps je dobrý kompromis medzi kvalitou a veľkosťou.',
     'export_samplerate': 'Vzorkovacia frekvencia',
     'export_samplerate_info': '44.1 kHz je štandard pre hudbu (CD), 48 kHz je štandard pre video.',
+
+    // Export Progress Modal
+    'export_progress_title': 'Exportuje sa Projekt',
+    'export_progress_message': 'Prosím čakajte, pri veľkých projektoch to môže chvíľu trvať...',
 
     // Unlock Modal
     'unlock_modal_title': 'Získať Podcast Mixer PRO',

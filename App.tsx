@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
-import type { Track } from './types';
+import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
 import { Timeline } from './components/Timeline';
 import { MixerControls } from './components/MixerControls';
@@ -18,6 +18,9 @@ import { ProProvider, usePro } from './context/ProContext';
 import { UnlockModal } from './components/UnlockModal';
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuestionMarkCircleIcon } from './components/icons';
+import * as db from './lib/db';
+import { SaveProjectModal } from './components/SaveProjectModal';
+import { ExportProgressModal } from './components/ExportProgressModal';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -40,6 +43,21 @@ const readAudioFile = (file: File): Promise<{ duration: number; arrayBuffer: Arr
     reader.readAsArrayBuffer(file);
   });
 };
+
+const calculateRMS = (audioBuffer: AudioBuffer): number => {
+    // Use the average power of all channels for a more balanced loudness measure
+    let sumOfSquares = 0;
+    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+        const data = audioBuffer.getChannelData(i);
+        for (let j = 0; j < data.length; j++) {
+            sumOfSquares += data[j] * data[j];
+        }
+    }
+    const rms = Math.sqrt(sumOfSquares / (audioBuffer.length * audioBuffer.numberOfChannels));
+    if (rms === 0) return -Infinity; // Avoid log(0)
+    return 20 * Math.log10(rms); // Convert to dBFS
+};
+
 
 const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { smartTrimStart: number; smartTrimEnd: number } => {
     const threshold = Math.pow(10, thresholdDb / 20);
@@ -100,29 +118,39 @@ const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
   const { isPro } = usePro();
   
+  // Project State
   const [tracks, setTracks] = useState<Track[]>([]);
   const [underlayTrack, setUnderlayTrack] = useState<Track | null>(null);
-  const [mixDuration, setMixDuration] = useState<number>(2);
+  const [projectName, setProjectName] = useState('Untitled Project');
+  const [projectId, setProjectId] = useState<number | null>(null);
+
+  // Mixer Settings
+  const [mixDuration, setMixDuration] = useState(2);
   const [duckingAmount, setDuckingAmount] = useState(0.7);
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
-  
+  const [trimSilenceEnabled, setTrimSilenceEnabled] = useState(true);
+  const [silenceThreshold, setSilenceThreshold] = useState(-45);
+  const [normalizeTracks, setNormalizeTracks] = useState(true);
+  const [normalizeOutput, setNormalizeOutput] = useState(true);
+
+  // App UI State
   const [uploadingType, setUploadingType] = useState<'music' | 'spoken' | 'jingle' | 'underlay' | null>(null);
-  const [isMixing, setIsMixing] = useState<boolean>(false);
+  const [isMixing, setIsMixing] = useState(false);
   const [mixedAudioUrl, setMixedAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
-  const [trimSilenceEnabled, setTrimSilenceEnabled] = useState<boolean>(true);
-  const [silenceThreshold, setSilenceThreshold] = useState<number>(-45);
-  const [normalizeOutput, setNormalizeOutput] = useState<boolean>(true);
   
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // AI Content
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [suggestedDescription, setSuggestedDescription] = useState('');
   const [isSuggestingContent, setIsSuggestingContent] = useState(false);
@@ -232,15 +260,15 @@ const AppContent: React.FC = () => {
   const applyLoadedProject = (projectData: any) => {
       const loadedTracks: Track[] = (projectData.tracks || []).map((t: any) => ({
         ...t,
-        file: null, // Files must be re-linked
-        fileBuffer: undefined,
+        file: t.fileBuffer ? new File([t.fileBuffer], t.fileName) : null,
       }));
+
+      setTracks(loadedTracks);
 
       if (projectData.underlayTrack) {
         setUnderlayTrack({
           ...projectData.underlayTrack,
-          file: null,
-          fileBuffer: undefined,
+          file: projectData.underlayTrack.fileBuffer ? new File([projectData.underlayTrack.fileBuffer], projectData.underlayTrack.fileName) : null,
         });
       } else {
         setUnderlayTrack(null);
@@ -253,10 +281,10 @@ const AppContent: React.FC = () => {
         setUnderlayVolume(projectData.mixerSettings.underlayVolume ?? 0.5);
         setTrimSilenceEnabled(projectData.mixerSettings.trimSilenceEnabled ?? true);
         setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -45);
+        setNormalizeTracks(projectData.mixerSettings.normalizeTracks ?? true);
         setNormalizeOutput(projectData.mixerSettings.normalizeOutput ?? true);
       }
       
-      setTracks(loadedTracks);
       resetMix();
   };
 
@@ -293,107 +321,139 @@ const AppContent: React.FC = () => {
   const trackIds = useMemo(() => tracks.map(t => t.id).join(','), [tracks]);
   const underlayId = useMemo(() => underlayTrack?.id, [underlayTrack]);
 
-  // Load project from localStorage on first load
+  // Load mixer settings from localStorage on first load
   useEffect(() => {
-    const loadInitialProject = () => {
-        try {
-            const savedSession = localStorage.getItem('podcastMixerSession');
-            if (savedSession) {
-                const loadedProject = JSON.parse(savedSession);
-                if (loadedProject.tracks?.length > 0 || loadedProject.underlayTrack) {
-                    applyLoadedProject(loadedProject);
-                    handleInfo('info_session_loaded');
-                }
+    try {
+        const savedSettings = localStorage.getItem('podcastMixerSettings');
+        if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            if (settings) {
+                setMixDuration(settings.mixDuration ?? 2);
+                setDuckingAmount(settings.duckingAmount ?? 0.7);
+                setRampUpDuration(settings.rampUpDuration ?? 1.5);
+                setUnderlayVolume(settings.underlayVolume ?? 0.5);
+                setTrimSilenceEnabled(settings.trimSilenceEnabled ?? true);
+                setSilenceThreshold(settings.silenceThreshold ?? -45);
+                setNormalizeTracks(settings.normalizeTracks ?? true);
+                setNormalizeOutput(settings.normalizeOutput ?? true);
             }
-        } catch (e) {
-            console.error("Failed to load session from localStorage", e);
-            localStorage.removeItem('podcastMixerSession');
         }
-    };
-    loadInitialProject();
+    } catch (e) { console.error("Failed to load settings", e); }
   }, []);
 
-  const getProjectData = () => {
+  const mixerSettings = useMemo(() => ({
+      mixDuration, duckingAmount, rampUpDuration, underlayVolume,
+      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput
+  }), [mixDuration, duckingAmount, rampUpDuration, underlayVolume,
+      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput]);
+
+  // Save mixer settings whenever they change
+  useEffect(() => {
+      try {
+          localStorage.setItem('podcastMixerSettings', JSON.stringify(mixerSettings));
+      } catch (e) {
+          console.error("Failed to save settings", e);
+      }
+  }, [mixerSettings]);
+
+
+  const getProjectData = useCallback(() => {
     return {
         tracks: tracks.map(t => ({
-            id: t.id,
-            name: t.name,
-            fileName: t.fileName,
-            duration: t.duration,
-            type: t.type,
-            vocalStartTime: t.vocalStartTime,
+            id: t.id, name: t.name, fileName: t.fileName, duration: t.duration, type: t.type,
+            vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer,
         })),
         underlayTrack: underlayTrack ? {
-            id: underlayTrack.id,
-            name: underlayTrack.name,
-            fileName: underlayTrack.fileName,
-            duration: underlayTrack.duration,
-            type: underlayTrack.type,
+            id: underlayTrack.id, name: underlayTrack.name, fileName: underlayTrack.fileName,
+            duration: underlayTrack.duration, type: underlayTrack.type, fileBuffer: underlayTrack.fileBuffer,
         } : null,
-        mixerSettings: {
-            mixDuration,
-            duckingAmount,
-            rampUpDuration,
-            underlayVolume,
-            trimSilenceEnabled,
-            silenceThreshold,
-            normalizeOutput,
-        }
+        mixerSettings: mixerSettings
     };
-  };
+  }, [tracks, underlayTrack, mixerSettings]);
 
-  const handleSaveProject = async () => {
-    const projectData = getProjectData();
+  const handleSaveProject = async (name: string, idToUpdate?: number) => {
     setIsSaving(true);
     try {
-        localStorage.setItem('podcastMixerSession', JSON.stringify(projectData));
-        handleInfo('info_local_project_saved');
+        const project: SavedProject = {
+            id: idToUpdate,
+            name,
+            createdAt: new Date().toISOString(),
+            projectData: getProjectData()
+        };
+        const savedId = await db.saveProject(project);
+        setProjectId(idToUpdate ?? savedId);
+        setProjectName(name);
+        handleInfo('info_project_saved');
     } catch (e) {
-        console.error("Failed to save session to localStorage", e);
-        handleError('error_local_save_failed', {}, e);
+        console.error("Failed to save project to IndexedDB", e);
+        handleError('error_project_save_failed', {}, e);
     } finally {
         setIsSaving(false);
     }
   };
 
+  const handleLoadProject = async (id: number) => {
+      try {
+          const project = await db.getProjectById(id);
+          if (project) {
+            applyLoadedProject(project.projectData);
+            setProjectName(project.name);
+            setProjectId(project.id);
+            handleInfo('info_project_loaded');
+          }
+      } catch (e) {
+          console.error("Failed to load project", e);
+          handleError('error_project_load_failed', {}, e);
+      }
+  };
 
    useEffect(() => {
     const analyzeAllTracks = async () => {
-      if (!trimSilenceEnabled) {
-        // If trimming is disabled, clear any existing trim points
-        if (tracks.some(t => t.smartTrimStart !== undefined) || underlayTrack?.smartTrimStart !== undefined) {
-          setTracks(current => current.map(t => ({ ...t, smartTrimStart: undefined, smartTrimEnd: undefined })));
-          if (underlayTrack) setUnderlayTrack(t => t ? ({...t, smartTrimStart: undefined, smartTrimEnd: undefined}) : null);
-        }
-        return;
-      }
-
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const allTracks = underlayTrack ? [...tracks, underlayTrack] : tracks;
 
-      const updates = new Map<string, { smartTrimStart: number; smartTrimEnd: number }>();
+      const updates = new Map<string, Partial<Track>>();
 
       for (const track of allTracks) {
-        if (!track.file) continue; // Skip tracks with missing files
+        if (!track.file || !track.fileBuffer) continue;
         try {
           let buffer = decodedAudioBuffers.current.get(track.id);
           if (!buffer) {
-            if (!track.fileBuffer) {
-              console.warn(`File buffer missing for track ${track.name} during analysis. The file might not have been fully processed yet.`);
-              continue;
-            }
-            // Use a copy of the buffer for decoding, as decodeAudioData can be destructive.
             buffer = await audioContext.decodeAudioData(track.fileBuffer.slice(0));
             decodedAudioBuffers.current.set(track.id, buffer);
           }
           
-          const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
+          const trackUpdates: Partial<Track> = {};
+
+          if (trimSilenceEnabled) {
+              const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
+              trackUpdates.smartTrimStart = smartTrimStart;
+              trackUpdates.smartTrimEnd = smartTrimEnd;
+          } else {
+              trackUpdates.smartTrimStart = undefined;
+              trackUpdates.smartTrimEnd = undefined;
+          }
+
+          if (normalizeTracks) {
+              const targetLoudness = -16; // Target RMS in dBFS
+              const rmsDb = calculateRMS(buffer);
+              if (isFinite(rmsDb)) {
+                const gain = Math.pow(10, (targetLoudness - rmsDb) / 20);
+                trackUpdates.normalizationGain = gain;
+              } else {
+                trackUpdates.normalizationGain = 1;
+              }
+          } else {
+              trackUpdates.normalizationGain = undefined;
+          }
           
           const currentTrackState = track.id.startsWith('underlay-') ? underlayTrack : tracks.find(t => t.id === track.id);
-
-          if (currentTrackState && (currentTrackState.smartTrimStart !== smartTrimStart || currentTrackState.smartTrimEnd !== smartTrimEnd)) {
-            updates.set(track.id, { smartTrimStart, smartTrimEnd });
+          const needsUpdate = Object.keys(trackUpdates).some(key => trackUpdates[key as keyof Track] !== currentTrackState?.[key as keyof Track]);
+          
+          if (needsUpdate) {
+            updates.set(track.id, trackUpdates);
           }
+
         } catch (err) {
           handleError('error_process_file', { fileName: track.name }, err);
         }
@@ -404,11 +464,12 @@ const AppContent: React.FC = () => {
         if (underlayTrack && updates.has(underlayTrack.id)) {
           setUnderlayTrack(t => t ? ({...t, ...updates.get(underlayTrack.id)}) : null);
         }
+        resetMix();
       }
     };
 
     analyzeAllTracks();
-  }, [trimSilenceEnabled, trackIds, underlayId, silenceThreshold, t]);
+  }, [trimSilenceEnabled, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
 
   const handleReorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
     setTracks(prevTracks => {
@@ -510,8 +571,6 @@ const AppContent: React.FC = () => {
             if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
                 isTalkUpIntro = true;
                 const vocalStart = track.vocalStartTime ?? 0;
-                // If vocal start is 0, use the general mix duration as a sensible default overlap.
-                // This makes the "ducking" feature work out-of-the-box.
                 const overlapDuration = vocalStart > 0 ? vocalStart : mixDuration;
                 startTime -= Math.min(overlapDuration, prevLayoutItem.positioningDuration);
             } else if (prevTrack.type === 'music' && track.type === 'music') {
@@ -572,7 +631,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
     const audioContext = new OfflineAudioContext({
         numberOfChannels: 2,
-        length: Math.ceil(sampleRate * (totalDuration + 2)), // Add padding, ensure integer length
+        length: Math.ceil(sampleRate * (totalDuration + 2)),
         sampleRate: sampleRate,
     });
 
@@ -583,9 +642,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         let trackBuffer = decodedAudioBuffers.current.get(item.track.id);
         
         if (!trackBuffer) {
-            console.warn(`Buffer for ${item.track.name} not found, decoding now.`);
             if (!item.track.fileBuffer) continue;
-             // Use a temporary context for decoding if the main one has a different sample rate
             const tempCtx = new AudioContext({ sampleRate });
             trackBuffer = await tempCtx.decodeAudioData(item.track.fileBuffer.slice(0));
             await tempCtx.close();
@@ -601,15 +658,15 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         gainNode.connect(audioContext.destination);
 
         const gain = gainNode.gain;
-        gain.setValueAtTime(0.0, 0);
+        gain.setValueAtTime(item.track.normalizationGain ?? 1.0, 0);
 
         if (isUnderlay) {
             source.loop = true;
             gain.setValueAtTime(0.0, item.startTime);
-            gain.linearRampToValueAtTime(underlayVolume, item.startTime + 0.1);
+            gain.linearRampToValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), item.startTime + 0.1);
             const fadeOutStartTime = item.endTime - mixDuration;
             if (fadeOutStartTime > item.startTime + 0.1) {
-                gain.setValueAtTime(underlayVolume, fadeOutStartTime);
+                gain.setValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), fadeOutStartTime);
             }
             gain.linearRampToValueAtTime(0, item.endTime);
         } else { 
@@ -617,9 +674,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               const prevItem = mainLayoutIndex > 0 ? layout[mainLayoutIndex - 1] : null;
               const nextItem = mainLayoutIndex < layout.length - 1 ? layout[mainLayoutIndex + 1] : null;
 
-              const duckedGain = 1 - duckingAmount;
-              const fullGain = 1.0;
-              const silentGain = 0.0;
+              const baseGain = item.track.normalizationGain ?? 1.0;
+              const duckedGain = baseGain * (1 - duckingAmount);
               
               let fadeInEndTime = item.startTime;
 
@@ -629,36 +685,35 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   const rampUpEndTime = duckingEndTime + rampDuration;
                   
                   gain.setValueAtTime(duckedGain, item.startTime);
-                  
                   if (duckingEndTime > item.startTime) gain.setValueAtTime(duckedGain, duckingEndTime);
                  
-                  if (rampUpEndTime > duckingEndTime) gain.linearRampToValueAtTime(fullGain, rampUpEndTime);
-                  else gain.setValueAtTime(fullGain, duckingEndTime);
+                  if (rampUpEndTime > duckingEndTime) gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
+                  else gain.setValueAtTime(baseGain, duckingEndTime);
                   
                   fadeInEndTime = rampUpEndTime;
               } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music') {
                   const rampUpEndTime = item.startTime + mixDuration;
-                  gain.setValueAtTime(silentGain, item.startTime);
-                  gain.linearRampToValueAtTime(fullGain, rampUpEndTime);
+                  gain.setValueAtTime(0.0, item.startTime);
+                  gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
                   fadeInEndTime = rampUpEndTime;
               } else {
-                  gain.setValueAtTime(fullGain, item.startTime);
+                  gain.setValueAtTime(baseGain, item.startTime);
               }
 
               if (item.track.type === 'music' && nextItem && (nextItem.track.type === 'music' || nextItem.track.type === 'jingle')) {
                   const fadeOutStartTime = Math.max(fadeInEndTime, item.endTime - mixDuration);
                   const fadeOutFinishTime = item.endTime;
                   if (fadeOutFinishTime > fadeOutStartTime) {
-                      gain.setValueAtTime(fullGain, fadeOutStartTime);
-                      gain.linearRampToValueAtTime(silentGain, fadeOutFinishTime);
+                      gain.setValueAtTime(baseGain, fadeOutStartTime);
+                      gain.linearRampToValueAtTime(0.0, fadeOutFinishTime);
                   }
               } else if (!nextItem) {
                   const actualEndTime = item.startTime + item.playbackDuration;
                   const fadeDuration = Math.min(0.5, item.playbackDuration);
                   if (fadeDuration > 0.01) {
                       const fadeOutStartTime = Math.max(fadeInEndTime, actualEndTime - fadeDuration);
-                      gain.setValueAtTime(fullGain, fadeOutStartTime);
-                      gain.linearRampToValueAtTime(silentGain, actualEndTime);
+                      gain.setValueAtTime(baseGain, fadeOutStartTime);
+                      gain.linearRampToValueAtTime(0.0, actualEndTime);
                   }
               }
         }
@@ -684,7 +739,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       
       if (maxPeak > 0 && maxPeak !== 1) {
         const gainValue = 0.98 / maxPeak;
-        // The buffer needs to be processed in a new context to apply gain.
         const gainContext = new OfflineAudioContext(mixedBuffer.numberOfChannels, mixedBuffer.length, mixedBuffer.sampleRate);
         const source = gainContext.createBufferSource();
         source.buffer = mixedBuffer;
@@ -699,7 +753,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     }
     
     return mixedBuffer;
-}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration]);
+}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration, normalizeTracks]);
 
 
   const estimatedDuration = timelineLayout.totalDuration;
@@ -741,10 +795,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         
         if (options.format === 'wav') {
             blob = encodeWav(mixedBuffer);
-            fileName = 'podcast_mix.wav';
+            fileName = `${projectName}.wav`;
         } else {
             blob = await encodeMp3(mixedBuffer, options.bitrate);
-            fileName = 'podcast_mix.mp3';
+            fileName = `${projectName}.mp3`;
         }
 
         const link = document.createElement('a');
@@ -768,14 +822,21 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         handleError('error_export_first_mix');
         return;
     }
-    setIsSaving(true);
+    setIsExporting(true);
+    setExportProgress(0);
     try {
         const zip = new JSZip();
-        const projectData = getProjectData();
-        zip.file("project.json", JSON.stringify(projectData, null, 2));
+        
+        // Remove file buffers before saving project.json to keep it small
+        const projectDataToSave = getProjectData();
+        projectDataToSave.tracks.forEach(t => { delete (t as any).fileBuffer; });
+        if (projectDataToSave.underlayTrack) {
+            delete (projectDataToSave.underlayTrack as any).fileBuffer;
+        }
+        zip.file("project.json", JSON.stringify(projectDataToSave, null, 2));
 
         const mixedAudioBlob = await fetch(mixedAudioUrl).then(r => r.blob());
-        zip.file("mix_output.wav", mixedAudioBlob);
+        zip.file(`${projectName}_mix.wav`, mixedAudioBlob);
 
         const sourceFilesFolder = zip.folder("source_files");
         const allTracksWithFiles = [...tracks, underlayTrack].filter((t): t is Track => !!t && !!t.fileBuffer && !!t.fileName);
@@ -786,10 +847,12 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             }
         }
         
-        const content = await zip.generateAsync({ type: "blob" });
+        const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+            setExportProgress(metadata.percent);
+        });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(content);
-        link.download = "podcast_mixer_project.zip";
+        link.download = `${projectName}_project.zip`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -798,7 +861,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     } catch(err) {
         handleError('error_project_export_failed', {}, err);
     } finally {
-        setIsSaving(false);
+        setIsExporting(false);
+        setExportProgress(0);
     }
   };
 
@@ -875,7 +939,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
   const showUnderlayControl = useMemo(() => {
     if (!underlayTrack) return false;
-    // Show control if there's an underlay and at least two music tracks to bridge.
     return tracks.filter(t => t.type === 'music').length >= 2;
   }, [tracks, underlayTrack]);
   
@@ -905,13 +968,22 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           isExporting={isExporting}
         />
       )}
+      {isSaveModalOpen && (
+        <SaveProjectModal 
+            onClose={() => setIsSaveModalOpen(false)}
+            onSave={handleSaveProject}
+            onLoad={handleLoadProject}
+            isSaving={isSaving}
+            currentProjectName={projectName}
+            currentProjectId={projectId}
+        />
+      )}
+      {isExporting && exportProgress > 0 && <ExportProgressModal progress={exportProgress} />}
+
 
       <div className="max-w-7xl mx-auto">
         <Header 
           onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
-          onSaveProject={handleSaveProject}
-          isSaving={isSaving}
-          hasTracks={tracks.length > 0 || !!underlayTrack}
         />
         <main className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
@@ -944,6 +1016,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onTrimSilenceChange={(e) => { setTrimSilenceEnabled(e); resetMix(); }}
               silenceThreshold={silenceThreshold}
               onSilenceThresholdChange={(t) => { setSilenceThreshold(t); resetMix(); }}
+              normalizeTracks={normalizeTracks}
+              onNormalizeTracksChange={(e) => { setNormalizeTracks(e); resetMix(); }}
               normalizeOutput={normalizeOutput}
               onNormalizeOutputChange={(e) => { setNormalizeOutput(e); resetMix(); }}
               onMix={handleMix}
@@ -951,11 +1025,12 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
               onExportAudio={() => setIsExportModalOpen(true)}
               onExportProject={handleExportProject}
+              onSaveProject={() => setIsSaveModalOpen(true)}
+              isSaving={isSaving}
               mixedAudioUrl={mixedAudioUrl}
               isDisabled={!canMix}
               totalDuration={estimatedDuration}
               demoMaxDuration={DEMO_MAX_DURATION_SECONDS}
-              hasTracks={tracks.length > 0}
               showDuckingControl={showDuckingControl}
               showUnderlayControl={showUnderlayControl}
               onSuggestContent={handleSuggestContent}
@@ -989,7 +1064,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           </div>
         </main>
         <footer className="text-center text-xs text-gray-500 mt-8 pb-4">
-          {t('footer_version')} 1.4.0 | © {new Date().getFullYear()} CustomRadio.sk
+          {t('footer_version')} 1.5.0 | © {new Date().getFullYear()} CustomRadio.sk
         </footer>
       </div>
     </div>
