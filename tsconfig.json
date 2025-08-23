@@ -23,7 +23,6 @@
     "lib/config.ts",
     "lib/database.types.ts",
     "lib/supabaseClient.ts",
-    "api/create-checkout.ts",
     "api/stripe-webhook.ts"
   ]
 }
