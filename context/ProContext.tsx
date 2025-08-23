@@ -37,7 +37,7 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    const apiUrl = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+    const apiUrl = '/api/verify-license'; // Point to our backend proxy
 
     try {
       const response = await fetch(apiUrl, {
@@ -45,53 +45,28 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, license_key: code }),
+        body: JSON.stringify({ email, key: code }), // Use 'key' as expected by our API
       });
       
-      const responseText = await response.text();
+      const data = await response.json();
 
-      if (response.ok) { // A 2xx status from the webhook.
-        let isSuccess = false;
-
-        // Ideal case: The webhook returns a structured JSON response
-        try {
-            const data = JSON.parse(responseText);
-            if (data && data.valid === true) {
-                isSuccess = true;
-            }
-        } catch (e) {
-            // Not JSON, so we check for the plain text response
-        }
-        
-        // Fallback case: The webhook returns a simple "Accepted" text
-        if (!isSuccess && responseText.trim().toLowerCase() === 'accepted') {
-            isSuccess = true;
-        }
-
-        if (isSuccess) {
-            const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-            setIsPro(true);
-            setProUser({ email: email.trim(), key: code.trim() });
-            return { success: true };
-        } else {
-            // The webhook responded with 200 OK, but the content indicates failure
-            return { success: false, error: "Invalid email or license key." };
-        }
-
+      if (response.ok && data.success) {
+        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+        setIsPro(true);
+        setProUser({ email: email.trim(), key: code.trim() });
+        return { success: true };
       } else {
-        // The webhook returned a non-2xx status (e.g., 401, 404, 500).
-        // Use the response text as the error message if available, otherwise a generic one.
-        return { success: false, error: responseText || "Invalid email or license key." };
+        return { success: false, error: data.error || "Invalid email or license key." };
       }
     } catch (error) {
       console.error("Failed to call verification API:", error);
-      // This catch block handles network errors (e.g. CORS, DNS, no internet)
       return { success: false, error: "Could not connect to the license server." };
     } finally {
       setIsLoading(false);
     }
   }, []);
+
 
   const logout = useCallback(() => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);

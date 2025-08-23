@@ -41,27 +41,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body: JSON.stringify({ email, license_key: key }),
         });
 
-        // Check if the webhook responded successfully (status 200-299)
+        const responseText = await webhookResponse.text();
+
+        // Check for a successful response (status 200) AND valid content
         if (webhookResponse.ok) {
-            // Assuming a successful response from Make.com means the license is valid.
-            return res.status(200).json({ success: true });
-        } else {
-            // The webhook indicated an error (e.g., 401 for invalid key)
-            let errorMessage = 'Invalid email or license key provided.';
+            let isValid = false;
+            // Check for explicit JSON success response
             try {
-                // Try to parse a more specific error message from the webhook response
-                const errorData = await webhookResponse.json();
-                if (errorData && typeof errorData.error === 'string') {
-                    errorMessage = errorData.error;
+                const data = JSON.parse(responseText);
+                if (data && data.valid === true) {
+                    isValid = true;
                 }
             } catch (e) {
-                // The error response wasn't JSON. We'll use the generic error message.
-                console.warn('Make.com webhook error response was not JSON.');
+                // Not JSON, continue to check for plain text
             }
             
-            // Return a 401 status for invalid credentials.
-            return res.status(401).json({ success: false, error: errorMessage });
+            // Fallback: Check for simple "Accepted" text response
+            if (!isValid && responseText.trim().toLowerCase() === 'accepted') {
+                isValid = true;
+            }
+
+            if (isValid) {
+                return res.status(200).json({ success: true });
+            }
         }
+        
+        // If we reach here, the license is invalid for any reason
+        const errorMessage = 'Invalid email or license key provided.';
+        return res.status(401).json({ success: false, error: errorMessage });
 
     } catch (error: any) {
         console.error('Unhandled error in /api/verify-license:', {
