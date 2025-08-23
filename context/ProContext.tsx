@@ -47,45 +47,42 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         },
         body: JSON.stringify({ email, license_key: code }),
       });
+      
+      const responseText = await response.text();
 
-      if (response.ok) { // A 2xx status from the webhook. Now, we must check the body.
+      if (response.ok) { // A 2xx status from the webhook.
+        let isSuccess = false;
+
+        // Ideal case: The webhook returns a structured JSON response
         try {
-            // A correctly configured Make.com scenario should return a JSON response.
-            // On success, it should return something like: {"valid": true}
-            // On failure (but still 200 OK), it might return: {"valid": false, "error": "Invalid key"}
-            const data = await response.json();
-
+            const data = JSON.parse(responseText);
             if (data && data.valid === true) {
-                // License is confirmed as valid by the webhook.
-                const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-                setIsPro(true);
-                setProUser({ email: email.trim(), key: code.trim() });
-                return { success: true };
-            } else {
-                // The webhook responded with 200 OK, but the content indicates the license is invalid.
-                return { success: false, error: data.error || "Invalid email or license key." };
+                isSuccess = true;
             }
         } catch (e) {
-            // The response was 200 OK, but not valid JSON. This can happen if the Make.com
-            // scenario returns a simple text string like "Accepted" by default.
-            // We treat this as a failure because we expect a specific JSON structure for confirmation.
-            console.warn("Webhook response was not valid JSON.", e);
-            return { success: false, error: "Received an unexpected response from the license server." };
+            // Not JSON, so we check for the plain text response
         }
+        
+        // Fallback case: The webhook returns a simple "Accepted" text
+        if (!isSuccess && responseText.trim().toLowerCase() === 'accepted') {
+            isSuccess = true;
+        }
+
+        if (isSuccess) {
+            const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+            setIsPro(true);
+            setProUser({ email: email.trim(), key: code.trim() });
+            return { success: true };
+        } else {
+            // The webhook responded with 200 OK, but the content indicates failure
+            return { success: false, error: "Invalid email or license key." };
+        }
+
       } else {
         // The webhook returned a non-2xx status (e.g., 401, 404, 500).
-        let errorMessage = "Invalid email or license key.";
-        try {
-            const responseText = await response.text();
-            if (responseText) {
-                // Use the webhook's response as the error message if available.
-                errorMessage = responseText;
-            }
-        } catch (e) {
-            console.warn("Could not read error response body from webhook.");
-        }
-        return { success: false, error: errorMessage };
+        // Use the response text as the error message if available, otherwise a generic one.
+        return { success: false, error: responseText || "Invalid email or license key." };
       }
     } catch (error) {
       console.error("Failed to call verification API:", error);
