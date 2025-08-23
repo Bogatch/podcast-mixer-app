@@ -18,26 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        let body;
-        // The body can be a pre-parsed object or a string depending on the Vercel environment.
-        // This makes the parsing robust.
-        if (typeof req.body === 'string' && req.body.length > 0) {
-            try {
-                body = JSON.parse(req.body);
-            } catch (e) {
-                console.warn('Failed to parse request body as JSON:', req.body);
-                return res.status(400).json({ success: false, error: 'Invalid JSON in request body.' });
-            }
-        } else if (typeof req.body === 'object' && req.body !== null) {
-            body = req.body;
-        } else {
-            return res.status(400).json({ success: false, error: 'Request body is missing, empty, or not an object.' });
-        }
-
-        const { email, key } = body;
+        const { email, key } = req.body;
 
         if (!email || typeof email !== 'string' || !key || typeof key !== 'string') {
-            return res.status(400).json({ success: false, error: 'Email and license key are required and must be strings.' });
+            return res.status(400).json({ success: false, error: 'Email and license key are required.' });
         }
         
         console.log(`Forwarding verification request for email: ${email} to Make.com`);
@@ -49,34 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         const responseText = await webhookResponse.text();
-        console.log(`Received response from Make.com. Status: ${webhookResponse.status}, Body: "${responseText}"`);
-
-        if (!webhookResponse.ok) {
-            console.error(`Make.com webhook returned an error status: ${webhookResponse.status}`);
-            return res.status(401).json({ success: false, error: 'Invalid license key or email.' });
-        }
-
-        let isValid = false;
-        const trimmedResponse = responseText.trim().toLowerCase();
         
-        if (trimmedResponse === 'accepted') {
-            isValid = true;
-        } else {
-            try {
-                const data = JSON.parse(responseText);
-                if (data && data.valid === true) {
-                    isValid = true;
-                }
-            } catch (e) {
-                console.warn('Make.com response was not "Accepted" and not valid JSON. Assuming invalid.');
-            }
-        }
-        
-        if (isValid) {
+        if (webhookResponse.ok && responseText.trim().toLowerCase() === 'accepted') {
             console.log(`License validation successful for email: ${email}`);
             return res.status(200).json({ success: true });
         } else {
-            console.log(`License validation failed for email: ${email}`);
+            console.warn(`License validation failed for email: ${email}. Status: ${webhookResponse.status}, Response: "${responseText}"`);
             return res.status(401).json({ success: false, error: 'Invalid license key or email.' });
         }
 
