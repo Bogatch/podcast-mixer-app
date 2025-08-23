@@ -1,7 +1,6 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon, KeyIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
-import { useAuth } from '../context/AuthContext';
 import { usePro } from '../context/ProContext';
 
 interface UnlockModalProps {
@@ -19,23 +18,20 @@ const Feature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const BuyLicenseForm: React.FC = () => {
     const { t } = useContext(I18nContext);
-    const { createCheckout } = useAuth();
-    
     const [email, setEmail] = useState('');
-    const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
 
-    const handlePurchase = async (e: React.FormEvent) => {
+    const handlePurchase = (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        if (!emailIsValid) return;
+
         setIsLoading(true);
-
-        const result = await createCheckout(email);
-
-        if (result.error) {
-            setError(t('unlock_modal_checkout_failed'));
-            setIsLoading(false);
-        }
+        const baseUrl = 'https://buy.stripe.com/bJe14ogcG5bi9QR47g00000';
+        // Pre-fill email for Stripe payment link
+        const finalUrl = `${baseUrl}?prefilled_email=${encodeURIComponent(email)}`;
+        window.location.href = finalUrl;
+        // The page will redirect, so no need to set isLoading back to false.
     };
     
     return (
@@ -59,12 +55,10 @@ const BuyLicenseForm: React.FC = () => {
                </div>
             </div>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
             <div className="pt-2">
                <button
                     type="submit"
-                    disabled={isLoading || !email}
+                    disabled={isLoading || !emailIsValid}
                     className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
                 >
                     {isLoading ? (
