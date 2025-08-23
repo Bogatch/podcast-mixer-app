@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, key }),
+            body: JSON.stringify({ email, license_key: key }),
         });
 
         // Check if the webhook responded successfully (status 200-299)

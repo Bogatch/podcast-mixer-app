@@ -47,7 +47,7 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, key: code }),
+        body: JSON.stringify({ email, license_key: code }),
       });
 
       if (response.ok) { // A 2xx status from the webhook indicates success.
