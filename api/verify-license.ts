@@ -42,17 +42,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         console.log(`Received verification request for email starting with: ${email.substring(0, 3)}...`);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
         console.log('Forwarding request to Make.com...');
         const webhookResponse = await fetch(MAKE_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim(), key: key.trim() }),
-            signal: controller.signal
         });
-        clearTimeout(timeoutId);
 
         console.log(`Received response from Make.com with status: ${webhookResponse.status}`);
 
@@ -70,10 +65,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
-
-        if (error.name === 'AbortError') {
-            return res.status(504).json({ success: false, error: 'The license server did not respond in time.' });
-        }
 
         return res.status(500).json({ success: false, error: 'An unexpected server error occurred.' });
     }
