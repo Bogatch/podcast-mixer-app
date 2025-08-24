@@ -948,7 +948,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                  (!underlayTrack || !!underlayTrack.file);
   
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
       {isReordering && (
         <ReorderModal 
             tracks={tracks}
@@ -995,7 +995,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
           <div className="lg:col-span-1 space-y-6">
             <button
               onClick={() => setIsHelpModalOpen(true)}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm font-medium text-gray-200 rounded-md transition-colors"
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
             >
               <QuestionMarkCircleIcon className="w-5 h-5" />
               <span>{t('show_help_guide')}</span>
@@ -1006,8 +1006,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               uploadingType={uploadingType}
               isMixing={isMixing} 
             />
-            {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-md text-sm" role="alert">{error}</div>}
-            {info && <div className="bg-blue-900/50 text-blue-300 p-3 rounded-md text-sm" role="status">{info}</div>}
+            {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-md text-sm" role="alert">{error}</div>}
+            {info && <div className="bg-blue-500/20 text-blue-300 p-3 rounded-md text-sm" role="status">{info}</div>}
             
             <MixerControls 
               mixDuration={mixDuration} 
@@ -1045,7 +1045,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               suggestedDescription={suggestedDescription}
             />
           </div>
-          <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-700">
+          <div className="lg:col-span-2 bg-gray-800/50 rounded-lg p-6 shadow-2xl border border-gray-700">
             {tracks.length > 0 || underlayTrack ? (
               <div className="space-y-6">
                 <MonitoringPanel
@@ -1069,7 +1069,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             )}
           </div>
         </main>
-        <footer className="text-center text-xs text-gray-400 mt-8 pb-4">
+        <footer className="text-center text-xs text-gray-500 mt-8 pb-4">
           {t('footer_version')} 1.5.0 | © {new Date().getFullYear()} CustomRadio.sk
         </footer>
       </div>

@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -12,36 +11,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
+    // Wrap the entire logic in a try-catch to prevent unhandled crashes
     try {
+        console.log('--- /api/verify-license function started ---');
+
+        const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+
+        if (!MAKE_WEBHOOK_URL) {
+            console.error('CRITICAL: MAKE_WEBHOOK_URL environment variable is not set on the server.');
+            return res.status(503).json({ success: false, error: 'Server is not configured correctly. Missing webhook URL.' });
+        }
+        console.log('Server configuration: Webhook URL is present.');
+
         if (req.method !== 'POST') {
             res.setHeader('Allow', 'POST');
             return res.status(405).json({ success: false, error: 'Method Not Allowed' });
         }
+        console.log('Request method is POST.');
 
-        // Safely handle the request body to prevent crashes if it's missing or malformed
-        const body = req.body || {};
-        const { email, key } = body;
+        if (!req.body) {
+            console.error('CRITICAL: Request body is missing or could not be parsed. Ensure Content-Type is application/json.');
+            return res.status(400).json({ success: false, error: 'Invalid request: body is missing.' });
+        }
+
+        const { email, key } = req.body;
 
         if (!email || typeof email !== 'string' || !key || typeof key !== 'string') {
             console.warn('Invalid request body received:', req.body);
             return res.status(400).json({ success: false, error: 'Email and license key are required.' });
         }
-        
-        console.log(`--- /api/verify-license: Processing request for ${email.substring(0,3)}... ---`);
+        console.log(`Received verification request for email starting with: ${email.substring(0, 3)}...`);
 
-        const MAKE_WEBHOOK_URL = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
-
+        console.log('Forwarding request to Make.com...');
         const webhookResponse = await fetch(MAKE_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim(), key: key.trim() }),
-            signal: controller.signal,
-        }).finally(() => {
-            clearTimeout(timeoutId);
         });
+
+        console.log(`Received response from Make.com with status: ${webhookResponse.status}`);
 
         if (webhookResponse.ok) {
             console.log('License verification successful.');
@@ -53,10 +61,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
     } catch (error: any) {
-        if (error.name === 'AbortError') {
-            console.error('--- Request to verification service timed out ---');
-            return res.status(504).json({ success: false, error: 'The license verification server did not respond in time.' });
-        }
         console.error('--- UNCAUGHT EXCEPTION in /api/verify-license ---');
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);

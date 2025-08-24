@@ -73,7 +73,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div 
@@ -89,7 +89,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
 
         <main className="p-6 space-y-6 overflow-y-auto">
             {/* Save Section */}
-            <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
+            <div className="bg-gray-900/50 p-4 rounded-lg">
                 <label htmlFor="project-name" className="block text-sm font-medium text-gray-300 mb-2">{t('save_project_modal_name_label')}</label>
                 <div className="flex items-center gap-3">
                     <input 
@@ -98,12 +98,12 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
                         value={projectName}
                         onChange={(e) => setProjectName(e.target.value)}
                         placeholder={t('save_project_modal_placeholder')}
-                        className="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-base text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button 
                         onClick={() => handleSave(false)} 
                         disabled={isSaving || !projectName.trim()}
-                        className="flex items-center justify-center px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-500 text-white font-semibold rounded-md transition-colors whitespace-nowrap"
+                        className="flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors whitespace-nowrap"
                     >
                         {isSaving ? <SpinnerIcon className="animate-spin h-5 w-5 mr-2" /> : <SaveIcon className="w-5 h-5 mr-2"/>}
                         {t('save_project_modal_save_as_new')}
@@ -113,7 +113,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
                     <button 
                         onClick={() => handleSave(true)}
                         disabled={isSaving || !projectName.trim()}
-                        className="w-full mt-3 flex items-center justify-center px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-500 text-gray-200 font-semibold rounded-md transition-colors"
+                        className="w-full mt-3 flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 text-white font-semibold rounded-md transition-colors"
                     >
                          {t('save_project_modal_overwrite')} "{currentProjectName}"
                     </button>
@@ -122,23 +122,23 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
             
             {/* Load Section */}
             <div>
-                <h3 className="text-lg font-semibold text-white mb-3">{t('save_project_modal_saved_projects_title')}</h3>
+                <h3 className="text-lg font-semibold text-gray-200 mb-3">{t('save_project_modal_saved_projects_title')}</h3>
                 {isLoading ? (
                     <div className="text-center py-4 text-gray-400">{t('loading')}...</div>
                 ) : savedProjects.length > 0 ? (
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                         {savedProjects.map(p => (
-                            <div key={p.id} className="bg-gray-700/50 p-3 rounded-lg flex items-center justify-between border border-gray-600">
+                            <div key={p.id} className="bg-gray-700/50 p-3 rounded-lg flex items-center justify-between">
                                 <div>
-                                    <p className="font-semibold text-gray-100">{p.name}</p>
+                                    <p className="font-semibold text-white">{p.name}</p>
                                     <p className="text-xs text-gray-400">{t('saved_at')} {formatDate(p.createdAt)}</p>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <button onClick={() => handleLoad(p.id!)} className="flex items-center space-x-2 px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-xs font-semibold text-gray-200 rounded-md transition-colors">
+                                    <button onClick={() => handleLoad(p.id!)} className="flex items-center space-x-2 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-xs font-semibold text-white rounded-md transition-colors">
                                         <FolderOpenIcon className="w-4 h-4" />
                                         <span>{t('load_project')}</span>
                                     </button>
-                                     <button onClick={() => handleDelete(p.id!)} className="p-2 rounded-md hover:bg-red-900/50 transition-colors" title={t('delete_project')}>
+                                     <button onClick={() => handleDelete(p.id!)} className="p-2 rounded-md hover:bg-red-500/20 transition-colors" title={t('delete_project')}>
                                         <TrashIcon className="w-4 h-4 text-red-400" />
                                     </button>
                                 </div>
@@ -146,7 +146,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-400 text-center py-4">{t('no_saved_projects')}</p>
+                    <p className="text-sm text-gray-500 text-center py-4">{t('no_saved_projects')}</p>
                 )}
             </div>
         </main>

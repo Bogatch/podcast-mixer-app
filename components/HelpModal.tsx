@@ -4,15 +4,15 @@ import { I18nContext } from '../lib/i18n';
 
 const HelpSection: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
     <section className="space-y-3">
-        <h3 className="text-xl font-bold text-teal-400 border-b-2 border-teal-400/20 pb-2">{title}</h3>
-        <div className="space-y-4 text-gray-300 text-base leading-relaxed">
+        <h3 className="text-xl font-bold text-teal-400 border-b-2 border-teal-500/30 pb-2">{title}</h3>
+        <div className="space-y-4 text-gray-300/90 text-base leading-relaxed">
             {children}
         </div>
     </section>
 );
 
 const SubHeading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <h4 className="text-lg font-semibold text-gray-100 mt-4">{children}</h4>
+    <h4 className="text-lg font-semibold text-gray-200 mt-4">{children}</h4>
 );
 
 export const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -20,7 +20,7 @@ export const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     
     return (
         <div 
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
           onClick={onClose}
         >
           <div 

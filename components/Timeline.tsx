@@ -34,8 +34,8 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineLayout }) => {
     return (
       <div className="mt-6">
         <h3 className="text-md font-semibold mb-2 text-gray-400">{t('timeline_title')}</h3>
-        <div className="w-full h-32 bg-gray-700/50 rounded-lg flex items-center justify-center border border-gray-700">
-          <p className="text-sm text-gray-400">{t('timeline_waiting')}</p>
+        <div className="w-full h-32 bg-gray-700/50 rounded-lg flex items-center justify-center">
+          <p className="text-sm text-gray-500">{t('timeline_waiting')}</p>
         </div>
       </div>
     );
@@ -67,7 +67,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineLayout }) => {
         title={t('timeline_track_title', { trackName: track.name, startTime: startTime.toFixed(1) })}
       >
         <div 
-          className="absolute h-full flex items-center justify-center border-l-2 border-r-2 border-black/20 rounded"
+          className="absolute h-full flex items-center justify-center border-l-2 border-r-2 border-gray-900/50 rounded"
           style={{ 
               backgroundColor: color,
               width: `${mainBlockWidthRatio * 100}%`
@@ -96,8 +96,8 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineLayout }) => {
 
   return (
     <div className="mt-6">
-      <h3 className="text-md font-semibold mb-3 text-gray-300">{t('timeline_title')}</h3>
-      <div className="relative w-full h-36 bg-gray-900/50 rounded-lg overflow-hidden">
+      <h3 className="text-md font-semibold mb-3 text-gray-400">{t('timeline_title')}</h3>
+      <div className="relative w-full h-36 bg-gray-700/50 rounded-lg overflow-hidden">
         {layout.map(item => {
           if (item.track.type === 'music') {
             return renderTrackItem(item, '0%', COLORS.music);
@@ -115,7 +115,7 @@ export const Timeline: React.FC<TimelineProps> = ({ timelineLayout }) => {
           return renderTrackItem(item, '66.67%', COLORS.underlay);
         })}
       </div>
-       <div className="flex justify-between flex-wrap text-xs text-gray-300 mt-1 px-1">
+       <div className="flex justify-between flex-wrap text-xs text-gray-500 mt-1 px-1">
           <div className="flex items-center space-x-2 mr-4"><div className="w-3 h-3 rounded-sm" style={{backgroundColor: COLORS.music}}></div><span>{t('timeline_legend_music')}</span></div>
           <div className="flex items-center space-x-2 mr-4"><div className="w-3 h-3 rounded-sm" style={{backgroundColor: COLORS.spoken}}></div><span>{t('timeline_legend_spoken')}</span></div>
           <div className="flex items-center space-x-2 mr-4"><div className="w-3 h-3 rounded-sm" style={{backgroundColor: COLORS.jingle}}></div><span>{t('timeline_legend_jingle')}</span></div>

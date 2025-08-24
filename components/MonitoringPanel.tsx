@@ -36,7 +36,7 @@ const StaticTrackItem: React.FC<{
 
     if (!track.file) {
         return (
-             <div className="bg-yellow-900/30 p-3 rounded-lg border border-yellow-800/50 flex items-center w-full">
+             <div className="bg-yellow-900/40 p-3 rounded-lg border border-yellow-700/50 flex items-center w-full">
                 <input type="file" ref={relinkInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" />
                 <div className="flex items-center space-x-3 flex-grow min-w-0">
                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-600">
@@ -47,10 +47,10 @@ const StaticTrackItem: React.FC<{
                      </div>
                 </div>
                 <div className="flex items-center ml-4 space-x-2">
-                    <button onClick={() => relinkInputRef.current?.click()} className="p-2 rounded-md bg-yellow-800/50 hover:bg-yellow-700/50 transition-colors">
-                        <UploadIcon className="w-4 h-4 text-yellow-200" />
+                    <button onClick={() => relinkInputRef.current?.click()} className="p-2 rounded-md bg-yellow-600/30 hover:bg-yellow-600/50 transition-colors">
+                        <UploadIcon className="w-4 h-4 text-yellow-300" />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-md hover:bg-red-900/50 transition-colors">
+                    <button onClick={onDelete} className="p-2 rounded-md hover:bg-red-500/20 transition-colors">
                         <TrashIcon className="w-4 h-4 text-red-400" />
                     </button>
                 </div>
@@ -59,7 +59,7 @@ const StaticTrackItem: React.FC<{
     }
 
     return (
-        <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 flex items-center w-full">
+        <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/50 flex items-center w-full">
             <div className="flex items-center space-x-3 flex-grow min-w-0">
                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: color }}>
                     {icon}
@@ -69,7 +69,7 @@ const StaticTrackItem: React.FC<{
                  </div>
             </div>
             <div className="flex items-center ml-4">
-              <button onClick={onDelete} className="p-2 rounded-md hover:bg-red-900/50 transition-colors">
+              <button onClick={onDelete} className="p-2 rounded-md hover:bg-red-500/20 transition-colors">
                 <TrashIcon className="w-4 h-4 text-red-400" />
               </button>
             </div>
@@ -105,11 +105,11 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
   return (
     <div className="space-y-4 overflow-x-hidden">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-white">{t('monitoring_title')}</h2>
+        <h2 className="text-xl font-semibold text-gray-200">{t('monitoring_title')}</h2>
         {tracks.length > 1 && (
             <button
                 onClick={onToggleReorder}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm font-medium text-gray-200 rounded-md transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
                 title={t('monitoring_reorder_title')}
             >
                 <ArrowsUpDownIcon className="w-5 h-5"/>

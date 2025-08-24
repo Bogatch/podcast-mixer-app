@@ -39,8 +39,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
             disabled={isExporting}
             className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 value === currentValue
-                ? 'bg-teal-500 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
             }`}
         >
             {label}
@@ -51,7 +51,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
@@ -72,7 +72,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
 
         <main className="p-6 space-y-6 overflow-y-auto">
           <div>
-            <label className="block text-base font-semibold text-gray-200 mb-3">{t('export_format')}</label>
+            <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_format')}</label>
             <div className="flex space-x-2">
               <OptionButton
                 value="mp3"
@@ -91,7 +91,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
           
           {options.format === 'mp3' && (
              <div>
-                <label className="block text-base font-semibold text-gray-200 mb-3">{t('export_quality')}</label>
+                <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_quality')}</label>
                 <div className="flex flex-wrap gap-2">
                     {[128, 192, 256, 320].map(rate => (
                         <OptionButton
@@ -103,12 +103,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                         />
                     ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">{t('export_quality_info')}</p>
+                <p className="text-xs text-gray-500 mt-2">{t('export_quality_info')}</p>
             </div>
           )}
 
            <div>
-                <label className="block text-base font-semibold text-gray-200 mb-3">{t('export_samplerate')}</label>
+                <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_samplerate')}</label>
                 <div className="flex space-x-2">
                      <OptionButton
                         value={44100}
@@ -123,22 +123,22 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                         label="48 kHz"
                     />
                 </div>
-                 <p className="text-xs text-gray-400 mt-2">{t('export_samplerate_info')}</p>
+                 <p className="text-xs text-gray-500 mt-2">{t('export_samplerate_info')}</p>
             </div>
         </main>
 
-        <footer className="p-6 border-t border-gray-700 bg-gray-900 rounded-b-xl flex justify-end space-x-4">
+        <footer className="p-6 border-t border-gray-700 bg-gray-800/50 rounded-b-xl flex justify-end space-x-4">
           <button
             onClick={onClose}
             disabled={isExporting}
-            className="px-4 py-2 bg-gray-600 border border-gray-500 hover:bg-gray-500 text-gray-200 font-semibold rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors disabled:opacity-50"
           >
             {t('cancel')}
           </button>
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="px-6 py-2 w-36 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-wait"
+            className="px-6 py-2 w-36 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors disabled:bg-gray-600 disabled:cursor-wait"
           >
             {isExporting ? (
               <SpinnerIcon className="animate-spin h-5 w-5 text-white" />
