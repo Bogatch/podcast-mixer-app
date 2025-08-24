@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import fetch from 'node-fetch';
+import AbortController from 'abort-controller';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers to allow requests from any origin
@@ -19,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!MAKE_WEBHOOK_URL) {
             console.error('CRITICAL: MAKE_WEBHOOK_URL environment variable is not set on the server.');
-            return res.status(500).json({ success: false, error: 'Server is not configured correctly. Missing webhook URL.' });
+            return res.status(503).json({ success: false, error: 'Server is not configured correctly. Missing webhook URL.' });
         }
         console.log('Server configuration: Webhook URL is present.');
 
@@ -28,6 +30,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ success: false, error: 'Method Not Allowed' });
         }
         console.log('Request method is POST.');
+
+        if (!req.body) {
+            console.error('CRITICAL: Request body is missing or could not be parsed. Ensure Content-Type is application/json.');
+            return res.status(400).json({ success: false, error: 'Invalid request: body is missing.' });
+        }
 
         const { email, key } = req.body;
 
@@ -38,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log(`Received verification request for email starting with: ${email.substring(0, 3)}...`);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
         console.log('Forwarding request to Make.com...');
         const webhookResponse = await fetch(MAKE_WEBHOOK_URL, {
