@@ -1,6 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import fetch from 'node-fetch';
-import AbortController from 'abort-controller';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers to allow requests from any origin
