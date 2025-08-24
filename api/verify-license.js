@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
 
     // Normalizácia – rovnaká ako v Make
     const emailNorm = email.toLowerCase();
-    const codeNorm = codeInput.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const codeNorm = codeInput.replace(/[^A-Za-z0-9-]/g, '');
 
     // Server-to-server POST na Make webhook (Vercel Node 18 má global fetch)
     const fwResp = await fetch(MAKE_WEBHOOK_URL, {
