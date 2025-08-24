@@ -61,8 +61,8 @@ export const LicenseVerification: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-200 mb-1">{t('unlock_form_title')}</h3>
+        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-1">{t('unlock_form_title')}</h3>
             <p className="text-sm text-gray-400 mb-4">{t('unlock_form_subtitle')}</p>
 
             <form onSubmit={handleActivation} className="space-y-4">
@@ -79,7 +79,7 @@ export const LicenseVerification: React.FC = () => {
                                 value={email}
                                 onChange={handleEmailChange}
                                 placeholder={t('auth_email')}
-                                className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full bg-gray-700 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                                 required
                                 disabled={isLoading}
                             />
@@ -98,7 +98,7 @@ export const LicenseVerification: React.FC = () => {
                                 value={code}
                                 onChange={handleCodeChange}
                                 placeholder={t('auth_license_key')}
-                                className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full bg-gray-700 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                                 required
                                 disabled={isLoading}
                                 maxLength={11}
@@ -114,7 +114,7 @@ export const LicenseVerification: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isLoading || !emailIsValid || !codeIsValid}
-                        className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
+                        className="w-full flex items-center justify-center px-6 py-3 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-800/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors shadow-lg hover:shadow-teal-500/20"
                     >
                         {isLoading ? (
                             <>

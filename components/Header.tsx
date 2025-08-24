@@ -20,7 +20,7 @@ const LanguageOption: React.FC<{
 }> = ({ label, icon, onClick }) => (
   <button
     onClick={onClick}
-    className="flex items-center w-full px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+    className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
     role="menuitem"
   >
     {icon}
@@ -36,7 +36,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
       return (
          <button
             onClick={onOpenUnlockModal}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-md transition-colors whitespace-nowrap"
         >
             <SparklesIcon className="w-5 h-5" />
             <span className="text-sm">{t('header_get_pro')}</span>
@@ -47,12 +47,12 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
     return (
         <div className="flex items-center space-x-2 sm:space-x-3">
              <div className="text-right">
-                <div className="flex items-center justify-center space-x-2 px-3 py-1.5 bg-green-500/20 text-green-300 font-semibold rounded-md whitespace-nowrap">
+                <div className="flex items-center justify-center space-x-2 px-3 py-1.5 bg-green-900/50 text-green-300 font-semibold rounded-md whitespace-nowrap">
                   <CheckIcon className="w-5 h-5" />
                   <span className="text-sm">{t('header_pro_version')}</span>
                 </div>
                 {proUser?.email && (
-                    <p className="text-xs text-gray-500 mt-1 truncate max-w-[160px]" title={proUser.email}>
+                    <p className="text-xs text-gray-400 mt-1 truncate max-w-[160px]" title={proUser.email}>
                         {proUser.email}
                     </p>
                 )}
@@ -60,7 +60,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUn
             <button
               onClick={logout}
               title={t('header_deactivate')}
-              className="flex items-center self-start space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+              className="flex items-center self-start space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm font-medium text-gray-200 rounded-md transition-colors"
             >
               <KeyIcon className="w-5 h-5 text-red-400" />
             </button>
@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
            <MicIcon className="w-8 h-8 text-teal-400" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">{t('header_title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">{t('header_title')}</h1>
           <p className="text-sm sm:text-base text-gray-400">{t('header_subtitle')}</p>
         </div>
       </div>
@@ -116,14 +116,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
             <button
               onClick={() => setIsLangOpen(!isLangOpen)}
               title={t('language')}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm font-medium text-gray-200 rounded-md transition-colors"
             >
               {languageOptions[locale].icon}
               <ChevronDownIcon className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
             </button>
             {isLangOpen && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600"
+                className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 border border-gray-700"
                 role="menu"
               >
                 {(Object.keys(languageOptions) as Locale[]).map((lang) => (

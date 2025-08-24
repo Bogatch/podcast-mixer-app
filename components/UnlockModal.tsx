@@ -47,7 +47,7 @@ const BuyLicenseForm: React.FC = () => {
                        value={email}
                        onChange={(e) => setEmail(e.target.value)}
                        placeholder="your.email@example.com"
-                       className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       className="w-full bg-gray-800 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                        required
                        disabled={isLoading}
                    />
@@ -58,7 +58,7 @@ const BuyLicenseForm: React.FC = () => {
                <button
                     type="submit"
                     disabled={isLoading || !emailIsValid}
-                    className="w-full flex items-center justify-center px-6 py-4 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-700/50 disabled:cursor-not-allowed text-black font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
+                    className="w-full flex items-center justify-center px-6 py-4 bg-yellow-400 hover:bg-yellow-500 disabled:bg-yellow-300/50 disabled:cursor-not-allowed text-gray-800 font-bold text-lg rounded-md transition-colors shadow-lg hover:shadow-yellow-500/20"
                 >
                     {isLoading ? (
                         <>
@@ -83,11 +83,11 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
     
     return (
         <div
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
             onClick={onClose}
         >
             <div
-                className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-yellow-500/30"
+                className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-yellow-500/20"
                 onClick={e => e.stopPropagation()}
             >
                 <header className="p-6 flex items-center justify-between border-b border-gray-700">
@@ -104,11 +104,11 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
                     </button>
                 </header>
 
-                <main className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 overflow-y-auto">
+                <main className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 overflow-y-auto bg-gray-900/50">
                     {/* Left Column: Features */}
                     <div className="space-y-6">
                         <p className="text-lg text-gray-400">{t('unlock_modal_subtitle')}</p>
-                        <div className="bg-gray-900/50 p-6 rounded-lg">
+                        <div className="bg-gray-700/50 p-6 rounded-lg border border-gray-600">
                             <ul className="space-y-3">
                                 <Feature>{t('unlock_feature_1')}</Feature>
                                 <Feature>{t('unlock_feature_2')}</Feature>
@@ -119,10 +119,10 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose }) => {
                     </div>
                     
                     {/* Right Column: Purchase Form */}
-                    <div className="flex flex-col justify-center space-y-6 bg-gray-800/50 p-8 rounded-lg">
+                    <div className="flex flex-col justify-center space-y-6 bg-gray-700/50 p-8 rounded-lg border border-gray-600">
                         <div className="pt-4">
                             <div className='text-center mb-6'>
-                                <h3 className="text-xl font-semibold text-gray-200">
+                                <h3 className="text-xl font-semibold text-white">
                                     {t('purchase_modal_buy_license')}
                                 </h3>
                                 <p className="text-sm text-gray-400 mt-2">

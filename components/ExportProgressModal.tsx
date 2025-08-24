@@ -15,17 +15,17 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({ progre
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-8 border border-gray-700 text-center space-y-6">
         <div className="flex items-center justify-center space-x-4">
-            <SpinnerIcon className="w-8 h-8 text-blue-400 animate-spin" />
+            <SpinnerIcon className="w-8 h-8 text-teal-400 animate-spin" />
             <h2 className="text-2xl font-bold text-white">{t(titleKey)}</h2>
         </div>
-        <p className="text-gray-400">{t('export_progress_message')}</p>
+        <p className="text-gray-300">{t('export_progress_message')}</p>
         <div className="w-full bg-gray-700 rounded-full h-4">
           <div
-            className="bg-blue-600 h-4 rounded-full transition-all duration-150 ease-linear"
+            className="bg-teal-500 h-4 rounded-full transition-all duration-150 ease-linear"
             style={{ width: `${roundedProgress}%` }}
           ></div>
         </div>
-        <p className="text-xl font-mono font-semibold text-white">{roundedProgress}%</p>
+        <p className="text-xl font-mono font-semibold text-gray-200">{roundedProgress}%</p>
       </div>
     </div>
   );

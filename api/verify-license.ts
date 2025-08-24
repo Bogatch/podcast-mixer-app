@@ -42,11 +42,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         console.log(`Received verification request for email starting with: ${email.substring(0, 3)}...`);
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+
         console.log('Forwarding request to Make.com...');
         const webhookResponse = await fetch(MAKE_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim(), key: key.trim() }),
+            signal: controller.signal,
+        }).finally(() => {
+            clearTimeout(timeoutId);
         });
 
         console.log(`Received response from Make.com with status: ${webhookResponse.status}`);
@@ -61,6 +67,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
     } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.error('--- Request to verification service timed out ---');
+            return res.status(504).json({ success: false, error: 'The license verification server did not respond in time.' });
+        }
         console.error('--- UNCAUGHT EXCEPTION in /api/verify-license ---');
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
