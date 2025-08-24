@@ -1,6 +1,6 @@
 // /api/create-checkout.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Stripe from 'stripe';
+import { stripe } from '../../lib/stripe';
 
 // --- IMPORTANT ---
 // This function requires two things to be configured:
@@ -11,19 +11,6 @@ import Stripe from 'stripe';
 
 const STRIPE_PRICE_ID = 'price_1KhQ3FJz2UGjTjLq5z6y7x8y'; // <<< REPLACE WITH YOUR ACTUAL PRICE ID if this one is incorrect.
 
-let stripe: Stripe | undefined;
-
-// Initialize Stripe client only if the secret key is available.
-// This prevents the function from crashing if the environment variable is not set.
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-07-30.basil', // Use a recent, valid API version
-    typescript: true,
-  });
-} else {
-  console.error('CRITICAL: STRIPE_SECRET_KEY environment variable not set.');
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,14 +19,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
-  }
-
-  if (!stripe) {
-    return res.status(500).json({
-      ok: false,
-      error: 'SERVER_CONFIG_ERROR',
-      message: 'Stripe is not configured correctly on the server. The STRIPE_SECRET_KEY is missing.',
-    });
   }
 
   if (req.method !== 'POST') {
