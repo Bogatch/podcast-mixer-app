@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -12,35 +13,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        console.log('--- /api/verify-license function started ---');
-
-        const MAKE_WEBHOOK_URL = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
-        
-        console.log('Server configuration: Using hardcoded webhook URL.');
-
         if (req.method !== 'POST') {
             res.setHeader('Allow', 'POST');
             return res.status(405).json({ success: false, error: 'Method Not Allowed' });
         }
-        console.log('Request method is POST.');
 
-        if (!req.body) {
-            console.error('CRITICAL: Request body is missing or could not be parsed. Ensure Content-Type is application/json.');
-            return res.status(400).json({ success: false, error: 'Invalid request: body is missing.' });
-        }
-
-        const { email, key } = req.body;
+        // Safely handle the request body to prevent crashes if it's missing or malformed
+        const body = req.body || {};
+        const { email, key } = body;
 
         if (!email || typeof email !== 'string' || !key || typeof key !== 'string') {
             console.warn('Invalid request body received:', req.body);
             return res.status(400).json({ success: false, error: 'Email and license key are required.' });
         }
-        console.log(`Received verification request for email starting with: ${email.substring(0, 3)}...`);
+        
+        console.log(`--- /api/verify-license: Processing request for ${email.substring(0,3)}... ---`);
 
+        const MAKE_WEBHOOK_URL = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
 
-        console.log('Forwarding request to Make.com...');
         const webhookResponse = await fetch(MAKE_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -49,8 +42,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }).finally(() => {
             clearTimeout(timeoutId);
         });
-
-        console.log(`Received response from Make.com with status: ${webhookResponse.status}`);
 
         if (webhookResponse.ok) {
             console.log('License verification successful.');
