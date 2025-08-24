@@ -69,8 +69,10 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return { success: false, error: errorData.error || "Invalid email or license key." };
         } catch (e) {
           // If it's not JSON (e.g., HTML error page from Vercel), return a generic error.
-          // This prevents the dreaded SyntaxError crash.
           console.error("Received non-JSON error response from server:", errorText);
+          if (errorText.includes("FUNCTION_INVOCATION_FAILED")) {
+              return { success: false, error: "The server's verification function failed. Please check the Vercel logs for /api/verify-license for details." };
+          }
           return { success: false, error: "Could not connect to the license server." };
         }
       }
