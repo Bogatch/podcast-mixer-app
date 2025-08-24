@@ -1,8 +1,6 @@
 // pages/api/verify-license.ts (Next.js Pages Router) alebo api/verify-license.ts (Vercel Functions)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export const runtime = 'nodejs';
-
 function safeJsonParse<T = any>(text: string): { ok: true; data: T } | { ok: false; error: string } {
   try {
     return { ok: true, data: JSON.parse(text) as T };
