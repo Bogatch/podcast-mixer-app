@@ -11,17 +11,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    // Wrap the entire logic in a try-catch to prevent unhandled crashes
     try {
         console.log('--- /api/verify-license function started ---');
 
-        const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
-
-        if (!MAKE_WEBHOOK_URL) {
-            console.error('CRITICAL: MAKE_WEBHOOK_URL environment variable is not set on the server.');
-            return res.status(503).json({ success: false, error: 'Server is not configured correctly. Missing webhook URL.' });
-        }
-        console.log('Server configuration: Webhook URL is present.');
+        const MAKE_WEBHOOK_URL = 'https://hook.eu2.make.com/fbbcsb128zgndyyvmt98s3dq178402up';
+        
+        console.log('Server configuration: Using hardcoded webhook URL.');
 
         if (req.method !== 'POST') {
             res.setHeader('Allow', 'POST');
