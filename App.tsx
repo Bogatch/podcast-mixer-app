@@ -20,7 +20,6 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
-import { LicenseVerification } from './components/LicenseVerification';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -144,6 +143,7 @@ const AppContent: React.FC = () => {
   
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
+  const [unlockModalInitialTab, setUnlockModalInitialTab] = useState<'buy' | 'enter'>('buy');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -200,6 +200,11 @@ const AppContent: React.FC = () => {
       setInfo(message);
       setTimeout(() => setInfo(null), duration);
   }
+  
+  const handleOpenUnlockModal = (tab: 'buy' | 'enter' = 'buy') => {
+    setUnlockModalInitialTab(tab);
+    setIsUnlockModalOpen(true);
+  };
 
   const addTracks = useCallback(async (files: FileList, type: 'music' | 'spoken' | 'jingle') => {
     setUploadingType(type);
@@ -957,7 +962,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         />
       )}
       {isUnlockModalOpen && (
-        <UnlockModal onClose={() => setIsUnlockModalOpen(false)} />
+        <UnlockModal 
+            onClose={() => setIsUnlockModalOpen(false)} 
+            initialTab={unlockModalInitialTab}
+        />
       )}
       {isHelpModalOpen && (
         <HelpModal onClose={() => setIsHelpModalOpen(false)} />
@@ -984,13 +992,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
       <div className="max-w-7xl mx-auto">
         <Header 
-          onOpenUnlockModal={() => setIsUnlockModalOpen(true)}
+          onOpenUnlockModal={handleOpenUnlockModal}
         />
-        {!isPro && (
-          <div className="my-8">
-            <LicenseVerification />
-          </div>
-        )}
         <main className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
             <button

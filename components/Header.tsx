@@ -9,7 +9,7 @@ import { usePro } from '../context/ProContext';
 
 
 interface HeaderProps {
-    onOpenUnlockModal: () => void;
+    onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void;
 }
 
 const LanguageOption: React.FC<{
@@ -28,19 +28,27 @@ const LanguageOption: React.FC<{
   </button>
 );
 
-const ProHeaderControls: React.FC<{onOpenUnlockModal: () => void}> = ({ onOpenUnlockModal }) => {
+const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
     const { logout, isPro, proUser } = usePro();
 
     if (!isPro) {
       return (
-         <button
-            onClick={onOpenUnlockModal}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
-        >
-            <SparklesIcon className="w-5 h-5" />
-            <span className="text-sm">{t('header_get_pro')}</span>
-        </button>
+         <div className="flex items-center space-x-2">
+            <button
+                onClick={() => onOpenUnlockModal('enter')}
+                className="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-700/80 hover:bg-gray-700 rounded-md transition-colors"
+            >
+                {t('unlock_enter_key_tab')}
+            </button>
+            <button
+                onClick={() => onOpenUnlockModal('buy')}
+                className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
+            >
+                <SparklesIcon className="w-5 h-5" />
+                <span className="text-sm">{t('header_get_pro')}</span>
+            </button>
+         </div>
       )
     }
 
