@@ -45,19 +45,34 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, key: code }), // Use 'key' as expected by our API
+        body: JSON.stringify({ email, key: code }),
       });
       
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-        setIsPro(true);
-        setProUser({ email: email.trim(), key: code.trim() });
-        return { success: true };
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+          setIsPro(true);
+          setProUser({ email: email.trim(), key: code.trim() });
+          return { success: true };
+        } else {
+          // This case might happen if server returns 200 OK but success: false
+          return { success: false, error: data.error || "An unknown verification error occurred." };
+        }
       } else {
-        return { success: false, error: data.error || "Invalid email or license key." };
+        // Handle non-200 responses (4xx, 5xx)
+        const errorText = await response.text();
+        try {
+          // Try to parse as JSON, which our API should return
+          const errorData = JSON.parse(errorText);
+          return { success: false, error: errorData.error || "Invalid email or license key." };
+        } catch (e) {
+          // If it's not JSON (e.g., HTML error page from Vercel), return a generic error.
+          // This prevents the dreaded SyntaxError crash.
+          console.error("Received non-JSON error response from server:", errorText);
+          return { success: false, error: "Could not connect to the license server." };
+        }
       }
     } catch (error) {
       console.error("Failed to call verification API:", error);
