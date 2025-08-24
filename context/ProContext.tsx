@@ -1,12 +1,30 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+// context/ProContext.tsx
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react';
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
+
+interface ProUser {
+  email: string;
+  key: string; // uložíme pôvodný licenčný kľúč tak, ako ho zadal používateľ
+}
+
+interface VerifyResult {
+  success: boolean;
+  error?: string;
+}
 
 interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
-  proUser: { email: string; key: string } | null;
-  verifyLicense: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  proUser: ProUser | null;
+  verifyLicense: (email: string, code: string) => Promise<VerifyResult>;
   logout: () => void;
 }
 
@@ -15,78 +33,98 @@ const ProContext = createContext<ProContextType | undefined>(undefined);
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [proUser, setProUser] = useState<{ email: string; key: string } | null>(null);
+  const [proUser, setProUser] = useState<ProUser | null>(null);
 
+  // Načítanie uloženého PRO stavu pri štarte
   useEffect(() => {
     try {
-      const savedLicense = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedLicense) {
-        const licenseData = JSON.parse(savedLicense);
-        if (licenseData.isPro && licenseData.email && licenseData.key) {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.isPro && parsed?.email && parsed?.key) {
           setIsPro(true);
-          setProUser({ email: licenseData.email, key: licenseData.key });
+          setProUser({ email: parsed.email, key: parsed.key });
         }
       }
     } catch (e) {
-      console.error("Failed to load license from localStorage", e);
+      console.error('Failed to load license from localStorage', e);
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    const apiUrl = '/api/verify-license'; // Point to our backend proxy
+  // Hlavná funkcia overenia licencie – volá náš backend proxy /api/verify-license
+  const verifyLicense = useCallback(
+    async (email: string, code: string): Promise<VerifyResult> => {
+      setIsLoading(true);
 
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, key: code }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-          setIsPro(true);
-          setProUser({ email: email.trim(), key: code.trim() });
-          return { success: true };
-        } else {
-          // This case might happen if server returns 200 OK but success: false
-          return { success: false, error: data.error || "An unknown verification error occurred." };
-        }
-      } else {
-        // Handle non-200 responses (4xx, 5xx)
-        const errorText = await response.text();
+      const cleanedEmail = email.trim();
+      const cleanedCode = code.trim(); // NEMENÍME veľkosť písmen – verifikácia je case-sensitive
+
+      try {
+        const res = await fetch('/api/verify-license', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // Dôležité: posielame "code" (nie "key")
+          body: JSON.stringify({ email: cleanedEmail, code: cleanedCode }),
+        });
+
+        // Odpoveď nášho servera je vždy JSON (aj pri chybách),
+        // lebo backend wrapuje ne-JSON odpovede z Make.
+        let data: any = null;
         try {
-          // Try to parse as JSON, which our API should return
-          const errorData = JSON.parse(errorText);
-          return { success: false, error: errorData.error || "Invalid email or license key." };
-        } catch (e) {
-          // If it's not JSON (e.g., HTML error page from Vercel), return a generic error.
-          console.error("Received non-JSON error response from server:", errorText);
-          if (errorText.includes("FUNCTION_INVOCATION_FAILED")) {
-              return { success: false, error: "The server's verification function failed. Please check the Vercel logs for /api/verify-license for details." };
-          }
-          return { success: false, error: "Could not connect to the license server." };
+          data = await res.json();
+        } catch {
+          return { success: false, error: 'INVALID_SERVER_RESPONSE' };
         }
-      }
-    } catch (error) {
-      console.error("Failed to call verification API:", error);
-      return { success: false, error: "Could not connect to the license server." };
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
+        // Úspech ak: ok === true ALEBO status === "success"
+        const success = data?.ok === true || data?.status === 'success';
+
+        if (res.ok && success) {
+          const toStore = {
+            isPro: true,
+            email: cleanedEmail,
+            key: cleanedCode,
+          };
+
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(toStore));
+          } catch (e) {
+            console.warn('Could not persist license to localStorage', e);
+          }
+
+          setIsPro(true);
+          setProUser({ email: cleanedEmail, key: cleanedCode });
+          return { success: true };
+        }
+
+        // Neúspech – vyber čo najlepšiu správu
+        const message =
+          data?.message ||
+          data?.error ||
+          (res.status === 401
+            ? 'Invalid email or license key.'
+            : 'VERIFICATION_FAILED');
+
+        return { success: false, error: message };
+      } catch (err: any) {
+        console.error('verifyLicense network error:', err);
+        return { success: false, error: 'NETWORK_ERROR' };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const logout = useCallback(() => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    } catch (e) {
+      console.warn('localStorage remove failed', e);
+    }
     setIsPro(false);
     setProUser(null);
   }, []);
@@ -103,9 +141,9 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 };
 
 export const usePro = (): ProContextType => {
-  const context = useContext(ProContext);
-  if (context === undefined) {
+  const ctx = useContext(ProContext);
+  if (!ctx) {
     throw new Error('usePro must be used within a ProProvider');
   }
-  return context;
+  return ctx;
 };

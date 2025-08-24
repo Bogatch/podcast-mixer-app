@@ -96,7 +96,10 @@ const ActivationForm: React.FC = () => {
     const [codeError, setCodeError] = useState('');
     
     const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-    const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{2,3}$/.test(code), [code]);
+    const codeIsValid = useMemo(
+      () => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{3}$/.test(code),
+      [code]
+    );
 
     const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
