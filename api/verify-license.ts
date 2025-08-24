@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+export const runtime = 'nodejs';
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Set CORS headers to allow requests from any origin
     res.setHeader('Access-Control-Allow-Origin', '*');

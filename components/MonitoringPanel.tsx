@@ -95,13 +95,13 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
   const dragOverItem = useRef<number | null>(null);
 
   const handleDragSort = () => {
-    if (dragItem.current !== null && dragOverItem.current !== null) {
-      onReorderTracks(dragItem.current, dragOverItem.current);
+    if (dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+        onReorderTracks(dragItem.current, dragOverItem.current);
     }
     dragItem.current = null;
     dragOverItem.current = null;
   };
-
+  
   return (
     <div className="space-y-4 overflow-x-hidden">
       <div className="flex justify-between items-center">
@@ -128,17 +128,8 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
             onPreview={() => onPreview(track.id)}
             isPreviewing={previewingTrackId === track.id}
             onRelinkFile={(file) => onRelinkFile(track.id, file)}
-            onDragStart={(e) => {
-                if (!track.file) {
-                    e.preventDefault();
-                    return;
-                }
-                dragItem.current = index;
-            }}
-            onDragEnter={() => {
-                if (!track.file) return;
-                dragOverItem.current = index
-            }}
+            onDragStart={() => (dragItem.current = index)}
+            onDragEnter={() => (dragOverItem.current = index)}
             onDragEnd={handleDragSort}
             onDragOver={(e) => e.preventDefault()}
           />

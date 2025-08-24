@@ -45,7 +45,7 @@ export const TrackController: React.FC<TrackControllerProps> = ({
   onDragStart,
   onDragEnter,
   onDragEnd,
-  onDragOver
+  onDragOver,
 }) => {
   const { t } = useContext(I18nContext);
   const [vocalStartTimeInput, setVocalStartTimeInput] = useState(track.vocalStartTime?.toFixed(2) || '0.00');
@@ -110,7 +110,6 @@ export const TrackController: React.FC<TrackControllerProps> = ({
              <input type="file" ref={relinkInputRef} onChange={handleFileChange} accept="audio/*" className="hidden" />
              <div className="flex items-start">
                  <div className="flex items-center space-x-3 flex-grow min-w-0">
-                    <div className="flex-shrink-0 text-gray-500"><DragHandleIcon className="w-5 h-5"/></div>
                     <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gray-600">
                         <Icon className={`w-5 h-5 ${trackColor.icon}`} />
                     </div>
@@ -138,7 +137,7 @@ export const TrackController: React.FC<TrackControllerProps> = ({
 
   return (
     <div
-      className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/50 space-y-3 cursor-grab active:cursor-grabbing overflow-hidden"
+      className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/50 space-y-3 overflow-hidden cursor-grab active:cursor-grabbing"
       draggable
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
@@ -147,12 +146,9 @@ export const TrackController: React.FC<TrackControllerProps> = ({
     >
       <div className="flex items-start">
         <div className="flex items-center space-x-3 flex-grow min-w-0">
-           <div 
-             className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
-             title={t('track_drag_handle_title')}
-           >
-            <DragHandleIcon className="w-5 h-5"/>
-           </div>
+           <span className="flex-shrink-0" title={t('track_drag_handle_title')}>
+            <DragHandleIcon className="w-5 h-5 text-gray-400" />
+           </span>
           <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: trackColor.bg }}>
              <Icon className={`w-5 h-5 ${trackColor.icon}`} />
           </div>

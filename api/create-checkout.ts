@@ -2,6 +2,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { stripe } from '../lib/stripe';
 
+export const runtime = 'nodejs';
+
 // --- IMPORTANT ---
 // This function requires two things to be configured:
 // 1. STRIPE_SECRET_KEY: You must set this as an environment variable in your Vercel project settings.
