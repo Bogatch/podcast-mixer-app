@@ -1,6 +1,6 @@
 // /api/create-checkout.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { stripe } from '../../lib/stripe';
+import { stripe } from '../lib/stripe';
 
 // --- IMPORTANT ---
 // This function requires two things to be configured:
