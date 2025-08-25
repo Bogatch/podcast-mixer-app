@@ -31,7 +31,7 @@ const BuyLicenseForm: React.FC = () => {
         setIsLoading(true);
         setError('');
         
-        const stripeUrl = `https://buy.stripe.com/bJe14ogcG5bi9QR47g?prefilled_email=${encodeURIComponent(email)}`;
+        const stripeUrl = `https://buy.stripe.com/bJe14ogcG5bi9QR47g00000?prefilled_email=${encodeURIComponent(email)}`;
         window.location.href = stripeUrl;
     };
     
