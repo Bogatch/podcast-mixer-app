@@ -20,7 +20,7 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
-import ThankYouModal from './components/ThankYouModal';
+import SuccessModal from './components/SuccessModal';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -1094,7 +1094,7 @@ const App: React.FC = () => {
         return 'en'; // Default to English
     });
 
-    const [showThankYou, setShowThankYou] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
         try {
@@ -1110,12 +1110,11 @@ const App: React.FC = () => {
           const sp = url.searchParams;
           const success = sp.get('payment_success') === 'true';
           const cancel  = sp.get('payment_cancel') === 'true';
+          const fromFlag = sessionStorage.getItem("pm_showPaymentThanks") === "1";
     
-          const shown = sessionStorage.getItem('stripeThankYouShown') === '1';
-    
-          if (success && !shown) {
-            setShowThankYou(true);
-            sessionStorage.setItem('stripeThankYouShown', '1');
+          if (success || fromFlag) {
+            setShowSuccess(true);
+            sessionStorage.removeItem("pm_showPaymentThanks");
           }
     
           if (success || cancel) {
@@ -1147,7 +1146,7 @@ const App: React.FC = () => {
         <ProProvider>
           <>
             <AppContent />
-            {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
+            {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
           </>
         </ProProvider>
       </AuthProvider>

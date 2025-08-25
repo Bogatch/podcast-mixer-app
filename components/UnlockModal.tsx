@@ -29,10 +29,11 @@ const BuyLicenseForm: React.FC = () => {
     if (!emailIsValid) return;
     setIsLoading(true);
     setError('');
-
-    // This is the correct, simplified redirect logic
-    const stripeUrl = `https://buy.stripe.com/bJe14ogcG5bi9QR47g00000?prefilled_email=${encodeURIComponent(email)}`;
-    window.location.href = stripeUrl;
+    const result = await createCheckout(email);
+    if (result.error) {
+      setError(result.error);
+      setIsLoading(false);
+    }
   };
 
   return (

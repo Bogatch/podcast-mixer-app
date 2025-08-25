@@ -198,6 +198,8 @@ export const translations = {
     'verifying': 'Verifying...',
     'activation_success_title': 'Activation Successful!',
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
+    'payment_success_title': 'Thank you for your payment!',
+    'payment_success_message': 'Activation was successful. Please check your email inbox for your license key.',
 
     // Thank You Modal
     "thankyou_title": "Payment Successful",
@@ -451,6 +453,8 @@ export const translations = {
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
+    'payment_success_title': 'Ďakujeme za platbu!',
+    'payment_success_message': 'Aktivácia prebehla úspešne. Skontrolujte si e-mailovú schránku, kde nájdete licenčný kľúč.',
 
     // Thank You Modal
     "thankyou_title": "Platba úspešná",
