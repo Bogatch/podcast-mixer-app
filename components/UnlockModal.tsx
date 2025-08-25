@@ -1,7 +1,6 @@
 import React, { useContext, useState, useMemo, useEffect } from 'react';
 import { XMarkIcon, SparklesIcon, EnvelopeIcon, CreditCardIcon, SpinnerIcon, CheckIcon, KeyIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
-import { useAuth } from '../context/AuthContext';
 import { usePro } from '../context/ProContext';
 
 interface UnlockModalProps {
@@ -20,24 +19,20 @@ const Feature: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const BuyLicenseForm: React.FC = () => {
     const { t } = useContext(I18nContext);
-    const { createCheckout } = useAuth();
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
 
-    const handlePurchase = async (e: React.FormEvent) => {
+    const handlePurchase = (e: React.FormEvent) => {
         e.preventDefault();
         if (!emailIsValid) return;
 
         setIsLoading(true);
         setError('');
-        const result = await createCheckout(email);
-        if (result.error) {
-            setError(result.error);
-            setIsLoading(false);
-        }
-        // On success, the page redirects, so no need to set isLoading back to false.
+        
+        const stripeUrl = `https://buy.stripe.com/bJe14ogcG5bi9QR47g?prefilled_email=${encodeURIComponent(email)}`;
+        window.location.href = stripeUrl;
     };
     
     return (
