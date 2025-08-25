@@ -199,6 +199,13 @@ export const translations = {
     'activation_success_title': 'Activation Successful!',
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
 
+    // Thank You Modal
+    "thankyou_title": "Payment Successful",
+    "thankyou_message_title": "Thank you for your purchase 🎉",
+    "thankyou_message_subtitle": "Your payment was successful. We have sent the activation key to your email.",
+    "thankyou_message_check_email": "Please check your inbox (and spam folder).",
+    "thankyou_button_ok": "Got It",
+
     // Help Modal
     'help_title': 'Help & Feature Guide',
     'help_tracks_title': 'Uploading and Managing Tracks',
@@ -444,6 +451,13 @@ export const translations = {
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
+
+    // Thank You Modal
+    "thankyou_title": "Platba úspešná",
+    "thankyou_message_title": "Ďakujeme za váš nákup 🎉",
+    "thankyou_message_subtitle": "Platba prebehla úspešne. Aktivačný kód sme poslali na váš e-mail.",
+    "thankyou_message_check_email": "Skontrolujte si prosím schránku (aj spam).",
+    "thankyou_button_ok": "Rozumiem",
 
     // Help Modal
     'help_title': 'Pomocník a Sprievodca Funkciami',

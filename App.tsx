@@ -20,6 +20,7 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
+import ThankYouModal from './components/ThankYouModal';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -1093,6 +1094,8 @@ const App: React.FC = () => {
         return 'en'; // Default to English
     });
 
+    const [showThankYou, setShowThankYou] = useState(false);
+
     useEffect(() => {
         try {
             localStorage.setItem('podcastMixerLocale', locale);
@@ -1100,6 +1103,31 @@ const App: React.FC = () => {
             console.error("Could not save locale to localStorage", e);
         }
     }, [locale]);
+    
+    useEffect(() => {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+          const success = sp.get('payment_success') === 'true';
+          const cancel  = sp.get('payment_cancel') === 'true';
+    
+          const shown = sessionStorage.getItem('stripeThankYouShown') === '1';
+    
+          if (success && !shown) {
+            setShowThankYou(true);
+            sessionStorage.setItem('stripeThankYouShown', '1');
+          }
+    
+          if (success || cancel) {
+            sp.delete('payment_success');
+            sp.delete('payment_cancel');
+            sp.delete('session_id');
+            window.history.replaceState({}, '', url.toString());
+          }
+        } catch(e) {
+            console.error("Error processing URL params for purchase status", e);
+        }
+      }, []);
 
 
   const t = useCallback((key: TranslationKey, params?: { [key: string]: string | number }) => {
@@ -1117,7 +1145,10 @@ const App: React.FC = () => {
     <I18nContext.Provider value={{ t, setLocale, locale }}>
       <AuthProvider>
         <ProProvider>
-          <AppContent />
+          <>
+            <AppContent />
+            {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
+          </>
         </ProProvider>
       </AuthProvider>
     </I18nContext.Provider>
