@@ -1,72 +1,38 @@
-// api/create-checkout.js  (CommonJS, stabilná verzia)
+// api/create-checkout.js
 const Stripe = require('stripe');
 
-function safeParse(body) {
-  if (typeof body === 'string') {
-    try { return JSON.parse(body); } catch { return null; }
-  }
-  return body && typeof body === 'object' ? body : null;
-}
-
-module.exports = async function handler(req, res) {
-  // CORS
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ ok:false, error:'METHOD_NOT_ALLOWED' });
 
   try {
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', 'POST');
-      return res.status(405).json({ ok: false, error: 'METHOD_NOT_ALLOWED' });
-    }
-
-    const payload = safeParse(req.body);
-    if (!payload) return res.status(400).json({ ok: false, error: 'INVALID_JSON' });
-
-    const email = String(payload.email || '').trim();
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ ok: false, error: 'INVALID_EMAIL' });
-    }
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const email = (body.email || '').trim();
+    if (!email || !email.includes('@')) return res.status(400).json({ ok:false, error:'A valid email is required.' });
 
     const key = process.env.STRIPE_SECRET_KEY;
-    if (!key || !key.startsWith('sk_')) {
-      console.error('[create-checkout] Missing/invalid STRIPE_SECRET_KEY');
-      return res.status(500).json({ ok: false, error: 'CONFIG_ERROR' });
-    }
+    if (!key || !key.startsWith('sk_')) return res.status(500).json({ ok:false, error:'Stripe key missing/invalid.' });
 
-    const stripe = new Stripe(key, { apiVersion: '2024-06-20' });
+    const stripe = new Stripe(key);
     const origin = req.headers.origin || 'https://pms.customradio.sk';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       customer_email: email,
-      line_items: [{
-        price_data: {
-          currency: 'eur',
-          product_data: { name: 'Podcast Mixer PRO License' },
-          unit_amount: 2990, // 29.90 €
-        },
-        quantity: 1,
-      }],
+      // >>> pevná cena cez PRICE ID <<<
+      line_items: [{ price: 'price_1RvJg8Jz2UGjTjLqEBBfPknf', quantity: 1 }],
       success_url: `${origin}/?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?payment_cancel=true`,
       metadata: { user_email: email },
     });
 
-    if (!session || !session.url) {
-      console.error('[create-checkout] No session.url returned');
-      return res.status(500).json({ ok: false, error: 'NO_SESSION_URL' });
-    }
-
-    return res.status(200).json({ ok: true, url: session.url });
+    if (!session.url) return res.status(500).json({ ok:false, error:'Failed to create Checkout URL' });
+    return res.status(200).json({ ok:true, url: session.url });
   } catch (err) {
-    console.error('[create-checkout] exception:', err && err.message, err && err.stack);
-    return res.status(500).json({
-      ok: false,
-      error: 'INTERNAL_ERROR',
-      message: (err && err.message) || 'Unexpected server error'
-    });
+    return res.status(err?.statusCode || 500).json({ ok:false, error: err?.message || 'Unexpected error' });
   }
 };
