@@ -38,21 +38,19 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 405, { ok: false, error: 'METHOD_NOT_ALLOWED' });
     }
 
-    // Bezpečné získanie tela (string/objekt)
     let body = req.body;
     if (typeof body === 'string') {
       const parsed = safeJsonParse(body);
       if (!parsed.ok) return sendJson(res, 400, { ok: false, error: 'INVALID_JSON' });
       body = parsed.data;
     } else if (!body || typeof body !== 'object') {
-      const raw = (req && req.rawBody && req.rawBody.toString) ? req.rawBody.toString() : '';
+      const raw = (req.rawBody && req.rawBody.toString) ? req.rawBody.toString() : '';
       if (!raw) return sendJson(res, 400, { ok: false, error: 'EMPTY_BODY' });
       const parsed = safeJsonParse(raw);
       if (!parsed.ok) return sendJson(res, 400, { ok: false, error: 'INVALID_JSON' });
       body = parsed.data;
     }
 
-    // Očakávame email + code (neprepisujeme case, verifikácia je case-sensitive)
     const email = String(body.email || '').trim();
     const code  = String(body.code  || body.key || '').trim();
 
@@ -60,46 +58,39 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 400, { ok: false, error: 'EMAIL_AND_CODE_REQUIRED' });
     }
 
-    // Server-to-server POST do Make
     const fwResp = await fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      // Make.com webhook pravdepodobne očakáva pole 'key'
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email, key: code })
     });
 
     const text = await fwResp.text();
     const parsed = safeJsonParse(text);
 
-    // Make vrátil JSON
-    if (parsed.ok) {
-      const d = parsed.data && typeof parsed.data === 'object' ? parsed.data : {};
-
-      // Zjednotenie: doplň pole `ok`, ak chýba
-      const unified = Object.prototype.hasOwnProperty.call(d, 'ok')
-        ? d
-        : { ok: d.status === 'success', ...d };
-
-      // Ak upstream poslal non-2xx (napr. 400), necháme aj my non-2xx,
-      // ale stále vraciame JSON s `ok`.
-      return sendJson(res, fwResp.status || 200, unified);
+    // Primary success condition: HTTP status is 2xx from Make.com
+    if (fwResp.ok) {
+      if (parsed.ok) {
+        const d = parsed.data && typeof parsed.data === 'object' ? parsed.data : {};
+        return sendJson(res, 200, { ...d, ok: true });
+      } else {
+        return sendJson(res, 200, { ok: true, message: text });
+      }
+    } else {
+      // Make returned a non-2xx status code (error).
+      if (parsed.ok) {
+        const d = parsed.data && typeof parsed.data === 'object' ? parsed.data : {};
+        return sendJson(res, fwResp.status, { ...d, ok: false });
+      } else {
+        return sendJson(res, fwResp.status, { ok: false, error: 'UPSTREAM_ERROR', raw: text });
+      }
     }
 
-    // Make vrátil non-JSON (napr. "Accepted")
-    return sendJson(res, fwResp.status || 502, {
-      ok: false,
-      error: 'NON_JSON_UPSTREAM',
-      raw: text
-    });
-
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unexpected server error';
     return sendJson(res, 500, {
       ok: false,
       error: 'INTERNAL_ERROR',
-      message: err && err.message ? err.message : 'Unexpected server error'
+      message: errorMessage
     });
   }
 };
