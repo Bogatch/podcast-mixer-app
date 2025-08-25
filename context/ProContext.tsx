@@ -1,30 +1,15 @@
 // context/ProContext.tsx
 import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
+  createContext, useContext, useState, useEffect, ReactNode, useCallback
 } from 'react';
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
 
-interface ProUser {
-  email: string;
-  key: string; // uložíme pôvodný licenčný kľúč tak, ako ho zadal používateľ
-}
-
-interface VerifyResult {
-  success: boolean;
-  error?: string;
-}
-
 interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
-  proUser: ProUser | null;
-  verifyLicense: (email: string, code: string) => Promise<VerifyResult>;
+  proUser: { email: string; key: string } | null;
+  verifyLicense: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -33,17 +18,17 @@ const ProContext = createContext<ProContextType | undefined>(undefined);
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [proUser, setProUser] = useState<ProUser | null>(null);
+  const [proUser, setProUser] = useState<{ email: string; key: string } | null>(null);
 
-  // Načítanie uloženého PRO stavu pri štarte
+  // Načítať PRO z localStorage po mount-e
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.isPro && parsed?.email && parsed?.key) {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const obj = JSON.parse(saved);
+        if (obj?.isPro && obj?.email && obj?.key) {
           setIsPro(true);
-          setProUser({ email: parsed.email, key: parsed.key });
+          setProUser({ email: obj.email, key: obj.key });
         }
       }
     } catch (e) {
@@ -54,96 +39,56 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  // Hlavná funkcia overenia licencie – volá náš backend proxy /api/verify-license
-  const verifyLicense = useCallback(
-    async (email: string, code: string): Promise<VerifyResult> => {
-      setIsLoading(true);
+  const verifyLicense = useCallback(async (email: string, code: string) => {
+    setIsLoading(true);
+    const apiUrl = '/api/verify-license';
 
-      const cleanedEmail = email.trim();
-      const cleanedCode = code.trim(); // NEMENÍME veľkosť písmen – verifikácia je case-sensitive
+    try {
+      const resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // ✅ posielaj "code", nie "key"
+        body: JSON.stringify({ email, code })
+      });
 
-      try {
-        const res = await fetch('/api/verify-license', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // Dôležité: posielame "code" (nie "key")
-          body: JSON.stringify({ email: cleanedEmail, code: cleanedCode }),
-        });
+      const text = await resp.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { data = { success: false, error: 'NON_JSON', raw: text }; }
 
-        // Odpoveď nášho servera je vždy JSON (aj pri chybách),
-        // lebo backend wrapuje ne-JSON odpovede z Make.
-        let data: any = null;
-        try {
-          data = await res.json();
-        } catch {
-          return { success: false, error: 'INVALID_SERVER_RESPONSE' };
-        }
+      console.log('[verifyLicense] HTTP', resp.status, 'payload:', data);
 
-        // Úspech ak: ok === true ALEBO status === "success"
-        const success = data?.ok === true || data?.status === 'success';
-
-        if (res.ok && success) {
-          const toStore = {
-            isPro: true,
-            email: cleanedEmail,
-            key: cleanedCode,
-          };
-
-          try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(toStore));
-          } catch (e) {
-            console.warn('Could not persist license to localStorage', e);
-          }
-
-          setIsPro(true);
-          setProUser({ email: cleanedEmail, key: cleanedCode });
-          return { success: true };
-        }
-
-        // Neúspech – vyber čo najlepšiu správu
-        const message =
-          data?.message ||
-          data?.error ||
-          (res.status === 401
-            ? 'Invalid email or license key.'
-            : 'VERIFICATION_FAILED');
-
-        return { success: false, error: message };
-      } catch (err: any) {
-        console.error('verifyLicense network error:', err);
-        return { success: false, error: 'NETWORK_ERROR' };
-      } finally {
-        setIsLoading(false);
+      if (resp.ok && data?.success === true) {
+        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+        setIsPro(true);
+        setProUser({ email: email.trim(), key: code.trim() });
+        return { success: true };
+      } else {
+        return { success: false, error: data?.message || data?.error || 'Invalid email or license key.' };
       }
-    },
-    []
-  );
+    } catch (e) {
+      console.error('Failed to call verification API:', e);
+      return { success: false, error: 'Could not connect to the license server.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
-    } catch (e) {
-      console.warn('localStorage remove failed', e);
-    }
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
     setIsPro(false);
     setProUser(null);
   }, []);
 
-  const value: ProContextType = {
-    isPro,
-    isLoading,
-    proUser,
-    verifyLicense,
-    logout,
-  };
-
-  return <ProContext.Provider value={value}>{children}</ProContext.Provider>;
+  return (
+    <ProContext.Provider value={{ isPro, isLoading, proUser, verifyLicense, logout }}>
+      {children}
+    </ProContext.Provider>
+  );
 };
 
 export const usePro = (): ProContextType => {
   const ctx = useContext(ProContext);
-  if (!ctx) {
-    throw new Error('usePro must be used within a ProProvider');
-  }
+  if (!ctx) throw new Error('usePro must be used within a ProProvider');
   return ctx;
 };
