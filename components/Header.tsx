@@ -9,7 +9,7 @@ import { usePro } from '../context/ProContext';
 
 
 interface HeaderProps {
-    onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void;
+    onOpenUnlockModal: (initialTab?: 'buy' | 'enter' | 'recover') => void;
 }
 
 const LanguageOption: React.FC<{
@@ -28,7 +28,7 @@ const LanguageOption: React.FC<{
   </button>
 );
 
-const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void}> = ({ onOpenUnlockModal }) => {
+const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'enter' | 'recover') => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
     const { logout, isPro, proUser } = usePro();
 

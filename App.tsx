@@ -20,7 +20,7 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
-import SuccessModal from './components/SuccessModal';
+import { StripeReturnBanner } from './components/StripeReturnBanner';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -144,7 +144,7 @@ const AppContent: React.FC = () => {
   
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
-  const [unlockModalInitialTab, setUnlockModalInitialTab] = useState<'buy' | 'enter'>('buy');
+  const [unlockModalInitialTab, setUnlockModalInitialTab] = useState<'buy' | 'enter' | 'recover'>('buy');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -202,7 +202,7 @@ const AppContent: React.FC = () => {
       setTimeout(() => setInfo(null), duration);
   }
   
-  const handleOpenUnlockModal = (tab: 'buy' | 'enter' = 'buy') => {
+  const handleOpenUnlockModal = (tab: 'buy' | 'enter' | 'recover' = 'buy') => {
     setUnlockModalInitialTab(tab);
     setIsUnlockModalOpen(true);
   };
@@ -1094,8 +1094,6 @@ const App: React.FC = () => {
         return 'en'; // Default to English
     });
 
-    const [showSuccess, setShowSuccess] = useState(false);
-
     useEffect(() => {
         try {
             localStorage.setItem('podcastMixerLocale', locale);
@@ -1103,31 +1101,6 @@ const App: React.FC = () => {
             console.error("Could not save locale to localStorage", e);
         }
     }, [locale]);
-    
-    useEffect(() => {
-        try {
-          const url = new URL(window.location.href);
-          const sp = url.searchParams;
-          const success = sp.get('payment_success') === 'true';
-          const cancel  = sp.get('payment_cancel') === 'true';
-          const fromFlag = sessionStorage.getItem("pm_showPaymentThanks") === "1";
-    
-          if (success || fromFlag) {
-            setShowSuccess(true);
-            sessionStorage.removeItem("pm_showPaymentThanks");
-          }
-    
-          if (success || cancel) {
-            sp.delete('payment_success');
-            sp.delete('payment_cancel');
-            sp.delete('session_id');
-            window.history.replaceState({}, '', url.toString());
-          }
-        } catch(e) {
-            console.error("Error processing URL params for purchase status", e);
-        }
-      }, []);
-
 
   const t = useCallback((key: TranslationKey, params?: { [key: string]: string | number }) => {
     // Fallback to English if key not found in current locale
@@ -1145,8 +1118,8 @@ const App: React.FC = () => {
       <AuthProvider>
         <ProProvider>
           <>
+            <StripeReturnBanner />
             <AppContent />
-            {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
           </>
         </ProProvider>
       </AuthProvider>
