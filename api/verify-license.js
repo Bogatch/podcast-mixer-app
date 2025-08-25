@@ -67,7 +67,8 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ email, code })
+      // Make.com webhook pravdepodobne očakáva pole 'key'
+      body: JSON.stringify({ email, key: code })
     });
 
     const text = await fwResp.text();
