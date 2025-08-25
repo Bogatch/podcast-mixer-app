@@ -1,11 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from 'react';
+// context/ProContext.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
 
@@ -56,6 +50,7 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const verifyLicense = useCallback(
     async (email: string, code: string): Promise<VerifyResult> => {
       setIsLoading(true);
+      const isRecovery = !code?.trim();
       const apiUrl = '/api/verify-license';
 
       try {
@@ -65,70 +60,32 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           body: JSON.stringify({ email: email.trim(), code: code.trim() }),
         });
 
-        // načítaj text; môže to byť JSON alebo obyčajný text
         const text = await resp.text();
-
-        // skús parse JSON
-        let payload: any = null;
+        let payload: any = {};
         try {
           payload = JSON.parse(text);
         } catch {
-          // non-JSON odpoveď
-          if (!resp.ok) {
-            return {
-              success: false,
-              error: 'Došlo k chybe pri komunikácii so serverom. Skúste to znova neskôr.',
-            };
-          }
-          // 200 bez JSONu – berieme ako úspešné odoslanie mailu (napr. pri recovery flow)
-          return { success: true, info: 'Email bol úspešne odoslaný.' };
+          // Fallback pre neočakávané non-JSON odpovede
+          return { success: false, error: 'Komunikačná chyba so serverom.' };
         }
-
-        // normalizácia polí
-        const success = Boolean(payload?.success ?? payload?.ok === true);
-        const message: string = String(payload?.message || '');
+        
+        const success = payload?.success === true;
 
         if (resp.ok && success) {
-          // deteguj „odoslaný e-mail“ vs. „overená licencia“
-          const looksLikeMailSent =
-            /sent/i.test(message) || (/email/i.test(message) && !code);
-
-          if (looksLikeMailSent) {
-            return { success: true, info: 'Email bol úspešne odoslaný.' };
+          if (!isRecovery) {
+            // Úspešná aktivácia kľúča
+            const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+            setIsPro(true);
+            setProUser(licenseData);
           }
-
-          // úspešná verifikácia → odomkni PRO lokálne
-          const licenseData = {
-            isPro: true,
-            email: email.trim(),
-            key: code.trim(),
-          };
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-          setIsPro(true);
-          setProUser({ email: licenseData.email, key: licenseData.key });
-
-          return { success: true, info: 'Licencia overená. PRO odomknuté.' };
+          // Pre recovery aj pre aktiváciu vraciame info správu
+          return { success: true, info: payload.message || 'Operácia prebehla úspešne.' };
         }
+        
+        // Všetky ostatné prípady sú chyba
+        return { success: false, error: payload.message || 'Neznáma chyba.' };
 
-        // neúspech (4xx/5xx alebo success:false)
-        const lowered = message.toLowerCase();
-        if (
-          resp.status === 400 ||
-          lowered.includes('not found') ||
-          lowered.includes('no registration') ||
-          lowered.includes('invalid')
-        ) {
-          return {
-            success: false,
-            error:
-              'Nenašli sme registráciu pre zadaný e-mail. Skontrolujte, prosím, adresu.',
-          };
-        }
-
-        return {
-          success: false,
-          error: 'Došlo k chybe pri spracovaní. Skúste to znova neskôr.',
-        };
       } catch (e) {
         console.error('Failed to call verification API:', e);
         return {
