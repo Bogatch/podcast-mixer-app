@@ -75,6 +75,77 @@ const BuyLicenseForm: React.FC = () => {
   );
 };
 
+const RecoveryForm: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const { t } = useContext(I18nContext);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
+
+  const handleRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailIsValid) return;
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/recover-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess(t('recover_success_message'));
+      } else {
+        setError(data.message || t('recover_error_message'));
+      }
+    } catch (err) {
+      setError(t('recover_error_message'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h3 className="text-xl font-semibold text-gray-200">{t('recover_title')}</h3>
+        <p className="text-sm text-gray-400 mt-2">{t('recover_subtitle')}</p>
+      </div>
+      <form onSubmit={handleRecovery} className="space-y-4">
+        <div>
+          <label htmlFor="email_recover" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><EnvelopeIcon className="h-5 w-5 text-gray-400" /></div>
+            <input
+              id="email_recover" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.email@example.com"
+              className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required disabled={isLoading}
+            />
+          </div>
+        </div>
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        {success && <p className="text-green-400 text-sm text-center">{success}</p>}
+        <div className="pt-2">
+          <button type="submit" disabled={isLoading || !emailIsValid} className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors">
+            {isLoading ? <SpinnerIcon className="w-5 h-5 mr-3 animate-spin" /> : <EnvelopeIcon className="w-5 h-5 mr-3" />}
+            <span>{t('recover_button')}</span>
+          </button>
+        </div>
+      </form>
+      <div className="text-center">
+        <button onClick={onBack} className="text-sm text-gray-400 hover:text-white underline">
+          {t('recover_back_button')}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
 const ActivationForm: React.FC = () => {
   const { t } = useContext(I18nContext);
   const { verifyLicense, isLoading } = usePro();
@@ -83,9 +154,9 @@ const ActivationForm: React.FC = () => {
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [codeError, setCodeError] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-  // ✅ presne 3-3-3
   const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{3}$/.test(code), [code]);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,60 +191,62 @@ const ActivationForm: React.FC = () => {
     }
   };
 
+  if (isRecoveryMode) {
+    return <RecoveryForm onBack={() => setIsRecoveryMode(false)} />;
+  }
+
   return (
-    <form onSubmit={handleActivation} className="space-y-4">
-      <div>
-        <label htmlFor="email_activate" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><EnvelopeIcon className="h-5 w-5 text-gray-400" /></div>
-          <input
-            id="email_activate"
-            type="email"
-            value={email}
-            onChange={handleEmailChange}
-            placeholder="your.email@example.com"
-            className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            required
-            disabled={isLoading}
-          />
+    <>
+      <div className="text-center mb-6">
+        <h3 className="text-xl font-semibold text-gray-200">{t('unlock_form_title')}</h3>
+        <p className="text-sm text-gray-400 mt-2">{t('unlock_form_subtitle')}</p>
+      </div>
+      <form onSubmit={handleActivation} className="space-y-4">
+        <div>
+          <label htmlFor="email_activate" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_email')}</label>
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><EnvelopeIcon className="h-5 w-5 text-gray-400" /></div>
+            <input
+              id="email_activate" type="email" value={email} onChange={handleEmailChange}
+              placeholder="your.email@example.com"
+              className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required disabled={isLoading}
+            />
+          </div>
+          {emailError && <p className="text-red-400 text-xs mt-1">{emailError}</p>}
         </div>
-        {emailError && <p className="text-red-400 text-xs mt-1">{emailError}</p>}
-      </div>
-
-      <div>
-        <label htmlFor="license_key" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_license_key')}</label>
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><KeyIcon className="h-5 w-5 text-gray-400" /></div>
-          <input
-            id="license_key"
-            type="text"
-            value={code}
-            onChange={handleCodeChange}
-            placeholder="ABC-123-DEF"
-            className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            required
-            disabled={isLoading}
-            maxLength={11}
-          />
+        <div>
+          <label htmlFor="license_key" className="block text-sm font-medium text-gray-300 mb-2">{t('auth_license_key')}</label>
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><KeyIcon className="h-5 w-5 text-gray-400" /></div>
+            <input
+              id="license_key" type="text" value={code} onChange={handleCodeChange}
+              placeholder="ABC-123-DEF"
+              className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required disabled={isLoading} maxLength={11}
+            />
+          </div>
+          {codeError && <p className="text-red-400 text-xs mt-1">{codeError}</p>}
         </div>
-        {codeError && <p className="text-red-400 text-xs mt-1">{codeError}</p>}
-      </div>
-
-      {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
-      <div className="pt-2">
-        <button
-          type="submit"
-          disabled={isLoading || !emailIsValid || !codeIsValid}
-          className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
-        >
-          {isLoading
-            ? (<><SpinnerIcon className="w-5 h-5 mr-3 animate-spin" /><span>{t('verifying')}</span></>)
-            : (<><CheckIcon className="w-5 h-5 mr-3" /><span>{t('verify_and_activate')}</span></>)
-          }
-        </button>
-      </div>
-    </form>
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        <div className="pt-2">
+          <button
+            type="submit" disabled={isLoading || !emailIsValid || !codeIsValid}
+            className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
+          >
+            {isLoading
+              ? (<><SpinnerIcon className="w-5 h-5 mr-3 animate-spin" /><span>{t('verifying')}</span></>)
+              : (<><CheckIcon className="w-5 h-5 mr-3" /><span>{t('verify_and_activate')}</span></>)
+            }
+          </button>
+        </div>
+      </form>
+       <div className="text-center mt-4">
+          <button onClick={() => setIsRecoveryMode(true)} className="text-sm text-gray-400 hover:text-white underline">
+            {t('recover_forgot_key_button')}
+          </button>
+        </div>
+    </>
   );
 };
 
@@ -262,13 +335,7 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
                 <BuyLicenseForm />
               </div>
             ) : (
-              <div>
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-200">{t('unlock_form_title')}</h3>
-                  <p className="text-sm text-gray-400 mt-2">{t('unlock_form_subtitle')}</p>
-                </div>
                 <ActivationForm />
-              </div>
             )}
           </div>
         </main>

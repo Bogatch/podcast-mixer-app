@@ -200,6 +200,13 @@ export const translations = {
     'activation_success_message': 'Thank you! All PRO features are now unlocked. You can close this window.',
     'payment_success_title': 'Thank you for your payment!',
     'payment_success_message': 'Activation was successful. Please check your email inbox for your license key.',
+    'recover_title': 'Recover License Key',
+    'recover_subtitle': 'Enter the email you used for purchase.',
+    'recover_button': 'Send Recovery Email',
+    'recover_forgot_key_button': 'Forgot your license key?',
+    'recover_back_button': 'Back to license entry',
+    'recover_success_message': 'If an account exists for this email, a recovery message has been sent.',
+    'recover_error_message': 'An error occurred. Please try again later.',
 
     // Thank You Modal
     "thankyou_title": "Payment Successful",
@@ -455,6 +462,13 @@ export const translations = {
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
     'payment_success_title': 'Ďakujeme za platbu!',
     'payment_success_message': 'Aktivácia prebehla úspešne. Skontrolujte si e-mailovú schránku, kde nájdete licenčný kľúč.',
+    'recover_title': 'Obnoviť Licenčný Kľúč',
+    'recover_subtitle': 'Zadajte e-mail, ktorý ste použili pri nákupe.',
+    'recover_button': 'Poslať Obnovovací E-mail',
+    'recover_forgot_key_button': 'Zabudli ste licenčný kľúč?',
+    'recover_back_button': 'Späť na zadanie licencie',
+    'recover_success_message': 'Ak pre tento e-mail existuje účet, bola odoslaná správa na obnovenie.',
+    'recover_error_message': 'Vyskytla sa chyba. Skúste to prosím neskôr.',
 
     // Thank You Modal
     "thankyou_title": "Platba úspešná",
