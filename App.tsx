@@ -987,7 +987,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
   ), [t]);
   
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-dvh bg-gray-900 text-white px-4 sm:px-6 lg:px-8 py-4 sm:py-6 safe-top safe-bottom">
       {isReordering && (
         <ReorderModal 
             tracks={tracks}

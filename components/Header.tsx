@@ -21,7 +21,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
          <div className="flex items-center space-x-2">
             <button
                 onClick={() => onOpenUnlockModal('enter')}
-                className="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-700/80 hover:bg-gray-700 rounded-md transition-colors"
+                className="h-9 px-3 text-sm font-semibold text-gray-300 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors"
             >
                 {t('unlock_enter_key_tab')}
             </button>
@@ -71,23 +71,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
            <MicIcon className="w-8 h-8 text-teal-400" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">{t('header_title')}</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-100 text-balance">{t('header_title')}</h1>
           <p className="text-sm sm:text-base text-gray-400">{t('header_subtitle')}</p>
         </div>
       </div>
       <div className="flex items-start space-x-2 sm:space-x-3">
-          <div className="flex items-center space-x-1 bg-gray-700/80 p-1 rounded-lg">
+          <div className="flex items-center space-x-1 bg-slate-800/70 backdrop-blur p-1 rounded-xl">
             <button
                 onClick={() => setLocale('sk')}
                 title={t('slovak')}
-                className={`p-1.5 rounded-md transition-colors ${locale === 'sk' ? 'bg-gray-600' : 'opacity-60 hover:opacity-100 hover:bg-gray-700'}`}
+                className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'sk' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
             >
                 <SlovakiaFlagIcon className="w-6 h-auto rounded-sm" />
             </button>
             <button
                 onClick={() => setLocale('en')}
                 title={t('english')}
-                className={`p-1.5 rounded-md transition-colors ${locale === 'en' ? 'bg-gray-600' : 'opacity-60 hover:opacity-100 hover:bg-gray-700'}`}
+                className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'en' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
             >
                 <UKFlagIcon className="w-6 h-auto rounded-sm" />
             </button>

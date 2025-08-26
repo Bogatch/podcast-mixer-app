@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { XMarkIcon, SpinnerIcon, DownloadIcon } from './icons';
+import { SpinnerIcon, DownloadIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
+import { ModalShell } from './ModalShell';
 
 export interface ExportOptions {
   format: 'wav' | 'mp3';
@@ -48,29 +49,36 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
     );
   };
 
+  const footer = (
+     <div className="flex justify-end space-x-4">
+        <button
+          onClick={onClose}
+          disabled={isExporting}
+          className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors disabled:opacity-50"
+        >
+          {t('cancel')}
+        </button>
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="px-6 py-2 w-36 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors disabled:bg-gray-600 disabled:cursor-wait"
+        >
+          {isExporting ? (
+            <SpinnerIcon className="animate-spin h-5 w-5 text-white" />
+          ) : (
+              <>
+               <DownloadIcon className="w-5 h-5 mr-2"/>
+               <span>{t('export')}</span>
+              </>
+          )}
+        </button>
+      </div>
+  );
+
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-gray-700"
-        onClick={e => e.stopPropagation()}
-      >
-        <header className="p-6 flex items-center justify-between border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">{t('export_title')}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-            title={t('close')}
-            disabled={isExporting}
-          >
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </header>
-
-        <main className="p-6 space-y-6 overflow-y-auto">
+    <ModalShell title={t('export_title')} onClose={onClose} footer={footer} maxWidth="max-w-lg">
+        <div className="space-y-6">
           <div>
             <label className="block text-base font-semibold text-gray-300 mb-3">{t('export_format')}</label>
             <div className="flex space-x-2">
@@ -125,32 +133,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                 </div>
                  <p className="text-xs text-gray-500 mt-2">{t('export_samplerate_info')}</p>
             </div>
-        </main>
-
-        <footer className="p-6 border-t border-gray-700 bg-gray-800/50 rounded-b-xl flex justify-end space-x-4">
-          <button
-            onClick={onClose}
-            disabled={isExporting}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors disabled:opacity-50"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="px-6 py-2 w-36 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors disabled:bg-gray-600 disabled:cursor-wait"
-          >
-            {isExporting ? (
-              <SpinnerIcon className="animate-spin h-5 w-5 text-white" />
-            ) : (
-                <>
-                 <DownloadIcon className="w-5 h-5 mr-2"/>
-                 <span>{t('export')}</span>
-                </>
-            )}
-          </button>
-        </footer>
-      </div>
-    </div>
+        </div>
+    </ModalShell>
   );
 };

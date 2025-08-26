@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { XMarkIcon } from './icons';
+import { ModalShell } from './ModalShell';
 import { I18nContext } from '../lib/i18n';
 
 const HelpSection: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
@@ -19,25 +19,8 @@ export const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { t } = useContext(I18nContext);
     
     return (
-        <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={onClose}
-        >
-          <div 
-            className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-700"
-            onClick={e => e.stopPropagation()}
-          >
-            <header className="p-6 flex items-center justify-between border-b border-gray-700 sticky top-0 bg-gray-800/95 backdrop-blur-sm rounded-t-xl z-10">
-              <h2 className="text-2xl font-bold text-white">{t('help_title')}</h2>
-              <button
-                onClick={onClose}
-                className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                title={t('close')}
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </header>
-            <main className="p-8 space-y-8 overflow-y-auto text-gray-300">
+        <ModalShell title={t('help_title')} onClose={onClose} maxWidth="max-w-4xl">
+            <div className="space-y-8 text-gray-300">
                 <HelpSection title={t('help_tracks_title')}>
                     <p>{t('help_tracks_p1')}</p>
                     <ul className="list-disc list-inside space-y-2 pl-2">
@@ -78,8 +61,7 @@ export const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <li><b>{t('help_export_project_title')}</b> {t('help_export_project_desc')}</li>
                     </ul>
                 </HelpSection>
-            </main>
-          </div>
-        </div>
+            </div>
+        </ModalShell>
     );
 };

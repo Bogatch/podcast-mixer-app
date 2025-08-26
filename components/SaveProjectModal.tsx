@@ -1,8 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
 import type { SavedProject } from '../types';
-import { XMarkIcon, SaveIcon, SpinnerIcon, TrashIcon, FolderOpenIcon } from './icons';
+import { SaveIcon, SpinnerIcon, TrashIcon, FolderOpenIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
 import * as db from '../lib/db';
+import { ModalShell } from './ModalShell';
 
 interface SaveProjectModalProps {
   onClose: () => void;
@@ -72,24 +73,10 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700"
-        onClick={e => e.stopPropagation()}
-      >
-        <header className="p-6 flex items-center justify-between border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">{t('save_project_modal_title')}</h2>
-          <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors" title={t('close')}>
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </header>
-
-        <main className="p-6 space-y-6 overflow-y-auto">
+    <ModalShell title={t('save_project_modal_title')} onClose={onClose} maxWidth="max-w-2xl">
+        <div className="space-y-6">
             {/* Save Section */}
-            <div className="bg-gray-900/50 p-4 rounded-lg">
+            <div className="bg-slate-800/50 p-4 rounded-lg">
                 <label htmlFor="project-name" className="block text-sm font-medium text-gray-300 mb-2">{t('save_project_modal_name_label')}</label>
                 <div className="flex items-center gap-3">
                     <input 
@@ -98,7 +85,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
                         value={projectName}
                         onChange={(e) => setProjectName(e.target.value)}
                         placeholder={t('save_project_modal_placeholder')}
-                        className="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button 
                         onClick={() => handleSave(false)} 
@@ -149,8 +136,7 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
                     <p className="text-sm text-gray-500 text-center py-4">{t('no_saved_projects')}</p>
                 )}
             </div>
-        </main>
-      </div>
-    </div>
+        </div>
+    </ModalShell>
   );
 };

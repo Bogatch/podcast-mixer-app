@@ -72,7 +72,7 @@ const BuyLicenseForm: React.FC = () => {
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder={t('placeholder_email')}
-            className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
+            className="w-full rounded-lg bg-slate-800/60 border border-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={busy}
           />
         </div>
@@ -127,7 +127,7 @@ const VerifyForm: React.FC = () => {
             value={email}
             onChange={e => { setEmail(e.target.value); setError(''); }}
             placeholder={t('placeholder_email')}
-            className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
+            className="w-full rounded-lg bg-slate-800/60 border border-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={isLoading}
           />
         </div>
@@ -143,7 +143,7 @@ const VerifyForm: React.FC = () => {
             onChange={e => onCodeChange(e.target.value)}
             placeholder={t('placeholder_license_key')}
             maxLength={11}
-            className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
+            className="w-full rounded-lg bg-slate-800/60 border border-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={isLoading}
           />
         </div>
@@ -184,63 +184,53 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       aria-modal
       role="dialog"
+      onClick={onClose}
     >
-      {/* backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* card */}
-      <div
-        className="relative w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0f1220] shadow-2xl ring-1 ring-black/5 overflow-hidden"
+        className="relative w-full max-w-3xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden"
         style={{ animation: 'fadeIn 0.2s ease-out' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <div className="text-lg font-semibold text-white">
+        <header className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-700">
+          <h2 className="text-xl font-bold text-white">
             {t('unlock_modal_title')}
-          </div>
+          </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-2 text-gray-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1 rounded-full text-gray-400 hover:bg-slate-700 hover:text-white transition"
             aria-label={t('close')}
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-6 w-6" />
           </button>
+        </header>
+        
+        <div className="p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-2 bg-slate-800/70 p-1 rounded-xl">
+                <button
+                  onClick={() => setTab('buy')}
+                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+                    tab === 'buy' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <CreditCardIcon className="h-4 w-4" />
+                  {t('unlock_buy_license_tab')}
+                </button>
+                <button
+                  onClick={() => setTab('enter')}
+                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+                    tab === 'enter' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <KeyIcon className="h-4 w-4" />
+                  {t('unlock_enter_key_tab')}
+                </button>
+            </div>
         </div>
 
-        {/* tabs */}
-        <div className="px-6 pt-4">
-          <div className="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-xl">
-            <button
-              onClick={() => setTab('buy')}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                tab === 'buy' ? 'bg-white text-black' : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <CreditCardIcon className="h-4 w-4" />
-              {t('unlock_buy_license_tab')}
-            </button>
-            <button
-              onClick={() => setTab('enter')}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                tab === 'enter' ? 'bg-white text-black' : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <KeyIcon className="h-4 w-4" />
-              {t('unlock_enter_key_tab')}
-            </button>
-          </div>
-        </div>
-
-        {/* content */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 px-6 py-6">
-          {/* promo – jednoduchý, čistý blok */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 p-4 sm:p-5">
           <section className="md:col-span-2">
             <h3 className="text-white font-semibold mb-3">
               {t(featureTitleKey)}
@@ -253,7 +243,6 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
             </ul>
           </section>
 
-          {/* forms */}
           <section className="md:col-span-3">
             {tab === 'buy' ? <BuyLicenseForm /> : <VerifyForm />}
           </section>

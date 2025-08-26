@@ -2,6 +2,7 @@ import React, { useState, useRef, useContext } from 'react';
 import type { Track } from '../types';
 import { DragHandleIcon, MusicNoteIcon, UserIcon, BellIcon, ChevronUpIcon, ChevronDownIcon, ChevronDoubleUpIcon, ChevronDoubleDownIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
+import { ModalShell } from './ModalShell';
 
 interface ReorderModalProps {
   tracks: Track[];
@@ -104,20 +105,27 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({ tracks, onClose, onS
     onSave(orderedTracks);
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-4">
+        <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors"
+        >
+            {t('cancel')}
+        </button>
+        <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors"
+        >
+            {t('save_and_close')}
+        </button>
+    </div>
+  );
+
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">{t('reorder_title')}</h2>
-          <p className="text-sm text-gray-400 mt-1">{t('reorder_subtitle')}</p>
-        </div>
-        <div className="p-6 space-y-3 overflow-y-auto">
+    <ModalShell title={t('reorder_title')} onClose={onClose} footer={footer} maxWidth="max-w-2xl">
+        <p className="text-sm text-gray-400 -mt-2 mb-4">{t('reorder_subtitle')}</p>
+        <div className="space-y-3">
             {orderedTracks.map((track, index) => (
                 <ReorderableTrackItem 
                     key={track.id}
@@ -132,21 +140,6 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({ tracks, onClose, onS
                 />
             ))}
         </div>
-        <div className="p-6 border-t border-gray-700 bg-gray-800/50 rounded-b-xl flex justify-end space-x-4">
-            <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-md transition-colors"
-            >
-                {t('cancel')}
-            </button>
-            <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors"
-            >
-                {t('save_and_close')}
-            </button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 };
