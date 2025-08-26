@@ -144,7 +144,7 @@ const AppContent: React.FC = () => {
   
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
-  const [unlockModalInitialTab, setUnlockModalInitialTab] = useState<'buy' | 'enter' | 'recover'>('buy');
+  const [unlockModalInitialTab, setUnlockModalInitialTab] = useState<'buy' | 'enter'>('buy');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -202,7 +202,7 @@ const AppContent: React.FC = () => {
       setTimeout(() => setInfo(null), duration);
   }
   
-  const handleOpenUnlockModal = (tab: 'buy' | 'enter' | 'recover' = 'buy') => {
+  const handleOpenUnlockModal = (tab: 'buy' | 'enter' = 'buy') => {
     setUnlockModalInitialTab(tab);
     setIsUnlockModalOpen(true);
   };

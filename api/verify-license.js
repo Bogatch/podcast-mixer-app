@@ -85,35 +85,29 @@ module.exports = async function handler(req, res) {
     const parsed = safeJsonParse(fwText);
 
     console.log('[verify-license] upstream status:', fwResp.status);
-    if (parsed.ok) {
-      console.log('[verify-license] upstream JSON:', parsed.data);
-    } else {
+    if (!parsed.ok) {
       console.log('[verify-license] upstream NON-JSON:', fwText.slice(0, 300));
     }
 
-    // ----- DÔLEŽITÉ: RECOVER JE VŽDY "SOFT SUCCESS" -----
+    // ----- RECOVER: vždy soft-success (neenumerujeme e-maily) -----
     if (isRecover) {
-      // nezávisle od toho, čo vráti Make, UI má dostať úspech (neenumerujeme emaily)
-      const msg = parsed.ok && parsed.data && parsed.data.message
-        ? parsed.data.message
-        : 'If this email is registered, we have sent you the license key.';
+      const msg =
+        (parsed.ok && parsed.data && parsed.data.message) ||
+        'If this email is registered, we have sent you the license key.';
       return res.status(200).json({
         success: true,
         message: msg,
       });
     }
 
-    // ----- VERIFY (kód nie je prázdny) -----
+    // ----- VERIFY -----
     if (parsed.ok) {
       const upstream = parsed.data || {};
       const success = upstream.success === true || upstream.status === 'success';
       const message = upstream.message || 'License verified. PRO unlocked.';
 
       if (fwResp.ok && success) {
-        return res.status(200).json({
-          success: true,
-          message,
-        });
+        return res.status(200).json({ success: true, message });
       } else {
         const status = fwResp.ok ? 401 : fwResp.status;
         return res.status(status || 401).json({

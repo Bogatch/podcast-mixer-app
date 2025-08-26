@@ -15,7 +15,7 @@ import {
 
 interface UnlockModalProps {
   onClose: () => void;
-  initialTab?: 'buy' | 'enter' | 'recover';
+  initialTab?: 'buy' | 'enter';
 }
 
 /* ---------- Small UI atoms ---------- */
@@ -174,7 +174,12 @@ const ActivationForm: React.FC = () => {
     if (codeError) setCodeError('');
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (emailError) setEmailError('');
+  };
+  
+  const handleActivation = async (e: React.FormEvent) => {
     e.preventDefault();
     setInfo('');
     setError('');
@@ -182,26 +187,32 @@ const ActivationForm: React.FC = () => {
     setCodeError('');
 
     let invalid = false;
-    if (!emailIsValid) {
-      setEmailError(t('validation_email_invalid') || 'Please enter a valid email.');
-      invalid = true;
-    }
-    if (!codeIsValid) {
-      setCodeError(t('validation_code_invalid') || 'Enter code like ABC-123-DEF.');
-      invalid = true;
-    }
+    if (!emailIsValid) { setEmailError(t('validation_email_invalid') || 'Please enter a valid email.'); invalid = true; }
+    if (!codeIsValid) { setCodeError(t('validation_code_invalid') || 'Enter code like ABC-123-DEF.'); invalid = true; }
     if (invalid) return;
 
     const result = await verifyLicense(email, code);
+    if (!result.success) setError(result.error || t('error_invalid_license') || 'Invalid code or email.');
+  };
+
+  const handleRecover = async () => {
+    setInfo('');
+    setError('');
+    setEmailError('');
+    if (!emailIsValid) {
+      setEmailError(t('validation_email_invalid') || 'Please enter a valid email.');
+      return;
+    }
+    const result = await verifyLicense(email, '');
     if (result.success) {
-      setInfo(result.info || 'License verified. PRO unlocked.');
+      setInfo(t('recover_note') || 'We will email your existing license key if we can match your address.');
     } else {
-      setError(result.error || t('error_invalid_license') || 'Invalid code or email.');
+      setError(result.error || 'We could not send the key to this email.');
     }
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={handleActivation} className="space-y-4">
       <div>
         <FieldLabel htmlFor="email_activate">{t('auth_email') || 'Your email'}</FieldLabel>
         <div className="relative">
@@ -212,13 +223,10 @@ const ActivationForm: React.FC = () => {
             id="email_activate"
             type="email"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (emailError) setEmailError('');
-            }}
+            onChange={handleEmailChange}
             placeholder="your.email@example.com"
             autoComplete="email"
-            className="w-full rounded-lg border border-gray-700 bg-gray-900/70 py-2 pl-10 pr-4 text-white placeholder-gray-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-lg border border-gray-700 bg-gray-900/70 py-2 pl-10 pr-4 text-white placeholder-gray-500 outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             required
             disabled={isLoading}
           />
@@ -250,86 +258,30 @@ const ActivationForm: React.FC = () => {
       {!!info && <TextHelp tone="success">{info}</TextHelp>}
       {!!error && <TextHelp tone="error">{error}</TextHelp>}
 
-      <PrimaryButton type="submit" disabled={isLoading || !emailIsValid || !codeIsValid}>
-        {isLoading ? (
-          <>
-            <SpinnerIcon className="h-5 w-5 animate-spin" />
-            <span>{t('verifying') || 'Verifying…'}</span>
-          </>
-        ) : (
-          <>
-            <CheckIcon className="h-5 w-5" />
-            <span>{t('verify_and_activate') || 'Verify & Activate'}</span>
-          </>
-        )}
-      </PrimaryButton>
-    </form>
-  );
-};
-
-const RecoverForm: React.FC = () => {
-  const { t } = useContext(I18nContext);
-  const { verifyLicense, isLoading } = usePro();
-  const [email, setEmail] = useState('');
-  const [info, setInfo] = useState('');
-  const [error, setError] = useState('');
-  const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setInfo('');
-    setError('');
-    if (!emailIsValid) {
-      setError(t('validation_email_invalid') || 'Please enter a valid email.');
-      return;
-    }
-    // recovery = prázdny kód -> server/Make pošle kľúč na email
-    const result = await verifyLicense(email, '');
-    if (result.success) {
-      setInfo(result.info || 'Email bol úspešne odoslaný.');
-    } else {
-      setError(result.error || 'Nepodarilo sa odoslať email.');
-    }
-  };
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <FieldLabel htmlFor="email_recover">{t('auth_email') || 'Your email'}</FieldLabel>
-        <Badge>{t('instant') || 'Instant'}</Badge>
+      <div className="pt-2 space-y-3">
+        <PrimaryButton type="submit" disabled={isLoading || !emailIsValid || !codeIsValid}>
+          {isLoading ? (
+            <>
+              <SpinnerIcon className="h-5 w-5 animate-spin" />
+              <span>{t('verifying') || 'Verifying…'}</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon className="h-5 w-5" />
+              <span>{t('verify_and_activate') || 'Verify & Activate'}</span>
+            </>
+          )}
+        </PrimaryButton>
+        <button
+          type="button"
+          onClick={handleRecover}
+          disabled={isLoading || !emailIsValid}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gray-600/50 px-5 py-2.5 font-semibold text-gray-300 shadow-md transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <EnvelopeIcon className="h-5 w-5" />
+          <span>{t('recover_send_button') || 'Send my key'}</span>
+        </button>
       </div>
-      <input
-        id="email_recover"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="your.email@example.com"
-        autoComplete="email"
-        className="w-full rounded-lg border border-gray-700 bg-gray-900/70 py-2 px-4 text-white placeholder-gray-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-        required
-        disabled={isLoading}
-      />
-
-      {!!info && <TextHelp tone="success">{info}</TextHelp>}
-      {!!error && <TextHelp tone="error">{error}</TextHelp>}
-
-      <PrimaryButton type="submit" disabled={isLoading || !emailIsValid}>
-        {isLoading ? (
-          <>
-            <SpinnerIcon className="h-5 w-5 animate-spin" />
-            <span>{t('sending') || 'Sending…'}</span>
-          </>
-        ) : (
-          <>
-            <EnvelopeIcon className="h-5 w-5" />
-            <span>{t('recover_send_button') || 'Send my key'}</span>
-          </>
-        )}
-      </PrimaryButton>
-
-      <p className="text-center text-xs text-gray-400">
-        {t('recover_note') || 'We will email your existing license key if we can match your address.'}
-      </p>
     </form>
   );
 };
@@ -339,7 +291,7 @@ const RecoverForm: React.FC = () => {
 export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 'buy' }) => {
   const { t } = useContext(I18nContext);
   const { isPro } = usePro();
-  const [activeTab, setActiveTab] = useState<'buy' | 'enter' | 'recover'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'buy' | 'enter'>(initialTab);
 
   // Auto-close po úspešnej aktivácii (UX)
   useEffect(() => {
@@ -441,18 +393,11 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
                   {t('unlock_enter_key_tab') || 'Enter key'}
                 </span>
               </TabButton>
-              <TabButton isActive={activeTab === 'recover'} onClick={() => setActiveTab('recover')}>
-                <span className="inline-flex items-center gap-2">
-                  <EnvelopeIcon className="h-4 w-4" />
-                  {t('unlock_recover_key_tab') || 'Recover key'}
-                </span>
-              </TabButton>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/5 p-5">
               {activeTab === 'buy' && <BuyLicenseForm />}
               {activeTab === 'enter' && <ActivationForm />}
-              {activeTab === 'recover' && <RecoverForm />}
             </div>
           </section>
         </main>
