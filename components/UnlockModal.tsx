@@ -149,7 +149,14 @@ const VerifyForm: React.FC = () => {
         </div>
       </label>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-4 py-3 text-sm leading-relaxed">
+          {error}{' '}
+          <a href="mailto:support@customradio.sk" className="underline decoration-dotted">
+            support@customradio.sk
+          </a>
+        </div>
+      )}
 
       <SecondaryButton type="submit" disabled={!emailValid || !codeValid || isLoading}>
         {isLoading ? <SpinnerIcon className="h-5 w-5 animate-spin" /> : <KeyIcon className="h-5 w-5" />}

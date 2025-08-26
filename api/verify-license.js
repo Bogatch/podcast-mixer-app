@@ -1,133 +1,87 @@
-// api/verify-license.js — Vercel Serverless (CommonJS)
+// api/verify-license.js  (iba doplnené errorCode + jednotný tvar odpovedí)
 
 function safeJsonParse(text) {
-  try {
-    return { ok: true, data: JSON.parse(text) };
-  } catch (e) {
-    return { ok: false, error: e && e.message ? e.message : 'Invalid JSON' };
+  try { return { ok: true, data: JSON.parse(text) }; }
+  catch (e) { return { ok: false, error: e?.message || 'Invalid JSON' }; }
+}
+
+function normalizeUpstreamError(msg = '') {
+  const m = String(msg).toLowerCase();
+
+  if (m.includes('not found') || m.includes('no match') || m.includes('not registered')) {
+    return { errorCode: 'KEY_NOT_FOUND', message: 'The key was not found or is not registered with the provided email.' };
   }
+  if (m.includes('rate') && m.includes('limit')) {
+    return { errorCode: 'RATE_LIMITED', message: 'Rate limited by upstream.' };
+  }
+  return { errorCode: 'UPSTREAM_ERROR', message: 'Upstream returned an error.' };
 }
 
 module.exports = async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const HOOK =
-      process.env.MAKE_WEBHOOK_URL_VERIFY ||
-      process.env.MAKE_WEBHOOK_URL;
-
-    if (!HOOK) {
-      console.error('[verify-license] MISSING ENV: MAKE_WEBHOOK_URL_VERIFY or MAKE_WEBHOOK_URL');
-      return res.status(503).json({
-        success: false,
-        message: 'Server is not configured (missing webhook URL).',
-      });
-    }
+    const WEBHOOK = process.env.MAKE_WEBHOOK_URL_VERIFY || process.env.MAKE_WEBHOOK_URL;
+    if (!WEBHOOK) return res.status(503).json({ ok: false, errorCode: 'SERVER_MISCONFIGURED', message: 'Missing webhook URL.' });
 
     if (req.method !== 'POST') {
       res.setHeader('Allow', 'POST');
-      return res.status(405).json({
-        success: false,
-        message: 'Method Not Allowed',
-      });
+      return res.status(405).json({ ok: false, errorCode: 'METHOD_NOT_ALLOWED', message: 'Method Not Allowed' });
     }
 
-    // bezpečné načítanie tela
+    // tolerantné čítanie body
     let body = req.body;
     if (typeof body === 'string') {
-      const parsed = safeJsonParse(body);
-      if (!parsed.ok) return res.status(400).json({ success: false, message: 'INVALID_JSON' });
-      body = parsed.data;
-    } else if (!body || typeof body !== 'object') {
-      const raw =
-        req && req.rawBody && typeof req.rawBody.toString === 'function'
-          ? req.rawBody.toString()
-          : '';
-      if (!raw) return res.status(400).json({ success: false, message: 'EMPTY_BODY' });
-      const parsed = safeJsonParse(raw);
-      if (!parsed.ok) return res.status(400).json({ success: false, message: 'INVALID_JSON' });
-      body = parsed.data;
+      const p = safeJsonParse(body);
+      if (!p.ok) return res.status(400).json({ ok: false, errorCode: 'INVALID_JSON', message: 'Invalid JSON body.' });
+      body = p.data;
+    }
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ ok: false, errorCode: 'INVALID_JSON', message: 'Invalid JSON body.' });
     }
 
-    const email = (body.email ?? '').toString().trim();
-    const rawCode = body.code != null ? body.code.toString().trim() : '';
-
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({
-        success: false,
-        message: 'A valid email is required.',
-      });
+    const email = String(body.email || '').trim();
+    const code  = String(body.code  || body.key || '').trim();
+    if (!email || !email.includes('@') || !code) {
+      return res.status(400).json({ ok: false, errorCode: 'EMAIL_AND_CODE_REQUIRED', message: 'Email and license key are required.' });
     }
 
-    // recover = prázdny kód
-    const isRecover = rawCode.length === 0;
-    const payload = isRecover
-      ? { email, action: 'recover' }
-      : { email, code: rawCode, action: 'verify' };
-
-    console.log('[verify-license] using webhook:', HOOK);
-    console.log('[verify-license] outgoing payload:', payload);
-
-    const fwResp = await fetch(HOOK, {
+    const fw = await fetch(WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ email, code }), // pozor: zachovávame presný tvar (case-sensitive)
     });
 
-    const fwText = await fwResp.text();
-    const parsed = safeJsonParse(fwText);
+    const text = await fw.text();
+    const parsed = safeJsonParse(text);
 
-    console.log('[verify-license] upstream status:', fwResp.status);
-    if (!parsed.ok) {
-      console.log('[verify-license] upstream NON-JSON:', fwText.slice(0, 300));
-    }
-
-    // ----- RECOVER: vždy soft-success (neenumerujeme e-maily) -----
-    if (isRecover) {
-      const msg =
-        (parsed.ok && parsed.data && parsed.data.message) ||
-        'If this email is registered, we have sent you the license key.';
-      return res.status(200).json({
-        success: true,
-        message: msg,
-      });
-    }
-
-    // ----- VERIFY -----
+    // Upstream poslal JSON
     if (parsed.ok) {
-      const upstream = parsed.data || {};
-      const success = upstream.success === true || upstream.status === 'success';
-      const message = upstream.message || 'License verified. PRO unlocked.';
-
-      if (fwResp.ok && success) {
-        return res.status(200).json({ success: true, message });
-      } else {
-        const status = fwResp.ok ? 401 : fwResp.status;
-        return res.status(status || 401).json({
-          success: false,
-          message: upstream.message || 'Invalid email or license key.',
-        });
+      const data = parsed.data;
+      // konsolidácia: očakávame success:true/false
+      if (data?.success === true || data?.status === 'success') {
+        return res.status(200).json({ ok: true, success: true, message: data?.message || 'Verified.' });
       }
+      // upstream error – doplň kód
+      const norm = normalizeUpstreamError(data?.message || data?.error || '');
+      return res.status(400).json({ ok: false, success: false, errorCode: norm.errorCode, message: norm.message });
     }
 
-    // ne-JSON odpoveď
-    return res.status(fwResp.status || 502).json({
-      success: false,
-      message: 'The verification endpoint did not return a JSON response.',
-      upstream: 'NON_JSON_UPSTREAM',
+    // Upstream ne-JSON
+    return res.status(fw.status || 502).json({
+      ok: false, success: false,
+      errorCode: 'NON_JSON_UPSTREAM',
+      message: 'Upstream did not return JSON.'
     });
+
   } catch (err) {
-    console.error('[verify-license] exception:', err && err.message ? err.message : err);
     return res.status(500).json({
-      success: false,
-      message: 'An unexpected server error occurred.',
+      ok: false, success: false,
+      errorCode: 'INTERNAL_ERROR',
+      message: err?.message || 'Unexpected server error'
     });
   }
 };
