@@ -20,7 +20,7 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
-import { CenterPopup } from './components/CenterPopup';
+import CenterPopup from './components/CenterPopup';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -114,7 +114,7 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
 };
 
 const SuccessIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5 text-green-400">
+  <svg viewBox="0 0 24 24" className="h-6 w-6 text-green-400">
     <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M22 4L12 14.01l-3-3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
@@ -971,6 +971,20 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
   const canMix = tracks.length > 0 && 
                  !tracks.some(t => !t.file) && 
                  (!underlayTrack || !!underlayTrack.file);
+
+  const stripePopupMessage = useMemo(() => (
+    <div className="space-y-3">
+        <p>
+            {t('popup_stripe_message_new_1')} <strong>{t('popup_stripe_message_new_spam')}</strong> {t('popup_stripe_message_new_or')} <strong>{t('popup_stripe_message_new_promo')}</strong>.
+        </p>
+        <p>
+            {t('popup_stripe_message_new_contact')}{' '}
+            <a href="mailto:support@customradio.sk" className="underline decoration-dotted">
+                support@customradio.sk
+            </a>.
+        </p>
+    </div>
+  ), [t]);
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
@@ -1012,24 +1026,19 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       <CenterPopup
         open={showStripePopup}
         onClose={() => setShowStripePopup(false)}
-        autoCloseMs={7000}
-        title={t('popup_stripe_title_success')}
+        autoCloseMs={12000}
+        title={t('popup_stripe_title_new')}
         icon={<SuccessIcon />}
-        message={
-          <div className="space-y-2">
-            <p>{t('popup_stripe_message')}</p>
-            <p className="text-xs text-gray-400">{t('popup_stripe_spam_note')}</p>
-          </div>
-        }
+        message={stripePopupMessage}
       />
 
       <CenterPopup
         open={showActivatedPopup}
         onClose={() => setShowActivatedPopup(false)}
-        autoCloseMs={3000}
-        title={t('popup_activated_title')}
+        autoCloseMs={6000}
+        title={t('popup_activated_title_new')}
         icon={<SuccessIcon />}
-        message={<p>{t('popup_activated_message')}</p>}
+        message={<p>{t('popup_activated_message_new')}</p>}
       />
 
 

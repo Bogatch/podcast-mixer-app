@@ -16,11 +16,14 @@ export const translations = {
     'popup_ok': 'OK',
 
     // Popups
-    'popup_stripe_title_success': 'Thank You for Your Purchase',
-    'popup_stripe_message': 'Your payment was successful. Please check your email - we have sent you your license key and a confirmation.',
-    'popup_stripe_spam_note': 'If you don\'t see the email, please check your "Spam" or "Promotions" folder.',
-    'popup_activated_title': 'PRO Version Activated',
-    'popup_activated_message': 'All premium features are now unlocked. Enjoy your work!',
+    'popup_stripe_title_new': 'Payment Successful',
+    'popup_stripe_message_new_1': "We've sent you an email with your license key and payment confirmation. If you don't see the email, please also check the folders",
+    'popup_stripe_message_new_spam': "Spam",
+    'popup_stripe_message_new_or': "or",
+    'popup_stripe_message_new_promo': "Promotions",
+    'popup_stripe_message_new_contact': "In case of any issues, please contact us at",
+    'popup_activated_title_new': 'License Verified',
+    'popup_activated_message_new': 'PRO features are now active. Thank you.',
 
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
@@ -300,11 +303,14 @@ export const translations = {
     'popup_ok': 'OK',
 
     // Popups
-    'popup_stripe_title_success': 'Ďakujeme za nákup',
-    'popup_stripe_message': 'Platba prebehla úspešne. Skontrolujte prosím e-mail – poslali sme vám licenčný kľúč a potvrdenie.',
-    'popup_stripe_spam_note': 'Ak e-mail nevidíte, pozrite priečinok “Spam”/“Reklamy”.',
-    'popup_activated_title': 'PRO verzia aktivovaná',
-    'popup_activated_message': 'Všetky prémiové funkcie sú práve odomknuté. Užite si prácu!',
+    'popup_stripe_title_new': 'Platba prebehla úspešne',
+    'popup_stripe_message_new_1': 'Poslali sme vám e-mail s licenčným kľúčom a potvrdením o platbe. Ak e-mail nevidíte, skontrolujte aj priečinky',
+    'popup_stripe_message_new_spam': 'Spam',
+    'popup_stripe_message_new_or': 'alebo',
+    'popup_stripe_message_new_promo': 'Reklamy',
+    'popup_stripe_message_new_contact': 'V prípade problémov nás kontaktujte na',
+    'popup_activated_title_new': 'Licencia overená',
+    'popup_activated_message_new': 'PRO funkcionality sú aktívne. Ďakujeme.',
 
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
