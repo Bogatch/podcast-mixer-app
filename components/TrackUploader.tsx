@@ -1,6 +1,6 @@
 import React, { useRef, useContext } from 'react';
 import { SpinnerIcon } from './icons';
-import { I18nContext } from '../lib/i18n';
+import { I18nContext, TranslationKey } from '../lib/i18n';
 
 interface TrackUploaderProps {
   onFilesSelect: (files: FileList, type: 'music' | 'spoken' | 'jingle') => void;
@@ -8,6 +8,31 @@ interface TrackUploaderProps {
   uploadingType: 'music' | 'spoken' | 'jingle' | 'underlay' | null;
   isMixing: boolean;
 }
+
+const UploaderButton: React.FC<{
+  onClick: () => void;
+  disabled: boolean;
+  uploading: boolean;
+  labelKey: TranslationKey;
+  emoji: string;
+  className: string;
+}> = ({ onClick, disabled, uploading, labelKey, emoji, className }) => {
+    const { t } = useContext(I18nContext);
+    
+    return (
+        <button 
+          onClick={onClick} 
+          disabled={disabled} 
+          className={`w-full flex items-center justify-start text-left gap-4 px-4 py-4 sm:py-5 font-semibold rounded-2xl transition-all duration-200 ease-in-out shadow-lg shadow-black/20 active:scale-[.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 ${className}`}
+        >
+            {uploading 
+                ? <SpinnerIcon className="animate-spin h-6 w-6 text-white" /> 
+                : <span className="text-2xl sm:text-3xl">{emoji}</span>
+            }
+            <span className="text-lg sm:text-xl">{t(labelKey)}</span>
+        </button>
+    );
+};
 
 export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onUnderlaySelect, uploadingType, isMixing }) => {
   const { t } = useContext(I18nContext);
@@ -42,22 +67,38 @@ export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onU
       <input type="file" ref={underlayInputRef} onChange={handleUnderlayChange} accept="audio/*" className="hidden" disabled={isDisabled} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <button onClick={() => musicInputRef.current?.click()} disabled={isDisabled} className="w-full flex items-center justify-start text-left gap-3 px-5 py-4 sm:py-5 bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 ease-in-out shadow-lg shadow-black/20 active:scale-[.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-rose-500">
-          {uploadingType === 'music' ? <SpinnerIcon className="animate-spin h-5 w-5 mr-3" /> : null}
-          <span className="text-lg sm:text-xl">{t('uploader_music')}</span>
-        </button>
-        <button onClick={() => spokenInputRef.current?.click()} disabled={isDisabled} className="w-full flex items-center justify-start text-left gap-3 px-5 py-4 sm:py-5 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 ease-in-out shadow-lg shadow-black/20 active:scale-[.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500">
-          {uploadingType === 'spoken' ? <SpinnerIcon className="animate-spin h-5 w-5 mr-3" /> : null}
-           <span className="text-lg sm:text-xl">{t('uploader_spoken')}</span>
-        </button>
-        <button onClick={() => jingleInputRef.current?.click()} disabled={isDisabled} className="w-full flex items-center justify-start text-left gap-3 px-5 py-4 sm:py-5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 ease-in-out shadow-lg shadow-black/20 active:scale-[.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-violet-500">
-          {uploadingType === 'jingle' ? <SpinnerIcon className="animate-spin h-5 w-5 mr-3" /> : null}
-           <span className="text-lg sm:text-xl">{t('uploader_jingle')}</span>
-        </button>
-         <button onClick={() => underlayInputRef.current?.click()} disabled={isDisabled} className="w-full flex items-center justify-start text-left gap-3 px-5 py-4 sm:py-5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-2xl transition-all duration-200 ease-in-out shadow-lg shadow-black/20 active:scale-[.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-amber-500">
-          {uploadingType === 'underlay' ? <SpinnerIcon className="animate-spin h-5 w-5 mr-3" /> : null}
-           <span className="text-lg sm:text-xl">{t('uploader_underlay')}</span>
-        </button>
+        <UploaderButton
+            onClick={() => musicInputRef.current?.click()}
+            disabled={isDisabled}
+            uploading={uploadingType === 'music'}
+            labelKey="uploader_music"
+            emoji="🎵"
+            className="bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 text-white focus:ring-rose-500"
+        />
+        <UploaderButton
+            onClick={() => spokenInputRef.current?.click()}
+            disabled={isDisabled}
+            uploading={uploadingType === 'spoken'}
+            labelKey="uploader_spoken"
+            emoji="🎙️"
+            className="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 text-white focus:ring-teal-500"
+        />
+        <UploaderButton
+            onClick={() => jingleInputRef.current?.click()}
+            disabled={isDisabled}
+            uploading={uploadingType === 'jingle'}
+            labelKey="uploader_jingle"
+            emoji="🔔"
+            className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white focus:ring-violet-500"
+        />
+         <UploaderButton
+            onClick={() => underlayInputRef.current?.click()}
+            disabled={isDisabled}
+            uploading={uploadingType === 'underlay'}
+            labelKey="uploader_underlay"
+            emoji="🎼"
+            className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 text-slate-900 focus:ring-amber-500"
+        />
       </div>
        <p className="text-xs text-gray-500 pt-2 text-center">{t('uploader_info')}</p>
     </div>

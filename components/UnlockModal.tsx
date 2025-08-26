@@ -4,12 +4,12 @@ import { I18nContext, TranslationKey } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
 import { usePro } from '../context/ProContext';
 import {
-  XMarkIcon,
   CreditCardIcon,
   KeyIcon,
   EnvelopeIcon,
   SpinnerIcon,
 } from './icons';
+import { ModalShell } from './ModalShell';
 
 // ---------------------------------------------------------------------
 
@@ -183,72 +183,46 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
   const featureTitleKey: TranslationKey = 'unlock_features_title';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      aria-modal
-      role="dialog"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-3xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden"
-        style={{ animation: 'fadeIn 0.2s ease-out' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-700">
-          <h2 className="text-xl font-bold text-white">
-            {t('unlock_modal_title')}
-          </h2>
+    <ModalShell title={t('unlock_modal_title')} onClose={onClose} maxWidth="max-w-3xl">
+      <div className="grid grid-cols-2 gap-2 bg-slate-800/70 p-1 rounded-xl">
           <button
-            onClick={onClose}
-            className="p-1 rounded-full text-gray-400 hover:bg-slate-700 hover:text-white transition"
-            aria-label={t('close')}
+            onClick={() => setTab('buy')}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+              tab === 'buy' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }`}
           >
-            <XMarkIcon className="h-6 w-6" />
+            <CreditCardIcon className="h-4 w-4" />
+            {t('unlock_buy_license_tab')}
           </button>
-        </header>
-        
-        <div className="p-4 sm:p-5">
-            <div className="grid grid-cols-2 gap-2 bg-slate-800/70 p-1 rounded-xl">
-                <button
-                  onClick={() => setTab('buy')}
-                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                    tab === 'buy' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <CreditCardIcon className="h-4 w-4" />
-                  {t('unlock_buy_license_tab')}
-                </button>
-                <button
-                  onClick={() => setTab('enter')}
-                  className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
-                    tab === 'enter' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <KeyIcon className="h-4 w-4" />
-                  {t('unlock_enter_key_tab')}
-                </button>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 p-4 sm:p-5">
-          <section className="md:col-span-2">
-            <h3 className="text-white font-semibold mb-3">
-              {t(featureTitleKey)}
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>• {t('unlock_feature_1')}</li>
-              <li>• {t('unlock_feature_2')}</li>
-              <li>• {t('unlock_feature_3')}</li>
-              <li>• {t('unlock_feature_4')}</li>
-            </ul>
-          </section>
-
-          <section className="md:col-span-3">
-            {tab === 'buy' ? <BuyLicenseForm /> : <VerifyForm />}
-          </section>
-        </div>
+          <button
+            onClick={() => setTab('enter')}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+              tab === 'enter' ? 'bg-white/90 text-slate-900' : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <KeyIcon className="h-4 w-4" />
+            {t('unlock_enter_key_tab')}
+          </button>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pt-6">
+        <section className="md:col-span-2">
+          <h3 className="text-white font-semibold mb-3">
+            {t(featureTitleKey)}
+          </h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li>• {t('unlock_feature_1')}</li>
+            <li>• {t('unlock_feature_2')}</li>
+            <li>• {t('unlock_feature_3')}</li>
+            <li>• {t('unlock_feature_4')}</li>
+          </ul>
+        </section>
+
+        <section className="md:col-span-3">
+          {tab === 'buy' ? <BuyLicenseForm /> : <VerifyForm />}
+        </section>
+      </div>
+    </ModalShell>
   );
 };
 

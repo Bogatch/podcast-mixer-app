@@ -118,10 +118,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Add Files',
-    'uploader_music': '🎵 Music Track',
-    'uploader_spoken': '🎙️ Voice Track',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Background Music',
+    'uploader_music': 'Music Track',
+    'uploader_spoken': 'Voice Track',
+    'uploader_jingle': 'Intro / Jingle',
+    'uploader_underlay': 'Background Music',
     'uploader_info': 'You can upload multiple files at once, except for background music (only one).',
 
     // MixerControls
@@ -431,10 +431,10 @@ export const translations = {
 
     // TrackUploader
     'uploader_title': 'Pridať Súbory',
-    'uploader_music': '🎵 Hudobný súbor',
-    'uploader_spoken': '🎙️ Hlasová stopa',
-    'uploader_jingle': '🔔 Znelka, alebo jingle',
-    'uploader_underlay': '🎼 Hudobný podkres',
+    'uploader_music': 'Hudobný súbor',
+    'uploader_spoken': 'Hlasová stopa',
+    'uploader_jingle': 'Znelka, alebo jingle',
+    'uploader_underlay': 'Hudobný podkres',
     'uploader_info': 'Môžete nahrať viacero súborov naraz, okrem hudby do pozadia (iba jeden).',
 
     // MixerControls

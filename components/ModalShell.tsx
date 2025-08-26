@@ -13,19 +13,32 @@ interface ModalShellProps {
 export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children, footer, maxWidth = 'max-w-[520px]' }) => {
   const { t } = React.useContext(I18nContext);
 
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div 
-        className={`bg-slate-900 rounded-2xl shadow-2xl w-full flex flex-col border border-slate-800 max-h-[90vh] ${maxWidth}`}
+        className={`w-full ${maxWidth} rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl flex flex-col max-h-[95vh]`}
         onClick={e => e.stopPropagation()}
+        style={{ animation: 'fadeIn 0.2s ease-out' }}
       >
-        <header className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-700 flex-shrink-0">
+        <header className="flex-shrink-0 p-4 sm:p-5 flex items-center justify-between border-b border-slate-700">
           <h2 id="modal-title" className="text-xl font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
@@ -35,11 +48,11 @@ export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children
             <XMarkIcon className="w-6 h-6" />
           </button>
         </header>
-        <main className="p-4 sm:p-5 overflow-y-auto">
+        <main className="px-4 sm:px-5 py-4 sm:py-5 overflow-y-auto">
             {children}
         </main>
         {footer && (
-            <footer className="p-4 sm:p-5 border-t border-slate-700 bg-slate-900/50 rounded-b-2xl flex-shrink-0">
+            <footer className="flex-shrink-0 p-4 sm:p-5 border-t border-slate-700 bg-slate-900/50 rounded-b-2xl">
                 {footer}
             </footer>
         )}

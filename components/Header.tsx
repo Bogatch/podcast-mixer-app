@@ -18,13 +18,6 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
 
     if (!isPro) {
       return (
-         <div className="flex items-center space-x-2">
-            <button
-                onClick={() => onOpenUnlockModal('enter')}
-                className="h-9 px-3 text-sm font-semibold text-gray-300 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors"
-            >
-                {t('unlock_enter_key_tab')}
-            </button>
             <button
                 onClick={() => onOpenUnlockModal('buy')}
                 className="flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-md transition-colors whitespace-nowrap"
@@ -32,7 +25,6 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
                 <SparklesIcon className="w-5 h-5" />
                 <span className="text-sm">{t('header_get_pro')}</span>
             </button>
-         </div>
       )
     }
 
@@ -63,6 +55,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
 
 export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
+  const { isPro } = usePro();
 
   return (
     <header className="flex items-start justify-between">
@@ -76,21 +69,31 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
         </div>
       </div>
       <div className="flex items-start space-x-2 sm:space-x-3">
-          <div className="flex items-center space-x-1 bg-slate-800/70 backdrop-blur p-1 rounded-xl">
-            <button
-                onClick={() => setLocale('sk')}
-                title={t('slovak')}
-                className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'sk' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
-            >
-                <SlovakiaFlagIcon className="w-6 h-auto rounded-sm" />
-            </button>
-            <button
-                onClick={() => setLocale('en')}
-                title={t('english')}
-                className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'en' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
-            >
-                <UKFlagIcon className="w-6 h-auto rounded-sm" />
-            </button>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 bg-slate-800/70 backdrop-blur p-1 rounded-xl">
+              <button
+                  onClick={() => setLocale('sk')}
+                  title={t('slovak')}
+                  className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'sk' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
+              >
+                  <SlovakiaFlagIcon className="w-6 h-auto rounded-sm" />
+              </button>
+              <button
+                  onClick={() => setLocale('en')}
+                  title={t('english')}
+                  className={`h-8 w-10 flex items-center justify-center rounded-lg transition-colors ${locale === 'en' ? 'bg-slate-600' : 'opacity-70 hover:opacity-100 hover:bg-slate-700'}`}
+              >
+                  <UKFlagIcon className="w-6 h-auto rounded-sm" />
+              </button>
+            </div>
+            {!isPro && (
+               <button
+                  onClick={() => onOpenUnlockModal('enter')}
+                  className="h-9 px-3 text-sm font-semibold text-gray-300 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors"
+              >
+                  {t('unlock_enter_key_tab')}
+              </button>
+            )}
           </div>
           
           <ProHeaderControls onOpenUnlockModal={onOpenUnlockModal} />
