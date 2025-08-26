@@ -626,42 +626,6 @@ export const translations = {
     // Footer
     'footer_version': 'Verzia',
   },
-  de: {
-    'uploader_music': '🎵 Musikspur',
-    'uploader_spoken': '🎙️ Sprachspur',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Hintergrundmusik',
-  },
-  fr: {
-    'uploader_music': '🎵 Piste Musicale',
-    'uploader_spoken': '🎙️ Piste Vocale',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Musique de Fond',
-  },
-  hu: {
-    'uploader_music': '🎵 Zenei Sáv',
-    'uploader_spoken': '🎙️ Hangsáv',
-    'uploader_jingle': '🔔 Intro / Szignál',
-    'uploader_underlay': '🎼 Aláfestő Zene',
-  },
-  pl: {
-    'uploader_music': '🎵 Ścieżka Muzyczna',
-    'uploader_spoken': '🎙️ Ścieżka Głosowa',
-    'uploader_jingle': '🔔 Intro / Dżingiel',
-    'uploader_underlay': '🎼 Podkład Muzyczny',
-  },
-  es: {
-    'uploader_music': '🎵 Pista de Música',
-    'uploader_spoken': '🎙️ Pista de Voz',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Música de Fondo',
-  },
-  it: {
-    'uploader_music': '🎵 Traccia Musicale',
-    'uploader_spoken': '🎙️ Traccia Vocale',
-    'uploader_jingle': '🔔 Intro / Jingle',
-    'uploader_underlay': '🎼 Sottofondo Musicale',
-  }
 };
 
 export type Locale = keyof typeof translations;

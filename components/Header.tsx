@@ -1,7 +1,7 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { 
-    MicIcon, ChevronDownIcon, SparklesIcon,
-    UKFlagIcon, SlovakiaFlagIcon, GermanFlagIcon, FrenchFlagIcon, HungarianFlagIcon, PolishFlagIcon, SpanishFlagIcon, ItalianFlagIcon,
+    MicIcon, SparklesIcon,
+    UKFlagIcon, SlovakiaFlagIcon,
     CheckIcon, KeyIcon
 } from './icons';
 import { I18nContext, Locale } from '../lib/i18n';
@@ -11,22 +11,6 @@ import { usePro } from '../context/ProContext';
 interface HeaderProps {
     onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void;
 }
-
-const LanguageOption: React.FC<{
-  locale: Locale,
-  label: string,
-  icon: React.ReactNode,
-  onClick: () => void
-}> = ({ label, icon, onClick }) => (
-  <button
-    onClick={onClick}
-    className="flex items-center w-full px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
-    role="menuitem"
-  >
-    {icon}
-    <span className="ml-3">{label}</span>
-  </button>
-);
 
 const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
@@ -79,34 +63,6 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
 
 export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
   const { t, setLocale, locale } = useContext(I18nContext);
-  const [isLangOpen, setIsLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setIsLangOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const languageOptions: Record<Locale, { label: string, icon: React.ReactNode }> = {
-    sk: { label: t('slovak'), icon: <SlovakiaFlagIcon className="w-6 h-auto rounded-sm" /> },
-    en: { label: t('english'), icon: <UKFlagIcon className="w-6 h-auto rounded-sm" /> },
-    de: { label: t('german'), icon: <GermanFlagIcon className="w-6 h-auto rounded-sm" /> },
-    fr: { label: t('french'), icon: <FrenchFlagIcon className="w-6 h-auto rounded-sm" /> },
-    hu: { label: t('hungarian'), icon: <HungarianFlagIcon className="w-6 h-auto rounded-sm" /> },
-    pl: { label: t('polish'), icon: <PolishFlagIcon className="w-6 h-auto rounded-sm" /> },
-    es: { label: t('spanish'), icon: <SpanishFlagIcon className="w-6 h-auto rounded-sm" /> },
-    it: { label: t('italian'), icon: <ItalianFlagIcon className="w-6 h-auto rounded-sm" /> },
-  };
-
-  const handleLangSelect = (selectedLocale: Locale) => {
-    setLocale(selectedLocale);
-    setIsLangOpen(false);
-  }
 
   return (
     <header className="flex items-start justify-between">
@@ -120,31 +76,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
         </div>
       </div>
       <div className="flex items-start space-x-2 sm:space-x-3">
-          <div className="relative" ref={langRef}>
+          <div className="flex items-center space-x-1 bg-gray-700/80 p-1 rounded-lg">
             <button
-              onClick={() => setIsLangOpen(!isLangOpen)}
-              title={t('language')}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-700/80 hover:bg-gray-700 text-sm font-medium text-gray-300 rounded-md transition-colors"
+                onClick={() => setLocale('sk')}
+                title={t('slovak')}
+                className={`p-1.5 rounded-md transition-colors ${locale === 'sk' ? 'bg-gray-600' : 'opacity-60 hover:opacity-100 hover:bg-gray-700'}`}
             >
-              {languageOptions[locale].icon}
-              <ChevronDownIcon className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+                <SlovakiaFlagIcon className="w-6 h-auto rounded-sm" />
             </button>
-            {isLangOpen && (
-              <div
-                className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20 border border-gray-600"
-                role="menu"
-              >
-                {(Object.keys(languageOptions) as Locale[]).map((lang) => (
-                  <LanguageOption
-                    key={lang}
-                    locale={lang}
-                    label={languageOptions[lang].label}
-                    icon={languageOptions[lang].icon}
-                    onClick={() => handleLangSelect(lang)}
-                  />
-                ))}
-              </div>
-            )}
+            <button
+                onClick={() => setLocale('en')}
+                title={t('english')}
+                className={`p-1.5 rounded-md transition-colors ${locale === 'en' ? 'bg-gray-600' : 'opacity-60 hover:opacity-100 hover:bg-gray-700'}`}
+            >
+                <UKFlagIcon className="w-6 h-auto rounded-sm" />
+            </button>
           </div>
           
           <ProHeaderControls onOpenUnlockModal={onOpenUnlockModal} />
