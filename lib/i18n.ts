@@ -41,6 +41,12 @@ export const translations = {
     'warning_demo_duration_exceeded': 'Project length exceeds the {{minutes}} minute demo limit. Get the full version to mix the entire project.',
     'validation_email_invalid': 'Please enter a valid email address.',
     'validation_code_invalid': 'Enter code like ABC-123-DEF.',
+    'recover_info': 'If this email is registered, we have sent your license key to your inbox.',
+    'recover_error': 'We could not send the key to this email.',
+    'recover_send_title': 'Send my license key to email',
+    'recover_send_link': 'Forgot your key? Send it to my email',
+    'recover_sending': 'Sending...',
+    'recover_hint': 'If we find a match, we will email your existing license key.',
     
     // Save Project Modal
     'save_project_modal_title': 'Save or Load Project',
@@ -310,6 +316,12 @@ export const translations = {
     'warning_demo_duration_exceeded': 'Dĺžka projektu presahuje {{minutes}} minútový limit demo verzie. Získajte plnú verziu pre zmixovanie celého projektu.',
     'validation_email_invalid': 'Zadajte prosím platnú e-mailovú adresu.',
     'validation_code_invalid': 'Zadajte kód vo formáte ABC-123-DEF.',
+    'recover_info': 'Ak je tento e-mail zaregistrovaný, poslali sme vám licenčný kľúč do vašej schránky.',
+    'recover_error': 'Nepodarilo sa nám poslať kľúč na tento e-mail.',
+    'recover_send_title': 'Poslať môj licenčný kľúč na e-mail',
+    'recover_send_link': 'Zabudli ste kľúč? Poslať na môj e-mail',
+    'recover_sending': 'Odosiela sa...',
+    'recover_hint': 'Ak nájdeme zhodu, pošleme vám váš existujúci licenčný kľúč e-mailom.',
 
     // Save Project Modal
     'save_project_modal_title': 'Uložiť alebo Načítať Projekt',
@@ -552,7 +564,7 @@ export const translations = {
     'uploader_underlay': '🎼 Musique de Fond',
   },
   hu: {
-    'uploader_music': '������ Zenei Sáv',
+    'uploader_music': '🎵 Zenei Sáv',
     'uploader_spoken': '🎙️ Hangsáv',
     'uploader_jingle': '🔔 Intro / Szignál',
     'uploader_underlay': '🎼 Aláfestő Zene',

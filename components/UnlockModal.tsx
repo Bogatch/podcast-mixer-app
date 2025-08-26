@@ -159,132 +159,196 @@ const ActivationForm: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [info, setInfo] = useState('');
   const [error, setError] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [codeError, setCodeError] = useState('');
+  const [info, setInfo] = useState('');
+  const [recoverLoading, setRecoverLoading] = useState(false);
 
   const emailIsValid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-  const codeIsValid = useMemo(() => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{2,3}$/.test(code), [code]);
+  const codeIsValid = useMemo(
+    () => /^[A-Za-z0-9]{3}-[A-Za-z0-9]{3}-[A-Za-z0-9]{2,3}$/.test(code),
+    [code]
+  );
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/-/g, '').replace(/[^A-Za-z0-9]/g, '').slice(0, 9);
-    const chunks = raw.match(/.{1,3}/g) || [];
-    setCode(chunks.join('-'));
-    if (codeError) setCodeError('');
+    setError('');
+    setInfo('');
+    const value = e.target.value;
+    const raw = value.replace(/-/g, '').replace(/[^A-Za-z0-9]/g, '').slice(0, 9);
+    const parts = [];
+    for (let i = 0; i < raw.length; i += 3) parts.push(raw.substring(i, i + 3));
+    setCode(parts.join('-'));
   };
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    if (emailError) setEmailError('');
-  };
-  
   const handleActivation = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInfo('');
     setError('');
-    setEmailError('');
-    setCodeError('');
-
-    let invalid = false;
-    if (!emailIsValid) { setEmailError(t('validation_email_invalid') || 'Please enter a valid email.'); invalid = true; }
-    if (!codeIsValid) { setCodeError(t('validation_code_invalid') || 'Enter code like ABC-123-DEF.'); invalid = true; }
-    if (invalid) return;
-
-    const result = await verifyLicense(email, code);
-    if (!result.success) setError(result.error || t('error_invalid_license') || 'Invalid code or email.');
-  };
-
-  const handleRecover = async () => {
     setInfo('');
-    setError('');
-    setEmailError('');
+
     if (!emailIsValid) {
-      setEmailError(t('validation_email_invalid') || 'Please enter a valid email.');
+      setError(t('validation_email_invalid'));
       return;
     }
-    const result = await verifyLicense(email, '');
-    if (result.success) {
-      setInfo(t('recover_note') || 'We will email your existing license key if we can match your address.');
+    if (!codeIsValid) {
+      setError(t('validation_code_invalid'));
+      return;
+    }
+
+    const r = await verifyLicense(email, code);
+    if (!r.success) setError(r.error || t('error_invalid_license'));
+  };
+
+  const doRecover = async () => {
+    setError('');
+    setInfo('');
+    if (!emailIsValid) {
+      setError(t('validation_email_invalid'));
+      return;
+    }
+    setRecoverLoading(true);
+    const r = await verifyLicense(email, ''); // prázdny kód = RECOVER
+    setRecoverLoading(false);
+    if (r.success) {
+      setInfo(
+        t('recover_info') ||
+          'If this email is registered, we have sent your license key to your inbox.'
+      );
+      // necháme code prázdne, aby sa dalo hneď vložiť po doručení mailu
+      setCode('');
     } else {
-      setError(result.error || 'We could not send the key to this email.');
+      setError(
+        r.error ||
+          t('recover_error') ||
+          'We could not send the key to this email.'
+      );
     }
   };
 
   return (
     <form onSubmit={handleActivation} className="space-y-4">
+      {/* Email */}
       <div>
-        <FieldLabel htmlFor="email_activate">{t('auth_email') || 'Your email'}</FieldLabel>
+        <label
+          htmlFor="email_activate"
+          className="block text-sm font-medium text-gray-300 mb-2"
+        >
+          {t('auth_email')}
+        </label>
         <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-          </span>
+          </div>
           <input
             id="email_activate"
             type="email"
             value={email}
-            onChange={handleEmailChange}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError('');
+              setInfo('');
+            }}
             placeholder="your.email@example.com"
-            autoComplete="email"
-            className="w-full rounded-lg border border-gray-700 bg-gray-900/70 py-2 pl-10 pr-4 text-white placeholder-gray-500 outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-            required
-            disabled={isLoading}
+            className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={isLoading || recoverLoading}
           />
         </div>
-        {!!emailError && <TextHelp tone="error">{emailError}</TextHelp>}
       </div>
 
+      {/* License key */}
       <div>
-        <FieldLabel htmlFor="license_key">{t('auth_license_key') || 'License key'}</FieldLabel>
+        <div className="flex items-center justify-between">
+          <label
+            htmlFor="license_key"
+            className="block text-sm font-medium text-gray-300 mb-2"
+          >
+            {t('auth_license_key')}
+          </label>
+
+          {/* jemný odkaz na obnovu (vrátený) */}
+          <button
+            type="button"
+            onClick={doRecover}
+            disabled={!emailIsValid || isLoading || recoverLoading}
+            className="text-xs text-blue-400 hover:text-blue-300 underline disabled:opacity-50 disabled:no-underline"
+            title={t('recover_send_title') || 'Send my license key to email'}
+          >
+            {t('recover_send_link') || 'Forgot your key? Send it to my email'}
+          </button>
+        </div>
+
         <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <KeyIcon className="h-5 w-5 text-gray-400" />
-          </span>
+          </div>
           <input
             id="license_key"
             type="text"
             value={code}
             onChange={handleCodeChange}
             placeholder="ABC-123-DEF"
-            className="w-full rounded-lg border border-gray-700 bg-gray-900/70 py-2 pl-10 pr-4 text-white placeholder-gray-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="w-full bg-gray-900/70 border border-gray-600 rounded-md pl-10 pr-4 py-2 text-base text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             maxLength={11}
-            required
-            disabled={isLoading}
+            // POZOR: už NIE je required, aby recover mohol fungovať samostatne
+            disabled={isLoading || recoverLoading}
           />
         </div>
-        {!!codeError && <TextHelp tone="error">{codeError}</TextHelp>}
+
+        {/* sekundárne veľké tlačidlo pre recover (necháme aj link vyššie) */}
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={doRecover}
+            disabled={!emailIsValid || isLoading || recoverLoading}
+            className="w-full flex items-center justify-center px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-700/50 disabled:cursor-not-allowed text-white font-semibold rounded-md transition-colors"
+          >
+            {recoverLoading ? (
+              <>
+                <SpinnerIcon className="w-5 h-5 mr-3 animate-spin" />
+                {t('recover_sending') || 'Sending…'}
+              </>
+            ) : (
+              <>
+                <EnvelopeIcon className="w-5 h-5 mr-3" />
+                {t('recover_send_button') || 'Send my license key'}
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {!!info && <TextHelp tone="success">{info}</TextHelp>}
-      {!!error && <TextHelp tone="error">{error}</TextHelp>}
+      {/* Info / Error */}
+      {info && <p className="text-green-400 text-sm text-center">{info}</p>}
+      {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
-      <div className="pt-2 space-y-3">
-        <PrimaryButton type="submit" disabled={isLoading || !emailIsValid || !codeIsValid}>
+      {/* Verify button */}
+      <div className="pt-2">
+        <button
+          type="submit"
+          disabled={isLoading || recoverLoading || !emailIsValid || !codeIsValid}
+          className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700/50 disabled:cursor-not-allowed text-white font-bold rounded-md transition-colors shadow-lg hover:shadow-blue-500/20"
+        >
           {isLoading ? (
             <>
-              <SpinnerIcon className="h-5 w-5 animate-spin" />
-              <span>{t('verifying') || 'Verifying…'}</span>
+              <SpinnerIcon className="w-5 h-5 mr-3 animate-spin" />
+              <span>{t('verifying')}</span>
             </>
           ) : (
             <>
-              <CheckIcon className="h-5 w-5" />
-              <span>{t('verify_and_activate') || 'Verify & Activate'}</span>
+              <CheckIcon className="w-5 h-5 mr-3" />
+              <span>{t('verify_and_activate')}</span>
             </>
           )}
-        </PrimaryButton>
-        <button
-          type="button"
-          onClick={handleRecover}
-          disabled={isLoading || !emailIsValid}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gray-600/50 px-5 py-2.5 font-semibold text-gray-300 shadow-md transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <EnvelopeIcon className="h-5 w-5" />
-          <span>{t('recover_send_button') || 'Send my key'}</span>
         </button>
       </div>
+
+      {/* pomocný text pod formulárom */}
+      <p className="text-xs text-center text-emerald-400">
+        {t('recover_hint') ||
+          'If we find a match, we will email your existing license key.'}
+      </p>
     </form>
   );
 };
+
 
 /* ---------- Main modal ---------- */
 
