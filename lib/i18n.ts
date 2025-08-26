@@ -14,6 +14,20 @@ export const translations = {
     'copied': 'Copied!',
     'loading': 'Loading...',
     'popup_ok': 'OK',
+    'default_project_name': 'Untitled Project',
+    'error_details': 'Details:',
+    'error_invalid_underlay': 'Invalid file type for underlay.',
+    'placeholder_email': 'you@domain.com',
+    'placeholder_license_key': 'ABC-123-DEF',
+    'auth_error_invalid_email': 'Please enter a valid email address.',
+    'auth_error_checkout_session': 'Could not create checkout session. Please try again later.',
+    'auth_error_payment_server': 'Could not connect to the payment server. Please try again.',
+    'seconds_short_unit': '{{value}}s',
+    'mixer_ducking_display': '-{{value}}%',
+    'percent_unit': '{{value}}%',
+    'decibel_unit': '{{value}}dB',
+    'kbps_unit': '{{rate}} kbps',
+    'khz_unit': '{{rate}} kHz',
 
     // Popups
     'popup_stripe_title_new': 'Payment Successful',
@@ -312,6 +326,21 @@ export const translations = {
     'copied': 'Skopírované!',
     'loading': 'Načítava sa...',
     'popup_ok': 'OK',
+    'default_project_name': 'Nepomenovaný Projekt',
+    'error_details': 'Detaily:',
+    'error_invalid_underlay': 'Neplatný typ súboru pre hudobný podklad.',
+    'placeholder_email': 'vy@domena.sk',
+    'placeholder_license_key': 'ABC-123-DEF',
+    'auth_error_invalid_email': 'Zadajte prosím platnú e-mailovú adresu.',
+    'auth_error_checkout_session': 'Nepodarilo sa vytvoriť platobnú reláciu. Skúste to prosím neskôr.',
+    'auth_error_payment_server': 'Nepodarilo sa pripojiť k platobnému serveru. Skúste to prosím znova.',
+    'seconds_short_unit': '{{value}}s',
+    'mixer_ducking_display': '-{{value}}%',
+    'percent_unit': '{{value}}%',
+    'decibel_unit': '{{value}}dB',
+    'kbps_unit': '{{rate}} kbps',
+    'khz_unit': '{{rate}} kHz',
+
 
     // Popups
     'popup_stripe_title_new': 'Platba prebehla úspešne',
@@ -580,7 +609,7 @@ export const translations = {
     'help_ai_trim_title': 'Strihať ticho:',
     'help_ai_trim_desc': 'Ak je funkcia zapnutá, aplikácia automaticky odstráni tiché pasáže na začiatku a na konci každej stopy. Tým sa zabezpečia plynulejšie a rýchlejšie prechody.',
     'help_ai_threshold_title': 'Prah stíšenia:',
-    'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyššie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
+    'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyžšie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
 
     'help_export_title': 'Konečný Výstup a Export',
     'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Exportovanie je dostupné v PRO verzii.',
@@ -634,16 +663,6 @@ export const translations = {
     'uploader_underlay': '🎼 Sottofondo Musicale',
   }
 };
-
-// Fill empty languages with slovak as fallback to avoid errors
-Object.keys(translations).forEach(lang => {
-    if (lang !== 'en' && lang !== 'sk') {
-        const key = lang as Locale;
-        // @ts-ignore
-        translations[key] = { ...translations['sk'], ...translations[key] };
-    }
-});
-
 
 export type Locale = keyof typeof translations;
 export type TranslationKey = keyof typeof translations['en'];

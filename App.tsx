@@ -206,8 +206,8 @@ const AppContent: React.FC = () => {
 
       const errorMessage = error?.message || (typeof error === 'string' ? error : null);
 
-      if (errorMessage && !baseMessage.includes('Details:')) {
-          finalMessage = `${baseMessage} | Details: ${errorMessage}`;
+      if (errorMessage && !baseMessage.includes(t('error_details'))) {
+          finalMessage = `${baseMessage} | ${t('error_details')} ${errorMessage}`;
       }
 
       console.error(baseMessage, { errorDetails: error });
@@ -262,7 +262,7 @@ const AppContent: React.FC = () => {
     setInfo(null);
     resetMix();
     if (!file.type.startsWith('audio/')) {
-        setError("Invalid file type for underlay.");
+        handleError('error_invalid_underlay');
         setUploadingType(null);
         return;
     };
@@ -1017,7 +1017,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             onSave={handleSaveProject}
             onLoad={handleLoadProject}
             isSaving={isSaving}
-            currentProjectName={projectName}
+            currentProjectName={projectName === 'Untitled Project' ? t('default_project_name') : projectName}
             currentProjectId={projectId}
         />
       )}

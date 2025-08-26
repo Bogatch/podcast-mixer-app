@@ -1,5 +1,6 @@
 // context/AuthContext.tsx
 import React, { createContext, useContext, ReactNode } from "react";
+import { I18nContext } from "../lib/i18n";
 
 interface PurchaseContextType {
   createCheckout: (email: string) => Promise<{ error?: string }>;
@@ -8,9 +9,11 @@ interface PurchaseContextType {
 export const AuthContext = createContext<PurchaseContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { t } = useContext(I18nContext);
+
   const createCheckout = async (email: string): Promise<{ error?: string }> => {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      return { error: "Please enter a valid email address." };
+      return { error: t('auth_error_invalid_email') };
     }
 
     try {
@@ -28,7 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!resp.ok || !data?.ok || !data?.url) {
         console.error("create-checkout failed:", data);
-        return { error: data?.error || "Could not create checkout session. Please try again later." };
+        return { error: data?.error || t('auth_error_checkout_session') };
       }
 
       // DÔLEŽITÉ: flag do sessionStorage, aby sme vedeli po návrate ukázať “ďakujeme” modál
@@ -40,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return new Promise(() => {});
     } catch (err: any) {
       console.error("create-checkout error:", err);
-      return { error: "Could not connect to the payment server. Please try again." };
+      return { error: t('auth_error_payment_server') };
     }
   };
 

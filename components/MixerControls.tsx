@@ -132,7 +132,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 disabled={isMixing || !hasTracks}
               />
               <span className="w-24 bg-gray-800/60 text-teal-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                {mixDuration.toFixed(1)}s
+                {t('seconds_short_unit', { value: mixDuration.toFixed(1) })}
               </span>
             </div>
           </div>
@@ -151,7 +151,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                   disabled={isMixing || !showDuckingControl}
                 />
                  <span className="w-24 bg-gray-800/60 text-pink-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                   -{(duckingAmount * 100).toFixed(0)}%
+                   {t('mixer_ducking_display', { value: (duckingAmount * 100).toFixed(0) })}
                  </span>
               </div>
             </div>
@@ -167,7 +167,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                   disabled={isMixing || !showDuckingControl}
                 />
                 <span className="w-24 bg-gray-800/60 text-sky-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                  {rampUpDuration.toFixed(1)}s
+                  {t('seconds_short_unit', { value: rampUpDuration.toFixed(1) })}
                 </span>
               </div>
             </div>
@@ -186,7 +186,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 disabled={isMixing || !showUnderlayControl}
               />
                <span className="w-24 bg-gray-800/60 text-amber-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                 {(underlayVolume * 100).toFixed(0)}%
+                 {t('percent_unit', { value: (underlayVolume * 100).toFixed(0) })}
                </span>
             </div>
           </div>
@@ -217,7 +217,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                       disabled={isMixing || !trimSilenceEnabled}
                   />
                   <span className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                    {silenceThreshold.toFixed(0)}dB
+                    {t('decibel_unit', { value: silenceThreshold.toFixed(0) })}
                   </span>
                   </div>
               </div>

@@ -71,7 +71,7 @@ const BuyLicenseForm: React.FC = () => {
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="you@domain.com"
+            placeholder={t('placeholder_email')}
             className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={busy}
           />
@@ -82,7 +82,7 @@ const BuyLicenseForm: React.FC = () => {
 
       <PrimaryButton type="submit" disabled={!valid || busy}>
         {busy ? <SpinnerIcon className="h-5 w-5 animate-spin" /> : <CreditCardIcon className="h-5 w-5" />}
-        <span>{t('purchase_modal_buy_license') || 'Get PRO license'}</span>
+        <span>{t('purchase_modal_buy_license')}</span>
       </PrimaryButton>
     </form>
   );
@@ -126,7 +126,7 @@ const VerifyForm: React.FC = () => {
             type="email"
             value={email}
             onChange={e => { setEmail(e.target.value); setError(''); }}
-            placeholder="you@domain.com"
+            placeholder={t('placeholder_email')}
             className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={isLoading}
           />
@@ -141,7 +141,7 @@ const VerifyForm: React.FC = () => {
             type="text"
             value={code}
             onChange={e => onCodeChange(e.target.value)}
-            placeholder="ABC-123-DEF"
+            placeholder={t('placeholder_license_key')}
             maxLength={11}
             className="w-full rounded-lg bg-gray-900/70 border border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
             disabled={isLoading}
@@ -160,7 +160,7 @@ const VerifyForm: React.FC = () => {
 
       <SecondaryButton type="submit" disabled={!emailValid || !codeValid || isLoading}>
         {isLoading ? <SpinnerIcon className="h-5 w-5 animate-spin" /> : <KeyIcon className="h-5 w-5" />}
-        <span>{t('verify_and_activate') || 'Verify & Activate'}</span>
+        <span>{t('verify_and_activate')}</span>
       </SecondaryButton>
     </form>
   );

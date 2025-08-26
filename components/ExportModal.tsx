@@ -99,7 +99,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                             value={rate}
                             currentValue={options.bitrate}
                             onClick={() => setOptions(o => ({ ...o, bitrate: rate as ExportOptions['bitrate'] }))}
-                            label={`${rate} kbps`}
+                            label={t('kbps_unit', { rate })}
                         />
                     ))}
                 </div>
@@ -114,13 +114,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport, isE
                         value={44100}
                         currentValue={options.sampleRate}
                         onClick={() => setOptions(o => ({ ...o, sampleRate: 44100 }))}
-                        label="44.1 kHz"
+                        label={t('khz_unit', { rate: '44.1' })}
                     />
                      <OptionButton
                         value={48000}
                         currentValue={options.sampleRate}
                         onClick={() => setOptions(o => ({ ...o, sampleRate: 48000 }))}
-                        label="48 kHz"
+                        label={t('khz_unit', { rate: '48' })}
                     />
                 </div>
                  <p className="text-xs text-gray-500 mt-2">{t('export_samplerate_info')}</p>
