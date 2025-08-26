@@ -27,9 +27,9 @@ const UploaderButton: React.FC<{
         >
             {uploading 
                 ? <SpinnerIcon className="animate-spin h-6 w-6 text-white" /> 
-                : <span className="text-2xl sm:text-3xl">{emoji}</span>
+                : <span className="text-2xl">{emoji}</span>
             }
-            <span className="text-lg sm:text-xl">{t(labelKey)}</span>
+            <span className="text-lg whitespace-nowrap">{t(labelKey)}</span>
         </button>
     );
 };
@@ -66,14 +66,14 @@ export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onU
       <input type="file" ref={jingleInputRef} onChange={(e) => handleFileChange(e, 'jingle')} multiple accept="audio/*" className="hidden" disabled={isDisabled} />
       <input type="file" ref={underlayInputRef} onChange={handleUnderlayChange} accept="audio/*" className="hidden" disabled={isDisabled} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3">
         <UploaderButton
             onClick={() => musicInputRef.current?.click()}
             disabled={isDisabled}
             uploading={uploadingType === 'music'}
             labelKey="uploader_music"
             emoji="🎵"
-            className="bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 text-white focus:ring-rose-500"
+            className="bg-rose-800 hover:bg-rose-700 disabled:bg-gray-600 text-white focus:ring-rose-500"
         />
         <UploaderButton
             onClick={() => spokenInputRef.current?.click()}
@@ -81,7 +81,7 @@ export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onU
             uploading={uploadingType === 'spoken'}
             labelKey="uploader_spoken"
             emoji="🎙️"
-            className="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 text-white focus:ring-teal-500"
+            className="bg-teal-800 hover:bg-teal-700 disabled:bg-gray-600 text-white focus:ring-teal-500"
         />
         <UploaderButton
             onClick={() => jingleInputRef.current?.click()}
@@ -89,7 +89,7 @@ export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onU
             uploading={uploadingType === 'jingle'}
             labelKey="uploader_jingle"
             emoji="🔔"
-            className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white focus:ring-violet-500"
+            className="bg-violet-800 hover:bg-violet-700 disabled:bg-gray-600 text-white focus:ring-violet-500"
         />
          <UploaderButton
             onClick={() => underlayInputRef.current?.click()}
@@ -97,7 +97,7 @@ export const TrackUploader: React.FC<TrackUploaderProps> = ({ onFilesSelect, onU
             uploading={uploadingType === 'underlay'}
             labelKey="uploader_underlay"
             emoji="🎼"
-            className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 text-slate-900 focus:ring-amber-500"
+            className="bg-amber-700 hover:bg-amber-600 disabled:bg-gray-600 text-white focus:ring-amber-500"
         />
       </div>
        <p className="text-xs text-gray-500 pt-2 text-center">{t('uploader_info')}</p>

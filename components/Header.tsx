@@ -58,17 +58,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUnlockModal }) => {
   const { isPro } = usePro();
 
   return (
-    <header className="flex items-start justify-between">
-      <div className="flex items-center space-x-4">
-        <div className="p-3 bg-teal-500/10 rounded-lg">
-           <MicIcon className="w-8 h-8 text-teal-400" />
+    <header className="flex flex-wrap items-center justify-between gap-y-4">
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className="flex-shrink-0 p-2 sm:p-3 bg-teal-500/10 rounded-lg">
+           <MicIcon className="w-7 h-7 sm:w-8 sm:h-8 text-teal-400" />
         </div>
         <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-100 text-balance">{t('header_title')}</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-100 text-balance">{t('header_title')}</h1>
           <p className="text-sm sm:text-base text-gray-400">{t('header_subtitle')}</p>
         </div>
       </div>
-      <div className="flex items-start space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3 ml-auto">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1 bg-slate-800/70 backdrop-blur p-1 rounded-xl">
               <button
