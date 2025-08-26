@@ -20,7 +20,7 @@ import { QuestionMarkCircleIcon } from './components/icons';
 import * as db from './lib/db';
 import { SaveProjectModal } from './components/SaveProjectModal';
 import { ExportProgressModal } from './components/ExportProgressModal';
-import { StripeReturnBanner } from './components/StripeReturnBanner';
+import { CenterPopup } from './components/CenterPopup';
 
 
 const DEMO_MAX_DURATION_SECONDS = 15 * 60; // 15 minutes
@@ -113,6 +113,13 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
     return { smartTrimStart: Math.round(smartTrimStart * 10000) / 10000, smartTrimEnd: Math.round(smartTrimEnd * 10000) / 10000 };
 };
 
+const SuccessIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5 text-green-400">
+    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M22 4L12 14.01l-3-3" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 
 const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
@@ -151,6 +158,9 @@ const AppContent: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportProgressTitleKey, setExportProgressTitleKey] = useState<TranslationKey>('export_progress_title');
+  const [showStripePopup, setShowStripePopup] = useState(false);
+  const [showActivatedPopup, setShowActivatedPopup] = useState(false);
+  const wasProRef = useRef(isPro);
 
 
   // AI Content
@@ -162,17 +172,26 @@ const AppContent: React.FC = () => {
   const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
   const decodedAudioBuffers = useRef<Map<string, AudioBuffer>>(new Map());
 
-  // Show activation info toast only once per activation
-  const hasShownActivationInfo = useRef(false);
+  // Detect ?payment_success=true on load
   useEffect(() => {
-    if (isPro && !hasShownActivationInfo.current) {
-      handleInfo('info_pro_activated');
-      hasShownActivationInfo.current = true;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('payment_success') === 'true') {
+      setShowStripePopup(true);
+      // Clean URL to prevent popup on refresh
+      url.searchParams.delete('payment_success');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.toString());
     }
-    if (!isPro) {
-      hasShownActivationInfo.current = false;
+  }, []);
+
+  // Show activation popup on transition to PRO
+  useEffect(() => {
+    if (isPro && !wasProRef.current) {
+      setShowActivatedPopup(true);
     }
+    wasProRef.current = isPro;
   }, [isPro]);
+
 
   const resetMix = useCallback(() => {
     if (mixedAudioUrl) URL.revokeObjectURL(mixedAudioUrl);
@@ -990,6 +1009,29 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       )}
       {isExporting && <ExportProgressModal progress={exportProgress} titleKey={exportProgressTitleKey} />}
 
+      <CenterPopup
+        open={showStripePopup}
+        onClose={() => setShowStripePopup(false)}
+        autoCloseMs={7000}
+        title={t('popup_stripe_title_success')}
+        icon={<SuccessIcon />}
+        message={
+          <div className="space-y-2">
+            <p>{t('popup_stripe_message')}</p>
+            <p className="text-xs text-gray-400">{t('popup_stripe_spam_note')}</p>
+          </div>
+        }
+      />
+
+      <CenterPopup
+        open={showActivatedPopup}
+        onClose={() => setShowActivatedPopup(false)}
+        autoCloseMs={3000}
+        title={t('popup_activated_title')}
+        icon={<SuccessIcon />}
+        message={<p>{t('popup_activated_message')}</p>}
+      />
+
 
       <div className="max-w-7xl mx-auto">
         <Header 
@@ -1117,10 +1159,7 @@ const App: React.FC = () => {
     <I18nContext.Provider value={{ t, setLocale, locale }}>
       <AuthProvider>
         <ProProvider>
-          <>
-            <StripeReturnBanner />
-            <AppContent />
-          </>
+          <AppContent />
         </ProProvider>
       </AuthProvider>
     </I18nContext.Provider>
