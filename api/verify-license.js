@@ -66,6 +66,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // recover = prázdny kód
     const isRecover = rawCode.length === 0;
     const payload = isRecover
       ? { email, action: 'recover' }
@@ -90,15 +91,23 @@ module.exports = async function handler(req, res) {
       console.log('[verify-license] upstream NON-JSON:', fwText.slice(0, 300));
     }
 
-    // JSON odpoveď
+    // ----- DÔLEŽITÉ: RECOVER JE VŽDY "SOFT SUCCESS" -----
+    if (isRecover) {
+      // nezávisle od toho, čo vráti Make, UI má dostať úspech (neenumerujeme emaily)
+      const msg = parsed.ok && parsed.data && parsed.data.message
+        ? parsed.data.message
+        : 'If this email is registered, we have sent you the license key.';
+      return res.status(200).json({
+        success: true,
+        message: msg,
+      });
+    }
+
+    // ----- VERIFY (kód nie je prázdny) -----
     if (parsed.ok) {
       const upstream = parsed.data || {};
       const success = upstream.success === true || upstream.status === 'success';
-      const message =
-        upstream.message ||
-        (isRecover
-          ? 'If this email is registered, we have sent you the license key.'
-          : 'License verified. PRO unlocked.');
+      const message = upstream.message || 'License verified. PRO unlocked.';
 
       if (fwResp.ok && success) {
         return res.status(200).json({
@@ -109,11 +118,7 @@ module.exports = async function handler(req, res) {
         const status = fwResp.ok ? 401 : fwResp.status;
         return res.status(status || 401).json({
           success: false,
-          message:
-            upstream.message ||
-            (isRecover
-              ? 'We could not send the key to this email.'
-              : 'Invalid email or license key.'),
+          message: upstream.message || 'Invalid email or license key.',
         });
       }
     }
@@ -121,9 +126,7 @@ module.exports = async function handler(req, res) {
     // ne-JSON odpoveď
     return res.status(fwResp.status || 502).json({
       success: false,
-      message: isRecover
-        ? 'The request was accepted, but we could not confirm email delivery yet.'
-        : 'The verification endpoint did not return a JSON response.',
+      message: 'The verification endpoint did not return a JSON response.',
       upstream: 'NON_JSON_UPSTREAM',
     });
   } catch (err) {

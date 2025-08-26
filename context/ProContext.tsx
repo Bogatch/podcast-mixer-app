@@ -54,44 +54,39 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const apiUrl = '/api/verify-license';
 
       try {
-        const resp = await fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.trim(), code: code.trim() }),
         });
 
-        const text = await resp.text();
-        let payload: any = {};
-        try {
-          payload = JSON.parse(text);
-        } catch {
-          // Fallback pre neočakávané non-JSON odpovede
-          return { success: false, error: 'Komunikačná chyba so serverom.' };
-        }
-        
-        const success = payload?.success === true;
+        const data = await response.json().catch(() => null);
 
-        if (resp.ok && success) {
+        // Handle network errors or non-JSON responses
+        if (!data) {
+          return { success: false, error: 'Could not connect to the license server.' };
+        }
+
+        // Handle successful API responses
+        if (response.ok && data.success) {
+          // If it was a successful activation (not recovery), update the state
           if (!isRecovery) {
-            // Úspešná aktivácia kľúča
             const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);
             setProUser(licenseData);
           }
-          // Pre recovery aj pre aktiváciu vraciame info správu
-          return { success: true, info: payload.message || 'Operácia prebehla úspešne.' };
-        }
+          // For both successful activation and recovery, return the info message from the server.
+          // The new API endpoint ensures a message is always provided on success.
+          return { success: true, info: data.message };
+        } 
         
-        // Všetky ostatné prípady sú chyba
-        return { success: false, error: payload.message || 'Neznáma chyba.' };
+        // Handle unsuccessful API responses (e.g., wrong key, server error)
+        return { success: false, error: data.message || 'An unknown error occurred.' };
 
-      } catch (e) {
-        console.error('Failed to call verification API:', e);
-        return {
-          success: false,
-          error: 'Nepodarilo sa pripojiť k serveru. Skúste to neskôr.',
-        };
+      } catch (error) {
+        console.error('Failed to call verification API:', error);
+        return { success: false, error: 'Could not connect to the license server.' };
       } finally {
         setIsLoading(false);
       }
