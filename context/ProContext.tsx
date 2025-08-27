@@ -19,44 +19,19 @@ interface ProContextType {
 
 const ProContext = createContext<ProContextType | undefined>(undefined);
 
-// Helper function to robustly parse the activations value
-const parseActivations = (value: any): number | undefined => {
-  if (value === null || typeof value === 'undefined') {
-    return undefined;
-  }
-
-  const num = Number(value);
-  if (Number.isFinite(num)) {
-    return Math.floor(num);
-  }
-
-  const strValue = String(value);
-  const match = strValue.match(/\d+/);
-  if (match && match[0]) {
-    const extractedNum = parseInt(match[0], 10);
-    if (Number.isFinite(extractedNum)) {
-      return extractedNum;
-    }
-  }
-
-  return undefined;
-};
-
-// Helper to get activations from API response, checking multiple keys
-const getActivationsFromApi = (data: any): number | undefined => {
-    if (!data || typeof data !== 'object') {
-        return undefined;
-    }
-    // Check for different possible keys to be robust
-    const value = data.activations_left ?? data.activationsLeft ?? data.activations;
-    return parseActivations(value);
-};
-
-
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [proUser, setProUser] = useState<ProUser | null>(null);
+
+  // Simplified, robust function to get a finite integer from any value.
+  const getActivationsValue = (value: any): number | undefined => {
+    if (value === null || typeof value === 'undefined') {
+      return undefined;
+    }
+    const num = parseInt(String(value), 10);
+    return Number.isFinite(num) ? num : undefined;
+  };
 
   useEffect(() => {
     try {
@@ -68,7 +43,7 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setProUser({
             email: licenseData.email,
             key: licenseData.key,
-            activationsLeft: parseActivations(licenseData.activationsLeft),
+            activationsLeft: getActivationsValue(licenseData.activationsLeft),
           });
         }
       }
@@ -96,11 +71,13 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         if (response.ok) {
           if (data?.success || data?.status === 'success') {
+            const activations = getActivationsValue(data.activations_left);
+
             const licenseData: ProUser & { isPro: boolean } = { 
               isPro: true, 
               email: email.trim(), 
               key: code.trim(),
-              activationsLeft: getActivationsFromApi(data),
+              activationsLeft: activations,
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);
