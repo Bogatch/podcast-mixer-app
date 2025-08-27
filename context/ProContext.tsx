@@ -1,6 +1,5 @@
 // context/ProContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { I18nContext } from '../lib/i18n'; // aby sme mali t()
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
 
@@ -15,7 +14,6 @@ interface ProContextType {
 const ProContext = createContext<ProContextType | undefined>(undefined);
 
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { t } = useContext(I18nContext);
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [proUser, setProUser] = useState<{ email: string; key: string } | null>(null);
@@ -37,64 +35,54 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const localizeError = useCallback((errorCode?: string, fallbackMsg?: string) => {
-    switch (errorCode) {
-      case 'KEY_NOT_FOUND':
-        return t('error_key_not_found');
-      case 'EMAIL_AND_CODE_REQUIRED':
-        return t('error_email_code_required');
-      case 'INVALID_JSON':
-        return t('error_invalid_json');
-      case 'METHOD_NOT_ALLOWED':
-        return t('error_method_not_allowed');
-      case 'NON_JSON_UPSTREAM':
-        return t('error_upstream_nonjson');
-      case 'UPSTREAM_ERROR':
-        return t('error_upstream_generic');
-      case 'SERVER_MISCONFIGURED':
-        return t('error_server_misconfigured');
-      case 'RATE_LIMITED':
-        return t('error_rate_limited');
-      default:
-        return fallbackMsg || t('error_generic');
-    }
-  }, [t]);
+  const verifyLicense = useCallback(
+    async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+      setIsLoading(true);
 
-  const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    const apiUrl = '/api/verify-license';
+      try {
+        const response = await fetch('/api/verify-license', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+        });
 
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      });
+        let data: any = null;
+        const text = await response.text();
+        try { data = JSON.parse(text); } catch { /* no-op */ }
 
-      const text = await response.text();
-      let data: any;
-      try { data = JSON.parse(text); } catch { data = {}; }
+        if (response.ok) {
+          if (data?.success) {
+            const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
+            setIsPro(true);
+            setProUser({ email: licenseData.email, key: licenseData.key });
+            return { success: true };
+          }
+          return {
+            success: false,
+            error: data?.message || 'We could not verify your license. Please try again.',
+          };
+        }
 
-      if (response.ok && (data?.ok === true || data?.success === true)) {
-        const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
-        setIsPro(true);
-        setProUser({ email: email.trim(), key: code.trim() });
-        return { success: true };
+        if (data && typeof data === 'object') {
+          return {
+            success: false,
+            error: data.message || 'License verification failed. Please try again later.',
+          };
+        }
+        return {
+          success: false,
+          error: 'Could not reach the license server. Please try again later.',
+        };
+      } catch (err) {
+        console.error('verifyLicense error:', err);
+        return { success: false, error: 'Network error. Please try again.' };
+      } finally {
+        setIsLoading(false);
       }
-
-      // non-200 alebo success:false
-      const msg = localizeError(data?.errorCode, data?.message);
-      // doplníme hint na support
-      const withHint = `${msg} ${t('error_support_hint')}`;
-      return { success: false, error: withHint };
-
-    } catch {
-      return { success: false, error: `${t('error_network')} ${t('error_support_hint')}` };
-    } finally {
-      setIsLoading(false);
-    }
-  }, [localizeError, t]);
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
