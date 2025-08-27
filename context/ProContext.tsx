@@ -19,6 +19,32 @@ interface ProContextType {
 
 const ProContext = createContext<ProContextType | undefined>(undefined);
 
+// Helper function to robustly parse the activations value
+const parseActivations = (value: any): number | undefined => {
+  if (value === null || typeof value === 'undefined') {
+    return undefined;
+  }
+
+  // Try direct number conversion
+  const num = Number(value);
+  if (Number.isFinite(num)) {
+    return Math.floor(num);
+  }
+
+  // If it's a string, try to extract the first number sequence
+  const strValue = String(value);
+  const match = strValue.match(/\d+/);
+  if (match && match[0]) {
+    const extractedNum = parseInt(match[0], 10);
+    if (Number.isFinite(extractedNum)) {
+      return extractedNum;
+    }
+  }
+
+  return undefined;
+};
+
+
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,16 +56,11 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (savedLicense) {
         const licenseData = JSON.parse(savedLicense);
         if (licenseData.isPro && licenseData.email && licenseData.key) {
-          const activationsValue = licenseData.activationsLeft;
-          const parsedActivations = typeof activationsValue !== 'undefined' && activationsValue !== null
-            ? parseInt(String(activationsValue), 10)
-            : undefined;
-
           setIsPro(true);
           setProUser({
             email: licenseData.email,
             key: licenseData.key,
-            activationsLeft: Number.isFinite(parsedActivations) ? parsedActivations : undefined
+            activationsLeft: parseActivations(licenseData.activationsLeft),
           });
         }
       }
@@ -68,16 +89,11 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (response.ok) {
           // Handle both `status: "success"` from Make.com and `success: true` for fallback.
           if (data?.success || data?.status === 'success') {
-            const activationsValue = data.activations_left;
-            const parsedActivations = typeof activationsValue !== 'undefined' && activationsValue !== null
-                ? parseInt(String(activationsValue), 10)
-                : undefined;
-            
             const licenseData: ProUser & { isPro: boolean } = { 
               isPro: true, 
               email: email.trim(), 
               key: code.trim(),
-              activationsLeft: Number.isFinite(parsedActivations) ? parsedActivations : undefined,
+              activationsLeft: parseActivations(data.activations_left),
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);
