@@ -123,7 +123,7 @@ const SuccessIcon = () => (
 
 const AppContent: React.FC = () => {
   const { t } = useContext(I18nContext);
-  const { isPro } = usePro();
+  const { isPro, proUser } = usePro();
   
   // Project State
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -986,6 +986,17 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     </div>
   ), [t]);
   
+  const activatedPopupMessage = useMemo(() => {
+    const baseMessage = <p>{t('popup_activated_message_new')}</p>;
+    if (proUser && typeof proUser.activationsLeft === 'number') {
+        const count = proUser.activationsLeft;
+        const key: TranslationKey = count > 0 ? 'popup_activations_remaining_text' : 'popup_activations_limit_reached_text';
+        const activationsMessage = <p className="text-sm text-gray-400 mt-2">{t(key, { count })}</p>;
+        return <>{baseMessage}{activationsMessage}</>;
+    }
+    return baseMessage;
+  }, [t, proUser]);
+
   return (
     <div className="min-h-dvh bg-gray-900 text-white px-4 sm:px-6 lg:px-8 py-4 sm:py-6 safe-top safe-bottom">
       {isReordering && (
@@ -1035,10 +1046,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       <CenterPopup
         open={showActivatedPopup}
         onClose={() => setShowActivatedPopup(false)}
-        autoCloseMs={6000}
+        autoCloseMs={8000}
         title={t('popup_activated_title_new')}
         icon={<SuccessIcon />}
-        message={<p>{t('popup_activated_message_new')}</p>}
+        message={activatedPopupMessage}
       />
 
 

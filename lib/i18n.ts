@@ -38,6 +38,8 @@ export const translations = {
     'popup_stripe_message_new_contact': "In case of any issues, please contact us at",
     'popup_activated_title_new': 'License Verified',
     'popup_activated_message_new': 'PRO features are now active. Thank you.',
+    'popup_activations_remaining_text': 'You have {{count}} activations remaining.',
+    'popup_activations_limit_reached_text': 'You have reached your activation limit for this key.',
 
     // Info Messages
     'info_session_loaded': 'Your previous session has been loaded from your browser. Please re-link any missing audio files.',
@@ -103,7 +105,9 @@ export const translations = {
     'header_get_pro': 'Get PRO Version',
     'header_pro_version': 'PRO Version',
     'header_deactivate': 'Deactivate License',
-    'header_activations_left': 'Available activations: {{count}}',
+    'header_activations_left_zero': 'No activations left',
+    'header_activations_left_one': '1 activation left',
+    'header_activations_left_other': '{{count}} activations left',
     'show_help_guide': 'Help & Function Guide',
     
     // Language Switcher
@@ -352,6 +356,8 @@ export const translations = {
     'popup_stripe_message_new_contact': 'V prípade problémov nás kontaktujte na',
     'popup_activated_title_new': 'Licencia overená',
     'popup_activated_message_new': 'PRO funkcionality sú aktívne. Ďakujeme.',
+    'popup_activations_remaining_text': 'Počet zostávajúcich aktivácií: {{count}}.',
+    'popup_activations_limit_reached_text': 'Dosiahli ste limit aktivácií pre tento kľúč.',
 
     // Info Messages
     'info_session_loaded': 'Vaša predchádzajúca relácia bola načítaná z prehliadača. Prosím, priraďte chýbajúce zvukové súbory.',
@@ -417,7 +423,9 @@ export const translations = {
     'header_get_pro': 'Získať PRO Verziu',
     'header_pro_version': 'PRO Verzia',
     'header_deactivate': 'Deaktivovať Licenciu',
-    'header_activations_left': 'Počet dostupných aktivácií: {{count}}',
+    'header_activations_left_zero': 'Žiadne zostávajúce aktivácie',
+    'header_activations_left_one': 'Zostáva 1 aktivácia',
+    'header_activations_left_other': 'Zostávajúce aktivácie: {{count}}',
     'show_help_guide': 'Pomocník a sprievodca funkciami',
 
     // Language Switcher

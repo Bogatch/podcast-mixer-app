@@ -4,7 +4,7 @@ import {
     UKFlagIcon, SlovakiaFlagIcon,
     CheckIcon, KeyIcon
 } from './icons';
-import { I18nContext, Locale } from '../lib/i18n';
+import { I18nContext, Locale, TranslationKey } from '../lib/i18n';
 import { usePro } from '../context/ProContext';
 
 
@@ -15,6 +15,21 @@ interface HeaderProps {
 const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'enter') => void}> = ({ onOpenUnlockModal }) => {
     const { t } = useContext(I18nContext);
     const { logout, isPro, proUser } = usePro();
+
+    let activationsText = null;
+    if (isPro && typeof proUser?.activationsLeft === 'number') {
+        const count = proUser.activationsLeft;
+        let key: TranslationKey;
+        if (count === 0) {
+            key = 'header_activations_left_zero';
+        } else if (count === 1) {
+            key = 'header_activations_left_one';
+        } else {
+            key = 'header_activations_left_other';
+        }
+        activationsText = t(key, { count });
+    }
+
 
     if (!isPro) {
       return (
@@ -40,9 +55,9 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
                         {proUser.email}
                     </p>
                 )}
-                {typeof proUser?.activationsLeft === 'number' && (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {t('header_activations_left', { count: proUser.activationsLeft })}
+                {activationsText && (
+                  <p className="text-xs text-gray-400 mt-0.5" title={activationsText}>
+                    {activationsText}
                   </p>
                 )}
             </div>
