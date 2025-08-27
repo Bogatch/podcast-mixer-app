@@ -17,7 +17,7 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
     const { logout, isPro, proUser } = usePro();
 
     let activationsText = null;
-    if (isPro && typeof proUser?.activationsLeft === 'number') {
+    if (isPro && proUser?.activationsLeft != null) {
         const count = proUser.activationsLeft;
         let key: TranslationKey;
         if (count === 0) {

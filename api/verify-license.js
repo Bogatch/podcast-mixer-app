@@ -62,9 +62,26 @@ module.exports = async function handler(req, res) {
     const fwText = await fwResp.text();
     const parsed = safeJsonParse(fwText);
 
-    if (parsed.ok && typeof parsed.data === 'object') {
+    if (parsed.ok && typeof parsed.data === 'object' && parsed.data !== null) {
+      const data = parsed.data;
+
+      // Normalize activation count
+      const leftRaw = data.activations_left ?? data.remaining ?? data.remainingActivations ?? data.activationsLeft;
+      const activations_left = Number.isFinite(Number(leftRaw)) ? Number(leftRaw) : null;
+      
+      const responseBody = {
+        ...data,
+        success: data.success === true || data.ok === true || data.status === 'success',
+        activations_left: activations_left
+      };
+      
+      // Clean up other possible keys
+      delete responseBody.remaining;
+      delete responseBody.remainingActivations;
+      delete responseBody.activationsLeft;
+
       res.setHeader('Content-Type', 'application/json');
-      return res.status(fwResp.status || 200).send(JSON.stringify(parsed.data));
+      return res.status(fwResp.status || 200).send(JSON.stringify(responseBody));
     }
 
     console.warn('[verify-license] Upstream service returned non-JSON response.', {

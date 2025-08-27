@@ -3,10 +3,18 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
 
+type NumOrNull = number | null;
+
+function toNumOrNull(v: any): NumOrNull {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 interface ProUser {
   email: string;
   key: string;
-  activationsLeft?: number | null;
+  activationsLeft: NumOrNull;
 }
 
 interface ProContextType {
@@ -34,7 +42,7 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setProUser({
             email: parsed.email,
             key: parsed.key,
-            activationsLeft: typeof parsed.activationsLeft === 'number' ? parsed.activationsLeft : null,
+            activationsLeft: toNumOrNull(parsed.activationsLeft),
           });
         }
       }
@@ -45,41 +53,52 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  const verifyLicense = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+  const verifyLicense = useCallback(async (email: string, code: string) => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/verify-license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+        // endpoint už mapuje body.code || body.key, takže 'code' je OK
+        body: JSON.stringify({ email, code }),
       });
 
       const text = await res.text();
       let data: any = {};
-      try { data = JSON.parse(text); } catch { /* upstream might return non-JSON */ }
+      try { data = JSON.parse(text); } catch {/* upstream mohol byť non-JSON */}
 
-      if (res.ok && (data.success === true || data.ok === true || data.status === 'success')) {
-        const left =
-          typeof data.activations_left === 'number' ? data.activations_left
-        : typeof data.remaining === 'number'       ? data.remaining
-        : typeof data.activationsLeft === 'number' ? data.activationsLeft
-        : null;
+      const isOk = res.ok && (data.success === true || data.ok === true || data.status === 'success');
 
-        const licenseData = { isPro: true, email: email.trim(), key: code.trim(), activationsLeft: left };
+      if (isOk) {
+        // ber, čo príde, a premeň na number
+        const leftRaw =
+          data.activations_left ??
+          data.remaining ??
+          data.remainingActivations ??
+          data.activationsLeft;
+        const left = toNumOrNull(leftRaw);
+
+        const licenseData = {
+          isPro: true,
+          email: email.trim(),
+          key: code.trim(),
+          activationsLeft: left,
+        };
 
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
         setIsPro(true);
-        setProUser({ email: licenseData.email, key: licenseData.key, activationsLeft: left });
+        setProUser({
+          email: licenseData.email,
+          key: licenseData.key,
+          activationsLeft: left,
+        });
 
         return { success: true };
       }
 
-      const err =
-        data?.message ||
-        data?.error ||
-        'Could not verify the license key.';
+      const err = data?.message || data?.error || 'Could not verify the license key.';
       return { success: false, error: err };
-    } catch (e) {
+    } catch {
       return { success: false, error: 'Network error. Please try again.' };
     } finally {
       setIsLoading(false);
@@ -92,8 +111,11 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setProUser(null);
   }, []);
 
-  const value: ProContextType = { isPro, isLoading, proUser, verifyLicense, logout };
-  return <ProContext.Provider value={value}>{children}</ProContext.Provider>;
+  return (
+    <ProContext.Provider value={{ isPro, isLoading, proUser, verifyLicense, logout }}>
+      {children}
+    </ProContext.Provider>
+  );
 };
 
 export const usePro = (): ProContextType => {
