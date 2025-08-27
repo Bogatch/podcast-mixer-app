@@ -25,13 +25,11 @@ const parseActivations = (value: any): number | undefined => {
     return undefined;
   }
 
-  // Try direct number conversion
   const num = Number(value);
   if (Number.isFinite(num)) {
     return Math.floor(num);
   }
 
-  // If it's a string, try to extract the first number sequence
   const strValue = String(value);
   const match = strValue.match(/\d+/);
   if (match && match[0]) {
@@ -42,6 +40,16 @@ const parseActivations = (value: any): number | undefined => {
   }
 
   return undefined;
+};
+
+// Helper to get activations from API response, checking multiple keys
+const getActivationsFromApi = (data: any): number | undefined => {
+    if (!data || typeof data !== 'object') {
+        return undefined;
+    }
+    // Check for different possible keys to be robust
+    const value = data.activations_left ?? data.activationsLeft ?? data.activations;
+    return parseActivations(value);
 };
 
 
@@ -87,13 +95,12 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try { data = JSON.parse(text); } catch { /* no-op */ }
 
         if (response.ok) {
-          // Handle both `status: "success"` from Make.com and `success: true` for fallback.
           if (data?.success || data?.status === 'success') {
             const licenseData: ProUser & { isPro: boolean } = { 
               isPro: true, 
               email: email.trim(), 
               key: code.trim(),
-              activationsLeft: parseActivations(data.activations_left),
+              activationsLeft: getActivationsFromApi(data),
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);
