@@ -3,10 +3,16 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 
 const LOCAL_STORAGE_KEY = 'podcastMixerProLicense';
 
+interface ProUser {
+  email: string;
+  key: string;
+  activationsLeft?: number;
+}
+
 interface ProContextType {
   isPro: boolean;
   isLoading: boolean;
-  proUser: { email: string; key: string } | null;
+  proUser: ProUser | null;
   verifyLicense: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -16,7 +22,7 @@ const ProContext = createContext<ProContextType | undefined>(undefined);
 export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [proUser, setProUser] = useState<{ email: string; key: string } | null>(null);
+  const [proUser, setProUser] = useState<ProUser | null>(null);
 
   useEffect(() => {
     try {
@@ -25,7 +31,11 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const licenseData = JSON.parse(savedLicense);
         if (licenseData.isPro && licenseData.email && licenseData.key) {
           setIsPro(true);
-          setProUser({ email: licenseData.email, key: licenseData.key });
+          setProUser({ 
+            email: licenseData.email, 
+            key: licenseData.key, 
+            activationsLeft: licenseData.activationsLeft 
+          });
         }
       }
     } catch {
@@ -52,10 +62,15 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         if (response.ok) {
           if (data?.success) {
-            const licenseData = { isPro: true, email: email.trim(), key: code.trim() };
+            const licenseData: ProUser & { isPro: boolean } = { 
+              isPro: true, 
+              email: email.trim(), 
+              key: code.trim(),
+              activationsLeft: data.activations_left,
+            };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);
-            setProUser({ email: licenseData.email, key: licenseData.key });
+            setProUser(licenseData);
             return { success: true };
           }
           return {

@@ -40,6 +40,11 @@ const ProHeaderControls: React.FC<{onOpenUnlockModal: (initialTab?: 'buy' | 'ent
                         {proUser.email}
                     </p>
                 )}
+                {typeof proUser?.activationsLeft === 'number' && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {t('header_activations_left', { count: proUser.activationsLeft })}
+                  </p>
+                )}
             </div>
             <button
               onClick={logout}

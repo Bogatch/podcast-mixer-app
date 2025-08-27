@@ -103,6 +103,7 @@ export const translations = {
     'header_get_pro': 'Get PRO Version',
     'header_pro_version': 'PRO Version',
     'header_deactivate': 'Deactivate License',
+    'header_activations_left': 'Available activations: {{count}}',
     'show_help_guide': 'Help & Function Guide',
     
     // Language Switcher
@@ -416,6 +417,7 @@ export const translations = {
     'header_get_pro': 'Získať PRO Verziu',
     'header_pro_version': 'PRO Verzia',
     'header_deactivate': 'Deaktivovať Licenciu',
+    'header_activations_left': 'Počet dostupných aktivácií: {{count}}',
     'show_help_guide': 'Pomocník a sprievodca funkciami',
 
     // Language Switcher
