@@ -61,7 +61,8 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try { data = JSON.parse(text); } catch { /* no-op */ }
 
         if (response.ok) {
-          if (data?.success) {
+          // Handle both `status: "success"` from Make.com and `success: true` for fallback.
+          if (data?.success || data?.status === 'success') {
             const licenseData: ProUser & { isPro: boolean } = { 
               isPro: true, 
               email: email.trim(), 
