@@ -30,11 +30,16 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (savedLicense) {
         const licenseData = JSON.parse(savedLicense);
         if (licenseData.isPro && licenseData.email && licenseData.key) {
+          const activationsValue = licenseData.activationsLeft;
+          const parsedActivations = typeof activationsValue !== 'undefined' && activationsValue !== null
+            ? parseInt(String(activationsValue), 10)
+            : undefined;
+
           setIsPro(true);
-          setProUser({ 
-            email: licenseData.email, 
-            key: licenseData.key, 
-            activationsLeft: licenseData.activationsLeft 
+          setProUser({
+            email: licenseData.email,
+            key: licenseData.key,
+            activationsLeft: Number.isFinite(parsedActivations) ? parsedActivations : undefined
           });
         }
       }
@@ -63,11 +68,16 @@ export const ProProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (response.ok) {
           // Handle both `status: "success"` from Make.com and `success: true` for fallback.
           if (data?.success || data?.status === 'success') {
+            const activationsValue = data.activations_left;
+            const parsedActivations = typeof activationsValue !== 'undefined' && activationsValue !== null
+                ? parseInt(String(activationsValue), 10)
+                : undefined;
+            
             const licenseData: ProUser & { isPro: boolean } = { 
               isPro: true, 
               email: email.trim(), 
               key: code.trim(),
-              activationsLeft: data.activations_left,
+              activationsLeft: Number.isFinite(parsedActivations) ? parsedActivations : undefined,
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(licenseData));
             setIsPro(true);

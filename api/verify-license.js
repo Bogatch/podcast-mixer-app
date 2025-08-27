@@ -31,7 +31,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Telo požiadavky (email + code)
     let body = req.body;
     if (typeof body === 'string') {
       const p = safeJsonParse(body);
@@ -54,7 +53,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Pošli do Make, NEupratuj veľké/malé písmená – porovnávate presne
     const fwResp = await fetch(HOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,27 +63,27 @@ module.exports = async function handler(req, res) {
     const parsed = safeJsonParse(fwText);
 
     if (parsed.ok && typeof parsed.data === 'object') {
-      // Prepošli JSON z Make
       res.setHeader('Content-Type', 'application/json');
       return res.status(fwResp.status || 200).send(JSON.stringify(parsed.data));
     }
 
-    // Non-JSON odpoveď z Make → daj peknú hlášku namiesto "NON_JSON_UPSTREAM"
-    // Ak Make vrátil 2xx bez JSON, sprav priateľský fallback:
+    console.warn('[verify-license] Upstream service returned non-JSON response.', {
+      status: fwResp.status,
+      body: fwText.slice(0, 500),
+    });
+
     if (fwResp.ok) {
-      return res.status(200).json({
-        success: true,
-        status: 'ok',
-        message: 'Your license has been verified.'
+      return res.status(502).json({
+        success: false,
+        status: 'error',
+        message: 'Received an invalid response from the license server. Please contact support.',
       });
     }
-
-    // Chybový non-JSON (4xx/5xx) → priateľský fallback
-    console.warn('[verify-license] upstream non-JSON:', fwResp.status, fwText?.slice?.(0, 200));
+    
     return res.status(fwResp.status || 502).json({
       success: false,
       status: 'error',
-      message: 'We could not verify your license right now. Please try again or contact support@customradio.sk.'
+      message: 'The license server is currently unavailable. Please try again later or contact support.'
     });
 
   } catch (err) {
