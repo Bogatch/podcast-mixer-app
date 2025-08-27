@@ -1,7 +1,6 @@
 // components/UnlockModal.tsx
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { I18nContext, TranslationKey } from '../lib/i18n';
-import { useAuth } from '../context/AuthContext';
 import { usePro } from '../context/ProContext';
 import {
   CreditCardIcon,
@@ -10,6 +9,7 @@ import {
   SpinnerIcon,
 } from './icons';
 import { ModalShell } from './ModalShell';
+import { TermsGate } from './TermsGate';
 
 // ---------------------------------------------------------------------
 
@@ -20,15 +20,6 @@ interface UnlockModalProps {
   initialTab?: Tab;
 }
 
-const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', children, ...rest }) => (
-  <button
-    {...rest}
-    className={`w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-black bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/60 disabled:cursor-not-allowed shadow-lg transition ${className}`}
-  >
-    {children}
-  </button>
-);
-
 const SecondaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', children, ...rest }) => (
   <button
     {...rest}
@@ -38,55 +29,6 @@ const SecondaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> =
   </button>
 );
 
-// ========== BUY ==========
-const BuyLicenseForm: React.FC = () => {
-  const { t } = useContext(I18nContext);
-  const { createCheckout } = useAuth();
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const valid = useMemo(() => /^\S+@\S+\.\S+$/.test(email), [email]);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!valid) return;
-    setBusy(true);
-    setError('');
-    const r = await createCheckout(email);
-    if (r?.error) {
-      setError(r.error);
-      setBusy(false);
-    }
-    // pri úspechu prehliadač odíde na Stripe, loading necháme
-  };
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-5">
-      <label className="block">
-        <span className="block text-sm text-gray-300 mb-2">{t('auth_email')}</span>
-        <div className="relative">
-          <EnvelopeIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder={t('placeholder_email')}
-            className="w-full rounded-lg bg-slate-800/60 border border-slate-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40 text-white pl-10 pr-4 py-2.5"
-            disabled={busy}
-          />
-        </div>
-      </label>
-
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-
-      <PrimaryButton type="submit" disabled={!valid || busy}>
-        {busy ? <SpinnerIcon className="h-5 w-5 animate-spin" /> : <CreditCardIcon className="h-5 w-5" />}
-        <span>{t('purchase_modal_buy_license')}</span>
-      </PrimaryButton>
-    </form>
-  );
-};
 
 // ========== VERIFY ==========
 const VerifyForm: React.FC = () => {
@@ -168,13 +110,12 @@ const VerifyForm: React.FC = () => {
 
 // ========== MODAL ==========
 export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 'buy' }) => {
-  const { t } = useContext(I18nContext);
+  const { t, locale } = useContext(I18nContext);
   const { isPro } = usePro();
   const [tab, setTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
     if (isPro) {
-      // po úspešnej aktivácii jemné auto-zatvorenie
       const id = setTimeout(() => onClose(), 1600);
       return () => clearTimeout(id);
     }
@@ -219,7 +160,7 @@ export const UnlockModal: React.FC<UnlockModalProps> = ({ onClose, initialTab = 
         </section>
 
         <section className="md:col-span-3">
-          {tab === 'buy' ? <BuyLicenseForm /> : <VerifyForm />}
+          {tab === 'buy' ? <div className="-m-5"><TermsGate locale={locale === 'sk' ? 'sk' : 'en'} /></div> : <VerifyForm />}
         </section>
       </div>
     </ModalShell>
