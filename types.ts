@@ -3,6 +3,7 @@ export interface Track {
   file: File | null; // Can be null when a session is loaded without files
   name: string;
   fileName: string; // Persisted to help re-link files
+  fileType?: string; // Persisted MIME type
   duration: number; // in seconds
   type: 'music' | 'spoken' | 'jingle';
   vocalStartTime?: number; // in seconds

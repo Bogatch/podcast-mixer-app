@@ -270,6 +270,7 @@ const AppContent: React.FC = () => {
           file,
           name: file.name,
           fileName: file.name,
+          fileType: file.type,
           duration,
           type,
           fileBuffer: arrayBuffer,
@@ -302,6 +303,7 @@ const AppContent: React.FC = () => {
         file,
         name: file.name,
         fileName: file.name,
+        fileType: file.type,
         duration,
         type: 'music',
         fileBuffer: arrayBuffer,
@@ -316,7 +318,7 @@ const AppContent: React.FC = () => {
   const applyLoadedProject = (projectData: any) => {
       const loadedTracks: Track[] = (projectData.tracks || []).map((t: any) => ({
         ...t,
-        file: t.fileBuffer ? new File([t.fileBuffer], t.fileName, { type: 'audio/mpeg' }) : null,
+        file: t.fileBuffer ? new File([t.fileBuffer], t.fileName, { type: t.fileType || 'audio/mpeg' }) : null,
       }));
 
       setTracks(loadedTracks);
@@ -324,7 +326,7 @@ const AppContent: React.FC = () => {
       if (projectData.underlayTrack) {
         setUnderlayTrack({
           ...projectData.underlayTrack,
-          file: projectData.underlayTrack.fileBuffer ? new File([projectData.underlayTrack.fileBuffer], projectData.underlayTrack.fileName, { type: 'audio/mpeg' }) : null,
+          file: projectData.underlayTrack.fileBuffer ? new File([projectData.underlayTrack.fileBuffer], projectData.underlayTrack.fileName, { type: projectData.underlayTrack.fileType || 'audio/mpeg' }) : null,
         });
       } else {
         setUnderlayTrack(null);
@@ -352,12 +354,12 @@ const AppContent: React.FC = () => {
         
         setTracks(current => current.map(track => {
             if (track.id !== trackId) return track;
-            return { ...track, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer };
+            return { ...track, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer, fileType: file.type };
         }));
 
         setUnderlayTrack(current => {
             if (!current || current.id !== trackId) return current;
-            return { ...current, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer };
+            return { ...current, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer, fileType: file.type };
         });
         
         resetMix();
@@ -417,11 +419,11 @@ const AppContent: React.FC = () => {
     return {
         tracks: tracks.map(t => ({
             id: t.id, name: t.name, fileName: t.fileName, duration: t.duration, type: t.type,
-            vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer,
+            vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer, fileType: t.fileType,
         })),
         underlayTrack: underlayTrack ? {
             id: underlayTrack.id, name: underlayTrack.name, fileName: underlayTrack.fileName,
-            duration: underlayTrack.duration, type: underlayTrack.type, fileBuffer: underlayTrack.fileBuffer,
+            duration: underlayTrack.duration, type: underlayTrack.type, fileBuffer: underlayTrack.fileBuffer, fileType: underlayTrack.fileType,
         } : null,
         mixerSettings: mixerSettings
     };
