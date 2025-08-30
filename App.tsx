@@ -177,6 +177,7 @@ const AppContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
   
   const [isReordering, setIsReordering] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
@@ -417,6 +418,7 @@ const AppContent: React.FC = () => {
 
   const getProjectData = useCallback(() => {
     return {
+        projectName: projectName,
         tracks: tracks.map(t => ({
             id: t.id, name: t.name, fileName: t.fileName, duration: t.duration, type: t.type,
             vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer, fileType: t.fileType,
@@ -427,7 +429,7 @@ const AppContent: React.FC = () => {
         } : null,
         mixerSettings: mixerSettings
     };
-  }, [tracks, underlayTrack, mixerSettings]);
+  }, [tracks, underlayTrack, mixerSettings, projectName]);
 
   const handleSaveProject = async (name: string, idToUpdate?: number) => {
     setIsSaving(true);
@@ -455,6 +457,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleLoadProject = async (id: number) => {
+      setIsLoadingProject(true);
       try {
           const project = await db.getProjectById(id);
           if (project) {
@@ -466,52 +469,54 @@ const AppContent: React.FC = () => {
       } catch (e) {
           console.error("Failed to load project", e);
           handleError('error_project_load_failed', {}, e);
+      } finally {
+          setIsLoadingProject(false);
       }
   };
 
-  const handleLoadProjectFromFile = async (file: File) => {
+  const handleLoadProjectFromFile = async (projectJsonFile: File | undefined, sourceFiles: File[]) => {
+    setIsLoadingProject(true);
     try {
-      const zip = await JSZip.loadAsync(file);
-      const projectJsonFile = zip.file("project.json");
-      if (!projectJsonFile) {
-        throw new Error("project.json not found in the zip file.");
-      }
+        if (!projectJsonFile) {
+            throw new Error("`project.json` not found in the selected folder.");
+        }
+        
+        const projectJsonContent = await projectJsonFile.text();
+        const projectData = JSON.parse(projectJsonContent);
 
-      const projectJsonContent = await projectJsonFile.async("string");
-      const projectData = JSON.parse(projectJsonContent);
-      
-      const sourceFilesFolder = zip.folder("source_files");
-      if (!sourceFilesFolder) {
-        throw new Error("source_files folder not found in the zip file.");
-      }
-      
-      const filePromises = sourceFilesFolder.file(/./).map(async (zipEntry) => {
-          const buffer = await zipEntry.async("arraybuffer");
-          return { name: zipEntry.name, buffer };
-      });
+        const sourceFileMap = new Map(sourceFiles.map(f => [f.name, f]));
+        
+        const rehydratedTracks = await Promise.all(
+            (projectData.tracks || []).map(async (track: any) => {
+                const file = sourceFileMap.get(track.fileName);
+                if (file) {
+                    const { arrayBuffer } = await readAudioFile(file);
+                    track.fileBuffer = arrayBuffer;
+                }
+                return track;
+            })
+        );
+        projectData.tracks = rehydratedTracks;
 
-      const sourceFiles = await Promise.all(filePromises);
-      const sourceFileMap = new Map(sourceFiles.map(f => [f.name, f.buffer]));
+        if (projectData.underlayTrack) {
+            const file = sourceFileMap.get(projectData.underlayTrack.fileName);
+            if (file) {
+                const { arrayBuffer } = await readAudioFile(file);
+                projectData.underlayTrack.fileBuffer = arrayBuffer;
+            }
+        }
       
-      // Rehydrate file buffers
-      projectData.tracks.forEach((track: any) => {
-          if (sourceFileMap.has(track.fileName)) {
-              track.fileBuffer = sourceFileMap.get(track.fileName);
-          }
-      });
-      if (projectData.underlayTrack && sourceFileMap.has(projectData.underlayTrack.fileName)) {
-          projectData.underlayTrack.fileBuffer = sourceFileMap.get(projectData.underlayTrack.fileName);
-      }
-
       applyLoadedProject(projectData);
 
-      const loadedProjectName = file.name.replace(/_project\.zip$/, '').replace(/_/g, ' ');
+      const loadedProjectName = projectData.projectName || 'Imported Project';
       setProjectName(loadedProjectName);
-      setProjectId(null); // Loaded from file, not from DB
+      setProjectId(null); 
       handleInfo('info_project_loaded_from_file');
     } catch (e) {
-      console.error("Failed to load project from file", e);
+      console.error("Failed to load project from folder", e);
       handleError('error_project_load_from_file_failed', {}, e);
+    } finally {
+      setIsLoadingProject(false);
     }
   };
 
@@ -1106,6 +1111,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             onLoad={handleLoadProject}
             onLoadFromFile={handleLoadProjectFromFile}
             isSaving={isSaving}
+            isLoadingProject={isLoadingProject}
             currentProjectName={projectName === 'Untitled Project' ? t('default_project_name') : projectName}
             currentProjectId={projectId}
         />

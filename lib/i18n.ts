@@ -8,7 +8,7 @@ export const translations = {
     'cancel': 'Cancel',
     'export': 'Export',
     'exporting': 'Exporting...',
-    'save_project': 'Save/Load Project',
+    'save_project': 'Save/Load (Browser)',
     'saving': 'Saving...',
     'copy': 'Copy',
     'copied': 'Copied!',
@@ -63,7 +63,7 @@ export const translations = {
     'error_local_save_failed': 'Failed to save project to browser storage.',
     'error_project_save_failed': 'Failed to save the project. Your browser storage might be full.',
     'error_project_load_failed': 'Failed to load the project.',
-    'error_project_load_from_file_failed': 'Failed to load project from file. The file may be corrupted or in an invalid format.',
+    'error_project_load_from_file_failed': 'Failed to load project from folder. Ensure it contains a valid `project.json` file and a `source_files` subfolder.',
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
@@ -89,18 +89,18 @@ export const translations = {
     'error_support_hint': 'Forgot your code? Contact us at',
     
     // Save Project Modal
-    'save_project_modal_title': 'Save or Load Project',
+    'save_project_modal_title': 'Save, Load, or Import Project',
     'save_project_modal_name_label': 'Project Name',
     'save_project_modal_placeholder': 'e.g., Episode 1: The Beginning',
     'save_project_modal_save_as_new': 'Save as New',
     'save_project_modal_overwrite': 'Overwrite',
-    'save_project_modal_saved_projects_title': 'Saved Projects',
+    'save_project_modal_saved_projects_title': 'Projects in This Browser',
     'no_saved_projects': 'No saved projects found.',
     'load_project': 'Load',
     'delete_project': 'Delete',
     'confirm_delete_project': 'Are you sure you want to permanently delete this project?',
     'saved_at': 'Saved:',
-    'load_from_disk': 'Browse...',
+    'load_from_disk': 'Import from Folder...',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -153,7 +153,7 @@ export const translations = {
     'output_preview': 'Mix Preview',
     'output_audio_not_supported': 'Your browser does not support the audio element.',
     'output_export_audio': 'Export Audio',
-    'output_export_project': 'Export Project',
+    'output_export_project': 'Export Project to Disk',
     'output_mix': 'Generate Mix',
     'output_remix': 'Regenerate Mix',
     'output_processing': 'Processing...',
@@ -175,6 +175,7 @@ export const translations = {
     'tooltip_disabled_no_tracks': 'This option is available once you upload audio tracks.',
     'tooltip_disabled_ducking': 'This option is available when you have a spoken track followed by a music track in the timeline.',
     'tooltip_disabled_underlay': 'This option is available when you upload Background Music and have at least two Music Tracks.',
+    'tooltip_load_from_disk': 'Select the main project folder. The app will find `project.json` and the `source_files` subfolder inside it.',
 
     // Monitoring Panel
     'monitoring_title': 'Track Overview',
@@ -328,7 +329,7 @@ export const translations = {
     'cancel': 'Zrušiť',
     'export': 'Exportovať',
     'exporting': 'Exportuje sa...',
-    'save_project': 'Uložiť/Načítať Projekt',
+    'save_project': 'Uložiť/Načítať (v Prehliadači)',
     'saving': 'Ukladá sa...',
     'copy': 'Kopírovať',
     'copied': 'Skopírované!',
@@ -384,7 +385,7 @@ export const translations = {
     'error_local_save_failed': 'Nepodarilo sa uložiť projekt do úložiska prehliadača.',
     'error_project_save_failed': 'Nepodarilo sa uložiť projekt. Úložisko vášho prehliadača môže byť plné.',
     'error_project_load_failed': 'Nepodarilo sa načítať projekt.',
-    'error_project_load_from_file_failed': 'Nepodarilo sa načítať projekt zo súboru. Súbor môže byť poškodený alebo v neplatnom formáte.',
+    'error_project_load_from_file_failed': 'Nepodarilo sa načítať projekt z priečinka. Uistite sa, že obsahuje platný súbor `project.json` a podpriečinok `source_files`.',
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
@@ -410,18 +411,18 @@ export const translations = {
     'error_support_hint': 'Zabudli ste kód? Kontaktujte nás na',
 
     // Save Project Modal
-    'save_project_modal_title': 'Uložiť alebo Načítať Projekt',
+    'save_project_modal_title': 'Uložiť, Načítať alebo Importovať Projekt',
     'save_project_modal_name_label': 'Názov Projektu',
     'save_project_modal_placeholder': 'napr. Epizóda 1: Začiatok',
     'save_project_modal_save_as_new': 'Uložiť ako Nový',
     'save_project_modal_overwrite': 'Prepísať',
-    'save_project_modal_saved_projects_title': 'Uložené Projekty',
+    'save_project_modal_saved_projects_title': 'Projekty v tomto Prehliadači',
     'no_saved_projects': 'Nenašli sa žiadne uložené projekty.',
     'load_project': 'Načítať',
     'delete_project': 'Zmazať',
     'confirm_delete_project': 'Naozaj chcete natrvalo odstrániť tento projekt?',
     'saved_at': 'Uložené:',
-    'load_from_disk': 'Prehľadávať...',
+    'load_from_disk': 'Importovať z Priečinka...',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -474,7 +475,7 @@ export const translations = {
     'output_preview': 'Náhľad mixu',
     'output_audio_not_supported': 'Váš prehliadač nepodporuje prehrávanie zvuku.',
     'output_export_audio': 'Exportovať Audio',
-    'output_export_project': 'Exportovať Projekt',
+    'output_export_project': 'Exportovať Projekt na Disk',
     'output_mix': 'Generovať Mix',
     'output_remix': 'Znovu Generovať Mix',
     'output_processing': 'Spracúva sa...',
@@ -496,6 +497,7 @@ export const translations = {
     'tooltip_disabled_no_tracks': 'Táto možnosť je dostupná po nahratí zvukových stôp.',
     'tooltip_disabled_ducking': 'Táto možnosť je dostupná, keď máte na časovej osi hlasovú stopu nasledovanú hudobnou stopou.',
     'tooltip_disabled_underlay': 'Táto možnosť je dostupná, keď nahráte hudobný podklad a máte aspoň dve hudobné stopy.',
+    'tooltip_load_from_disk': 'Vyberte hlavný priečinok projektu. Aplikácia v ňom nájde súbor `project.json` a podpriečinok `source_files`.',
 
     // Monitoring Panel
     'monitoring_title': 'Prehľad Stôp',
