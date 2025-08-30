@@ -60,71 +60,37 @@ const calculateRMS = (audioBuffer: AudioBuffer): number => {
     return 20 * Math.log10(rms); // Convert to dBFS
 };
 
-// Nájde čas (s) v hudbe, kde krátkodobá hlasitosť klesla o `dropDb` dB
-// oproti maximu z posledných `lookbackMs` (relatívny pokles).
-// Ak nič nenájde, vráti celú dĺžku (t.j. nestrihaj hudbu).
-const findRelativeDropPoint = (
-  buffer: AudioBuffer,
-  dropDb: number,                // napr. 5 znamená „o 5 dB dole“
-  opts: Partial<{
-    winMs: number;              // RMS okno
-    hopMs: number;              // krok
-    lookbackMs: number;         // dĺžka pamäte na „nedávne maximum“
-    persistMs: number;          // požadovaná doba pod prahom (debounce)
-  }> = {}
-): number => {
-  const sr = buffer.sampleRate;
-  const winMs      = opts.winMs      ?? 20;   // 20 ms okno
-  const hopMs      = opts.hopMs      ?? 10;   // 10 ms krok
-  const lookbackMs = opts.lookbackMs ?? 2000; // 2 s pamäť
-  const persistMs  = opts.persistMs  ?? 120;  // 120 ms stabilita
+function findTalkOverPoint(buffer: AudioBuffer, dropDb: number): number | null {
+  const sampleRate = buffer.sampleRate;
+  if (buffer.numberOfChannels === 0) return null;
+  const channel = buffer.getChannelData(0);
+  const windowSize = Math.floor(sampleRate * 0.05); // 50 ms
+  let baselineRms = 0;
+  const first2s = sampleRate * 2;
+  for (let i = 0; i < Math.min(first2s, channel.length); i++) {
+    baselineRms += channel[i] * channel[i];
+  }
+  baselineRms = Math.sqrt(baselineRms / Math.min(first2s, channel.length));
+  if (baselineRms === 0) return buffer.duration; // Can't calculate drop from silence
+  
+  const baselineDb = 20 * Math.log10(baselineRms);
 
-  const win  = Math.max(1, Math.round(sr * winMs / 1000));
-  const hop  = Math.max(1, Math.round(sr * hopMs / 1000));
-  const look = Math.max(1, Math.round(lookbackMs / hopMs));
-  const need = Math.max(1, Math.round(persistMs  / hopMs));
+  const thresholdDb = baselineDb - dropDb;
+  const threshold = Math.pow(10, thresholdDb / 20);
 
-  // RMS dBFS po oknách
-  const chans = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
-  const n = buffer.length;
-  const rmsDb: number[] = [];
-  for (let start = 0; start < n; start += hop) {
-    const end = Math.min(n, start + win);
+  for (let i = 0; i < channel.length; i += windowSize) {
     let sum = 0;
-    const len = (end - start) * chans.length;
-    for (const ch of chans) for (let i = start; i < end; i++) sum += ch[i] * ch[i];
-    const rms = Math.sqrt(sum / Math.max(1, len));
-    rmsDb.push(rms > 0 ? 20 * Math.log10(rms) : -Infinity);
-  }
-
-  // Relatívny referenčný „nedávny max“ v okne lookback
-  const recentMax: number[] = [];
-  for (let i = 0; i < rmsDb.length; i++) {
-    let mx = -Infinity;
-    const from = Math.max(0, i - look);
-    for (let j = from; j <= i; j++) if (rmsDb[j] > mx) mx = rmsDb[j];
-    recentMax.push(mx);
-  }
-
-  // Prvý moment, keď (recentMax - rmsDb) >= dropDb a drží sa to min. persistMs
-  let run = 0;
-  for (let i = 0; i < rmsDb.length; i++) {
-    const diff = recentMax[i] - rmsDb[i]; // koľko dB sme padli oproti nedávnemu max
-    if (diff >= dropDb) {
-      run++;
-      if (run >= need) {
-        const frame = i - need + 1;             // začiatok stabilného poklesu
-        const time  = frame * hop / sr;
-        return Math.min(buffer.duration, Math.max(0, time));
-      }
-    } else {
-      run = 0;
+    const end = Math.min(i + windowSize, channel.length);
+    for (let j = i; j < end; j++) {
+      sum += channel[j] * channel[j];
+    }
+    const rms = Math.sqrt(sum / (end-i));
+    if (rms < threshold) {
+      return i / sampleRate;
     }
   }
-
-  // nič – nestrihaj hudbu
-  return buffer.duration;
-};
+  return null;
+}
 
 
 // Robustná detekcia začiatku/konca so „silence gate“
@@ -240,7 +206,8 @@ const AppContent: React.FC = () => {
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
   const [trimSilenceEnabled, setTrimSilenceEnabled] = useState(true);
-  const [silenceThreshold, setSilenceThreshold] = useState(-5);
+  const [silenceThreshold, setSilenceThreshold] = useState(-45);
+  const [talkoverDropDb, setTalkoverDropDb] = useState(6); // default 6 dB
   const [normalizeTracks, setNormalizeTracks] = useState(true);
   const [normalizeOutput, setNormalizeOutput] = useState(true);
 
@@ -416,7 +383,8 @@ const AppContent: React.FC = () => {
         setRampUpDuration(projectData.mixerSettings.rampUpDuration ?? 1.5);
         setUnderlayVolume(projectData.mixerSettings.underlayVolume ?? 0.5);
         setTrimSilenceEnabled(projectData.mixerSettings.trimSilenceEnabled ?? true);
-        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -5);
+        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -45);
+        setTalkoverDropDb(projectData.mixerSettings.talkoverDropDb ?? 6);
         setNormalizeTracks(projectData.mixerSettings.normalizeTracks ?? true);
         setNormalizeOutput(projectData.mixerSettings.normalizeOutput ?? true);
       }
@@ -469,7 +437,8 @@ const AppContent: React.FC = () => {
                 setRampUpDuration(settings.rampUpDuration ?? 1.5);
                 setUnderlayVolume(settings.underlayVolume ?? 0.5);
                 setTrimSilenceEnabled(settings.trimSilenceEnabled ?? true);
-                setSilenceThreshold(settings.silenceThreshold ?? -5);
+                setSilenceThreshold(settings.silenceThreshold ?? -45);
+                setTalkoverDropDb(settings.talkoverDropDb ?? 6);
                 setNormalizeTracks(settings.normalizeTracks ?? true);
                 setNormalizeOutput(settings.normalizeOutput ?? true);
             }
@@ -479,9 +448,9 @@ const AppContent: React.FC = () => {
 
   const mixerSettings = useMemo(() => ({
       mixDuration, duckingAmount, rampUpDuration, underlayVolume,
-      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput
+      trimSilenceEnabled, silenceThreshold, talkoverDropDb, normalizeTracks, normalizeOutput
   }), [mixDuration, duckingAmount, rampUpDuration, underlayVolume,
-      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput]);
+      trimSilenceEnabled, silenceThreshold, talkoverDropDb, normalizeTracks, normalizeOutput]);
 
   // Save mixer settings whenever they change
   useEffect(() => {
@@ -615,20 +584,21 @@ const AppContent: React.FC = () => {
           
           const trackUpdates: Partial<Track> = {};
 
-          if (trimSilenceEnabled) {
-            if (track.type === 'music') {
-              const dropDb = Math.max(1, Math.min(24, Math.abs(silenceThreshold))); 
-              const talkAt = findRelativeDropPoint(buffer, dropDb);
-              trackUpdates.smartTrimEnd = talkAt;
-              trackUpdates.smartTrimStart = 0; // Music start is always 0 for positioning
-            } else { // spoken or jingle
-              const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
-              trackUpdates.smartTrimStart = smartTrimStart;
-              trackUpdates.smartTrimEnd   = smartTrimEnd;
-            }
-          } else {
-            trackUpdates.smartTrimStart = undefined;
-            trackUpdates.smartTrimEnd   = undefined;
+          if (track.type === 'music') {
+              const talkPoint = findTalkOverPoint(buffer, talkoverDropDb);
+              trackUpdates.talkOverPoint = talkPoint ?? track.duration;
+              trackUpdates.smartTrimStart = 0; // Music always starts from 0 for positioning
+              trackUpdates.smartTrimEnd = undefined; // This is no longer used for music positioning
+          } else { // spoken or jingle
+              if (trimSilenceEnabled) {
+                  const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
+                  trackUpdates.smartTrimStart = smartTrimStart;
+                  trackUpdates.smartTrimEnd = smartTrimEnd;
+              } else {
+                  trackUpdates.smartTrimStart = undefined;
+                  trackUpdates.smartTrimEnd = undefined;
+              }
+              trackUpdates.talkOverPoint = undefined;
           }
 
           if (normalizeTracks) {
@@ -666,7 +636,7 @@ const AppContent: React.FC = () => {
     };
 
     analyzeAllTracks();
-  }, [trimSilenceEnabled, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
+  }, [trimSilenceEnabled, talkoverDropDb, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
 
   const handleReorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
     setTracks(prevTracks => {
@@ -769,17 +739,15 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
         let effectiveStart = 0;
         let positioningDuration = track.duration;
         
-        if (trimSilenceEnabled && track.smartTrimStart !== undefined && track.smartTrimEnd !== undefined) {
-            // Spoken/Jingles are always trimmed for their own length calculation.
-            if (track.type === 'spoken' || track.type === 'jingle') {
+        if (track.type === 'spoken' || track.type === 'jingle') {
+            if (trimSilenceEnabled && track.smartTrimStart !== undefined && track.smartTrimEnd !== undefined) {
                 effectiveStart = track.smartTrimStart;
                 positioningDuration = track.smartTrimEnd - track.smartTrimStart;
-            } 
-            // A Music track's positioning duration is ONLY shortened if it's followed by speech.
-            else if (track.type === 'music' && nextTrack?.type === 'spoken') {
-                const cut = Math.max(0, Math.min(track.duration, track.smartTrimEnd ?? track.duration));
-                positioningDuration = cut;
             }
+        } 
+        else if (track.type === 'music' && (nextTrack?.type === 'spoken' || nextTrack?.type === 'jingle')) {
+            const cut = Math.max(0, Math.min(track.duration, track.talkOverPoint ?? track.duration));
+            positioningDuration = cut;
         }
         
         const playbackDuration = track.duration - effectiveStart;
@@ -793,16 +761,11 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
             if (prevTrack.type === 'music' && track.type === 'music') {
                 startTime -= mixDuration;
             } 
-            // Music -> Spoken: Crossfade using the smart-trimmed end of the music
-            else if (prevTrack.type === 'music' && track.type === 'spoken') {
-                // reč má začať až keď hudba pri svojom fade-oute klesne pod speechStartDb
-                const offset = speechOffsetFromFadeStart(speechStartDb, mixDuration);
-                const fadeStart = prevLayoutItem.endTime - mixDuration;  // začiatok fade-outu hudby
-                startTime = Math.max(0, fadeStart + offset);
+            // Music -> Spoken/Jingle: Crossfade using the talk-over point of the music.
+            else if (prevTrack.type === 'music' && (track.type === 'spoken' || track.type === 'jingle')) {
+                const talkPoint = prevTrack.talkOverPoint ?? prevLayoutItem.positioningDuration;
+                startTime = Math.max(0, prevLayoutItem.startTime + talkPoint - mixDuration);
             }
-            // Music -> Jingle: NO crossfade. Jingle starts right after music's positioning block.
-            // Let this fall through to the default behavior.
-
             // Spoken/Jingle -> Music: Talk-up intro
             else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
                 isTalkUpIntro = true;
@@ -855,7 +818,7 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
     const totalDuration = layout.length > 0 ? Math.max(0, ...actualEndTimes, ...underlayLayout.map(item => item.endTime)) : 0;
     
     return { layout, underlayLayout, totalDuration };
-}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, silenceThreshold, speechStartDb]);
+}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, talkoverDropDb]);
 
 const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> => {
     const { layout, underlayLayout, totalDuration } = timelineLayout;
@@ -925,13 +888,13 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   else gain.setValueAtTime(baseGain, duckingEndTime);
                   
                   fadeInEndTime = rampUpEndTime;
-              } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music') {
+              } else if (prevItem && prevItem.track.type === 'music' && (item.track.type === 'music' || item.track.type === 'spoken' || item.track.type === 'jingle') ) {
                   const rampUpEndTime = item.startTime + mixDuration;
                   gain.setValueAtTime(0.0, item.startTime);
                   gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
                   fadeInEndTime = rampUpEndTime;
               } else {
-                  // No fade-in for spoken word or jingles
+                  // No fade-in for spoken word or jingles if they are first.
                   gain.setValueAtTime(baseGain, item.startTime);
               }
 
@@ -1294,6 +1257,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onTrimSilenceChange={(e) => { setTrimSilenceEnabled(e); resetMix(); }}
               silenceThreshold={silenceThreshold}
               onSilenceThresholdChange={(t) => { setSilenceThreshold(t); resetMix(); }}
+              talkoverDropDb={talkoverDropDb}
+              onTalkoverDropDbChange={(v) => { setTalkoverDropDb(v); resetMix(); }}
               normalizeTracks={normalizeTracks}
               onNormalizeTracksChange={(e) => { setNormalizeTracks(e); resetMix(); }}
               normalizeOutput={normalizeOutput}

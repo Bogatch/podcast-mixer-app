@@ -9,6 +9,7 @@ export interface Track {
   vocalStartTime?: number; // in seconds
   smartTrimStart?: number; // Time in seconds where content starts
   smartTrimEnd?: number;   // Time in seconds where content ends
+  talkOverPoint?: number;  // Time where music drops for talk-over
   fileBuffer?: ArrayBuffer; // In-memory buffer of the file content
   normalizationGain?: number; // Gain applied for volume leveling
 }
