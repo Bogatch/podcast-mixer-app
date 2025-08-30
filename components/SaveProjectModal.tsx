@@ -86,17 +86,45 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
   };
   
   const handleFileLoad = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (isBusy || !event.target.files) return;
-
+    if (isBusy || !event.target.files || event.target.files.length === 0) {
+      if (event.target) event.target.value = '';
+      return;
+    }
+  
     const files = Array.from(event.target.files);
+  
+    // Find the project.json file and its root path within the selection.
     const projectJsonFile = files.find(f => f.name === 'project.json');
-    const sourceFiles = files.filter(f => f.webkitRelativePath.startsWith('source_files/'));
-
+  
+    if (!projectJsonFile) {
+      await onLoadFromFile(undefined, []);
+      onClose();
+      if (event.target) event.target.value = '';
+      return;
+    }
+  
+    // Determine the root path of the project relative to what the user selected.
+    // e.g., if user selects a folder containing 'MyProject', webkitRelativePath might be 'MyProject/project.json'.
+    // The projectRootPath would then be 'MyProject'.
+    // If project.json is at the root of the selection, projectRootPath will be an empty string.
+    const relativeJsonPath = projectJsonFile.webkitRelativePath;
+    const pathParts = relativeJsonPath.split('/');
+    const projectRootPath = pathParts.slice(0, -1).join('/');
+  
+    // Construct the expected path for source files.
+    // If projectRootPath is 'MyProject', sourceFilesPath becomes 'MyProject/source_files/'.
+    // If projectRootPath is '', sourceFilesPath becomes 'source_files/'.
+    const sourceFilesPath = projectRootPath ? `${projectRootPath}/source_files/` : 'source_files/';
+  
+    const sourceFiles = files.filter(f =>
+      f.webkitRelativePath.startsWith(sourceFilesPath) && f.name !== '.DS_Store'
+    );
+  
     await onLoadFromFile(projectJsonFile, sourceFiles);
     onClose();
-
+  
     if (event.target) {
-        event.target.value = '';
+      event.target.value = '';
     }
   };
 
