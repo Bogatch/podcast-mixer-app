@@ -1,15 +1,42 @@
-"scripts": {
-  "start": "electron .",
-  "dev": "electron .",
-  "build": "electron-builder",
-  "build:mac": "electron-builder --mac",
-  "build:win": "electron-builder --win",
-  "build:linux": "electron-builder --linux"
-},
-"build": {
-  "appId": "com.customradio.podcastmixer",
-  "productName": "Podcast Mixer Studio",
-  "mac": { "target": "dmg" },
-  "win": { "target": "nsis", "icon": "assets/icon.ico" },
-  "linux": { "target": "AppImage" }
+{
+  "name": "podcast-mixer-desktop",
+  "version": "1.0.0",
+  "description": "Desktopová verzia Podcast Mixer Studio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:mac:both": "electron-builder --mac --x64 --arm64",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.customradio.podcastmixer",
+    "productName": "Podcast Mixer Studio",
+
+    "mac": {
+      "icon": "assets/icon.icns",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ]
+    },
+
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  },
+  "author": "CustomRadio",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3"
+  }
 }

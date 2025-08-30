@@ -64,42 +64,71 @@ const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { sma
     const sampleRate = buffer.sampleRate;
     const minSilenceDuration = 0.1; // 100ms of silence to confirm
     const minSilenceSamples = Math.floor(minSilenceDuration * sampleRate);
-    const channelData = buffer.getChannelData(0);
+    
+    const allChannelData = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+    const bufferLength = buffer.length;
 
     let smartTrimStart = 0;
     let smartTrimEnd = buffer.duration;
 
     // Find first non-silent sample from the start
     let firstNonSilentSample = 0;
-    for (let i = 0; i < channelData.length; i += minSilenceSamples) {
-        const segment = channelData.subarray(i, i + minSilenceSamples);
-        const isSilent = segment.every(sample => Math.abs(sample) < threshold);
-        if (!isSilent) {
+    for (let i = 0; i < bufferLength; i += minSilenceSamples) {
+        let isSegmentSilent = true;
+        for (const channel of allChannelData) {
+            const segment = channel.subarray(i, i + minSilenceSamples);
+            if (!segment.every(sample => Math.abs(sample) < threshold)) {
+                isSegmentSilent = false;
+                break;
+            }
+        }
+        if (!isSegmentSilent) {
             firstNonSilentSample = i;
             break;
         }
     }
      // Find the precise start
-    for (let i = firstNonSilentSample; i < channelData.length; i++) {
-        if (Math.abs(channelData[i]) > threshold) {
+    for (let i = firstNonSilentSample; i < bufferLength; i++) {
+        let isSampleSilent = true;
+        for (const channel of allChannelData) {
+            if (Math.abs(channel[i]) > threshold) {
+                isSampleSilent = false;
+                break;
+            }
+        }
+        if (!isSampleSilent) {
             smartTrimStart = i / sampleRate;
             break;
         }
     }
     
     // Find last non-silent sample from the end
-    let lastNonSilentSample = channelData.length - 1;
-    for (let i = channelData.length; i > 0; i -= minSilenceSamples) {
-        const segment = channelData.subarray(i - minSilenceSamples, i);
-        const isSilent = segment.every(sample => Math.abs(sample) < threshold);
-        if (!isSilent) {
+    let lastNonSilentSample = bufferLength - 1;
+    for (let i = bufferLength; i > 0; i -= minSilenceSamples) {
+        let isSegmentSilent = true;
+        for (const channel of allChannelData) {
+            const segment = channel.subarray(i - minSilenceSamples, i);
+            if (!segment.every(sample => Math.abs(sample) < threshold)) {
+                isSegmentSilent = false;
+                break;
+            }
+        }
+        if (!isSegmentSilent) {
             lastNonSilentSample = i;
             break;
         }
     }
     // Find precise end
     for (let i = lastNonSilentSample; i >= 0; i--) {
-        if (Math.abs(channelData[i]) > threshold) {
+        if (i >= bufferLength) continue; // Boundary check
+        let isSampleSilent = true;
+        for (const channel of allChannelData) {
+             if (Math.abs(channel[i]) > threshold) {
+                isSampleSilent = false;
+                break;
+            }
+        }
+        if (!isSampleSilent) {
             smartTrimEnd = (i + 1) / sampleRate;
             break;
         }
