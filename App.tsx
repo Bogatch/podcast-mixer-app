@@ -60,36 +60,70 @@ const calculateRMS = (audioBuffer: AudioBuffer): number => {
     return 20 * Math.log10(rms); // Convert to dBFS
 };
 
+function rmsDb(v: number) {
+  if (v <= 0) return -Infinity;
+  return 20 * Math.log10(v);
+}
+
 function findTalkOverPoint(buffer: AudioBuffer, dropDb: number): number | null {
-  const sampleRate = buffer.sampleRate;
+  const sr = buffer.sampleRate;
   if (buffer.numberOfChannels === 0) return null;
-  const channel = buffer.getChannelData(0);
-  const windowSize = Math.floor(sampleRate * 0.05); // 50 ms
-  let baselineRms = 0;
-  const first2s = sampleRate * 2;
-  for (let i = 0; i < Math.min(first2s, channel.length); i++) {
-    baselineRms += channel[i] * channel[i];
-  }
-  baselineRms = Math.sqrt(baselineRms / Math.min(first2s, channel.length));
-  if (baselineRms === 0) return buffer.duration; // Can't calculate drop from silence
-  
-  const baselineDb = 20 * Math.log10(baselineRms);
+  const ch = buffer.getChannelData(0); // stačí jeden kanál
+  const len = ch.length;
 
-  const thresholdDb = baselineDb - dropDb;
-  const threshold = Math.pow(10, thresholdDb / 20);
+  // --- Parametre okna ---
+  const winMs = 50;            // 50 ms okno
+  const hopMs = 25;            // 25 ms posun
+  const sustainMs = 300;       // musí to držať aspoň 300 ms
+  const minSearchStartMs = 1500; // nezačíname úplne od 0 (eliminácia intro klikov)
 
-  for (let i = 0; i < channel.length; i += windowSize) {
+  const win = Math.max(1, Math.floor(sr * (winMs / 1000)));
+  const hop = Math.max(1, Math.floor(sr * (hopMs / 1000)));
+  const sustainWins = Math.max(1, Math.floor(sustainMs / hopMs));
+  const startHop = Math.floor((minSearchStartMs / 1000) * sr / hop);
+
+  // --- baseline: 90. percentil krátkodobého RMS z prvých 30 s (alebo celé, ak kratšie) ---
+  const baselineDur = Math.min(len, Math.floor(sr * 30));
+  const rmsVals: number[] = [];
+  for (let i = 0; i + win <= baselineDur; i += hop) {
     let sum = 0;
-    const end = Math.min(i + windowSize, channel.length);
-    for (let j = i; j < end; j++) {
-      sum += channel[j] * channel[j];
-    }
-    const rms = Math.sqrt(sum / (end-i));
-    if (rms < threshold) {
-      return i / sampleRate;
+    for (let j = i; j < i + win; j++) sum += ch[j] * ch[j];
+    rmsVals.push(Math.sqrt(sum / win));
+  }
+  if (rmsVals.length === 0) return null;
+
+  rmsVals.sort((a, b) => a - b);
+  const idx = Math.max(0, Math.min(rmsVals.length - 1, Math.floor(0.9 * rmsVals.length)));
+  const baselineR = rmsVals[idx];
+  const baselineDb = rmsDb(baselineR);
+
+  // prah je baseline - dropDb, prepočítaný späť na lineárny RMS
+  const thrDb = baselineDb - dropDb;
+  const thrR = Math.pow(10, thrDb / 20);
+
+  // --- hľadanie prvého úseku, kde RMS < prah a vydrží aspoň sustainMs ---
+  let belowCount = 0;
+  for (let h = startHop; ; h++) {
+    const i = h * hop;
+    if (i + win > len) break;
+
+    let sum = 0;
+    for (let j = i; j < i + win; j++) sum += ch[j] * ch[j];
+    const r = Math.sqrt(sum / win);
+
+    if (r < thrR) {
+      belowCount++;
+      if (belowCount >= sustainWins) {
+        const firstHop = h - sustainWins + 1;
+        const sample = firstHop * hop + Math.floor(win / 2);
+        return sample / sr;
+      }
+    } else {
+      belowCount = 0;
     }
   }
-  return null;
+
+  return null; // nenašli sme spoľahlivý bod
 }
 
 
@@ -586,9 +620,17 @@ const AppContent: React.FC = () => {
 
           if (track.type === 'music') {
               const talkPoint = findTalkOverPoint(buffer, talkoverDropDb);
-              trackUpdates.talkOverPoint = talkPoint ?? track.duration;
-              trackUpdates.smartTrimStart = 0; // Music always starts from 0 for positioning
-              trackUpdates.smartTrimEnd = undefined; // This is no longer used for music positioning
+              let safeTalk = (talkPoint ?? null);
+              if (safeTalk != null) {
+                const posDur = track.duration;
+                const minSec = Math.max(0.5, mixDuration * 0.6);
+                if (safeTalk < minSec || safeTalk > posDur) {
+                    safeTalk = null;
+                }
+              }
+              trackUpdates.talkOverPoint = safeTalk ?? undefined;
+              trackUpdates.smartTrimStart = 0;
+              trackUpdates.smartTrimEnd = undefined;
           } else { // spoken or jingle
               if (trimSilenceEnabled) {
                   const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
@@ -636,7 +678,7 @@ const AppContent: React.FC = () => {
     };
 
     analyzeAllTracks();
-  }, [trimSilenceEnabled, talkoverDropDb, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
+  }, [trimSilenceEnabled, talkoverDropDb, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix, mixDuration]);
 
   const handleReorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
     setTracks(prevTracks => {
@@ -746,8 +788,10 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
             }
         } 
         else if (track.type === 'music' && (nextTrack?.type === 'spoken' || nextTrack?.type === 'jingle')) {
-            const cut = Math.max(0, Math.min(track.duration, track.talkOverPoint ?? track.duration));
-            positioningDuration = cut;
+             if (typeof track.talkOverPoint === 'number' && isFinite(track.talkOverPoint)) {
+                const cut = Math.max(0, Math.min(track.duration, track.talkOverPoint));
+                positioningDuration = cut;
+            }
         }
         
         const playbackDuration = track.duration - effectiveStart;
@@ -756,15 +800,24 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
         let startTime = prevLayoutItem ? prevLayoutItem.endTime : 0;
         let isTalkUpIntro = false;
 
-        if (prevTrack) {
+        if (prevTrack && prevLayoutItem) {
             // Music -> Music: Standard crossfade
             if (prevTrack.type === 'music' && track.type === 'music') {
                 startTime -= mixDuration;
             } 
             // Music -> Spoken/Jingle: Crossfade using the talk-over point of the music.
             else if (prevTrack.type === 'music' && (track.type === 'spoken' || track.type === 'jingle')) {
-                const talkPoint = prevTrack.talkOverPoint ?? prevLayoutItem.positioningDuration;
-                startTime = Math.max(0, prevLayoutItem.startTime + talkPoint - mixDuration);
+                let spokenStart = prevLayoutItem.endTime - mixDuration;
+                const talk = prevTrack.talkOverPoint;
+                if (typeof talk === 'number' && isFinite(talk)) {
+                    const earliest = prevLayoutItem.startTime;
+                    const latest = prevLayoutItem.endTime;
+                    const wish = prevLayoutItem.startTime + talk - mixDuration;
+                    const minAllowed = Math.max(0, earliest);
+                    const maxAllowed = Math.max(minAllowed, latest - mixDuration);
+                    spokenStart = Math.min(Math.max(wish, minAllowed), maxAllowed);
+                }
+                startTime = spokenStart;
             }
             // Spoken/Jingle -> Music: Talk-up intro
             else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
