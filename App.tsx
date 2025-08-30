@@ -60,86 +60,96 @@ const calculateRMS = (audioBuffer: AudioBuffer): number => {
 
 
 const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { smartTrimStart: number; smartTrimEnd: number } => {
-    const threshold = Math.pow(10, thresholdDb / 20);
+    const threshold = Math.pow(10, thresholdDb / 20); // Linear RMS threshold
     const sampleRate = buffer.sampleRate;
-    const minSilenceDuration = 0.1; // 100ms of silence to confirm
-    const minSilenceSamples = Math.floor(minSilenceDuration * sampleRate);
-    
     const allChannelData = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
     const bufferLength = buffer.length;
 
+    // --- Configuration for RMS analysis ---
+    const windowDuration = 0.05; // 50ms window
+    const windowSamples = Math.floor(sampleRate * windowDuration);
+    const safetyMarginDuration = 0.15; // 150ms safety margin at the end
+    const safetyMarginSamples = Math.floor(sampleRate * safetyMarginDuration);
+
     let smartTrimStart = 0;
     let smartTrimEnd = buffer.duration;
+    
+    // --- Find Smart Trim Start (first sound) ---
+    for (let i = 0; i < bufferLength; i += windowSamples) {
+        const windowEnd = Math.min(i + windowSamples, bufferLength);
+        let sumOfSquares = 0;
+        
+        for (const channel of allChannelData) {
+            for (let j = i; j < windowEnd; j++) {
+                sumOfSquares += channel[j] * channel[j];
+            }
+        }
+        
+        const numSamplesInWindow = (windowEnd - i) * buffer.numberOfChannels;
+        const rms = numSamplesInWindow > 0 ? Math.sqrt(sumOfSquares / numSamplesInWindow) : 0;
+        
+        if (rms > threshold) {
+            // We found the first window with sound. Now find the precise start within it.
+            let firstSample = i;
+            for(let k = i; k < windowEnd; k++) {
+                let isSampleAboveThreshold = false;
+                for (const channel of allChannelData) {
+                    if (Math.abs(channel[k]) > threshold) {
+                        isSampleAboveThreshold = true;
+                        break;
+                    }
+                }
+                if (isSampleAboveThreshold) {
+                    firstSample = k;
+                    break;
+                }
+            }
+            smartTrimStart = firstSample / sampleRate;
+            break;
+        }
+    }
 
-    // Find first non-silent sample from the start
-    let firstNonSilentSample = 0;
-    for (let i = 0; i < bufferLength; i += minSilenceSamples) {
-        let isSegmentSilent = true;
+    // --- Find Smart Trim End (last sound) ---
+    let lastSoundWindowEnd = 0;
+    for (let i = bufferLength; i > 0; i -= windowSamples) {
+        const windowStart = Math.max(0, i - windowSamples);
+        let sumOfSquares = 0;
+
         for (const channel of allChannelData) {
-            const segment = channel.subarray(i, i + minSilenceSamples);
-            if (!segment.every(sample => Math.abs(sample) < threshold)) {
-                isSegmentSilent = false;
-                break;
+            for (let j = windowStart; j < i; j++) {
+                 sumOfSquares += channel[j] * channel[j];
             }
         }
-        if (!isSegmentSilent) {
-            firstNonSilentSample = i;
-            break;
-        }
-    }
-     // Find the precise start
-    for (let i = firstNonSilentSample; i < bufferLength; i++) {
-        let isSampleSilent = true;
-        for (const channel of allChannelData) {
-            if (Math.abs(channel[i]) > threshold) {
-                isSampleSilent = false;
-                break;
-            }
-        }
-        if (!isSampleSilent) {
-            smartTrimStart = i / sampleRate;
+
+        const numSamplesInWindow = (i - windowStart) * buffer.numberOfChannels;
+        const rms = numSamplesInWindow > 0 ? Math.sqrt(sumOfSquares / numSamplesInWindow) : 0;
+        
+        if (rms > threshold) {
+            // This is the last window with significant sound.
+            lastSoundWindowEnd = i;
             break;
         }
     }
     
-    // Find last non-silent sample from the end
-    let lastNonSilentSample = bufferLength - 1;
-    for (let i = bufferLength; i > 0; i -= minSilenceSamples) {
-        let isSegmentSilent = true;
-        for (const channel of allChannelData) {
-            const segment = channel.subarray(i - minSilenceSamples, i);
-            if (segment.length > 0 && !segment.every(sample => Math.abs(sample) < threshold)) {
-                isSegmentSilent = false;
-                break;
-            }
-        }
-        if (!isSegmentSilent) {
-            lastNonSilentSample = i;
-            break;
-        }
+    if (lastSoundWindowEnd > 0) {
+       const endSample = Math.min(lastSoundWindowEnd + safetyMarginSamples, bufferLength);
+       smartTrimEnd = endSample / sampleRate;
     }
-    // Find precise end
-    for (let i = lastNonSilentSample; i >= 0; i--) {
-        if (i >= bufferLength) continue; // Boundary check
-        let isSampleSilent = true;
-        for (const channel of allChannelData) {
-             if (Math.abs(channel[i]) > threshold) {
-                isSampleSilent = false;
-                break;
-            }
-        }
-        if (!isSampleSilent) {
-            smartTrimEnd = (i + 1) / sampleRate;
-            break;
-        }
-    }
-    
+
+
+    // If the entire track is silent, or end is before start, return full duration.
     if (smartTrimEnd <= smartTrimStart) {
         return { smartTrimStart: 0, smartTrimEnd: buffer.duration };
     }
+    
+    // Ensure smartTrimEnd doesn't exceed the actual duration
+    smartTrimEnd = Math.min(smartTrimEnd, buffer.duration);
 
     // Rounding to prevent infinitesimal changes causing re-renders
-    return { smartTrimStart: Math.round(smartTrimStart * 10000) / 10000, smartTrimEnd: Math.round(smartTrimEnd * 10000) / 10000 };
+    return { 
+        smartTrimStart: Math.round(smartTrimStart * 10000) / 10000, 
+        smartTrimEnd: Math.round(smartTrimEnd * 10000) / 10000 
+    };
 };
 
 const SuccessIcon = () => (
