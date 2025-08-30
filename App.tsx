@@ -695,31 +695,34 @@ const AppContent: React.FC = () => {
             const prevTrack = prevLayoutItem.track;
 
             // --- Transition Logic ---
-            // A. Transitioning FROM music INTO something else
             if (prevTrack.type === 'music') {
-                let overlapDuration = 0;
+                let overlapDuration: number | undefined;
 
                 if (track.type === 'spoken' && trimSilenceEnabled) {
-                    // Case A1: Music -> Spoken (AI enabled)
-                    // The spoken word starts when the music fades to the specified threshold.
-                    const thresholdGain = Math.pow(10, silenceThreshold / 20);
-                    overlapDuration = mixDuration * thresholdGain;
-                } else {
-                    // Case A2: Music -> Music, Music -> Jingle, or Music -> Spoken (AI disabled)
-                    // These transitions use the standard crossfade duration for timing overlap.
+                    const prevTrackBuffer = decodedAudioBuffers.current.get(prevTrack.id);
+                    if (prevTrackBuffer) {
+                        const { smartTrimEnd: prevMusicSmartEnd } = analyzeTrackBoundaries(prevTrackBuffer, silenceThreshold);
+                        const tailDuration = prevTrack.duration - prevMusicSmartEnd;
+                        overlapDuration = Math.max(0, tailDuration);
+                    }
+                }
+                
+                // If overlapDuration is still undefined (because it wasn't a spoken track, AI is off, or buffer was missing),
+                // use the default mixDuration for the overlap. This covers Music->Music and Music->Jingle.
+                if (overlapDuration === undefined) {
                     overlapDuration = mixDuration;
                 }
+        
                 startTime -= overlapDuration;
-            } 
-            // B. Transitioning FROM spoken word/jingle INTO music
-            else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
+
+            } else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
                 // This is a "talk-up intro" where the music starts under the end of the speech.
                 isTalkUpIntro = true;
                 const vocalStart = track.vocalStartTime ?? 0;
                 const overlapDuration = vocalStart > 0 ? vocalStart : mixDuration;
                 startTime -= Math.min(overlapDuration, prevLayoutItem.positioningDuration);
             }
-            // C. Other transitions (e.g., spoken -> jingle) have no overlap.
+            // Other transitions (e.g., spoken -> jingle) have no overlap.
         }
 
         const newItem = {
@@ -846,7 +849,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               }
 
               if (item.track.type === 'music' && nextItem && (nextItem.track.type === 'music' || nextItem.track.type === 'jingle' || nextItem.track.type === 'spoken')) {
-                  const fadeOutStartTime = Math.max(fadeInEndTime, item.endTime - mixDuration);
+                  const fadeOutStartTime = Math.max(fadeInEndTime, nextItem.startTime);
                   const fadeOutFinishTime = item.endTime;
                   if (fadeOutFinishTime > fadeOutStartTime) {
                       gain.setValueAtTime(baseGain, fadeOutStartTime);
