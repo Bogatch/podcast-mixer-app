@@ -674,19 +674,28 @@ const AppContent: React.FC = () => {
   
   const timelineLayout = useMemo(() => {
     const layout = [];
-    let timeCursor = 0;
-    
     const tracksWithFiles = tracks.filter(t => t.file);
 
     for (let i = 0; i < tracksWithFiles.length; i++) {
         const track = tracksWithFiles[i];
         const prevLayoutItem = i > 0 ? layout[i - 1] : null;
+        const nextTrack = (i + 1 < tracksWithFiles.length) ? tracksWithFiles[i + 1] : null;
 
-        const smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
-        const smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
+        let smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+        let smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
+        
+        // FIX: If this track is music followed by spoken word, its positioning duration
+        // should be based on its content's end, not the file's end, to create a smart transition.
+        if (trimSilenceEnabled && track.type === 'music' && nextTrack?.type === 'spoken') {
+            const trackBuffer = decodedAudioBuffers.current.get(track.id);
+            if (trackBuffer) {
+                const { smartTrimEnd: musicSmartEnd } = analyzeTrackBoundaries(trackBuffer, silenceThreshold);
+                smartEnd = musicSmartEnd;
+            }
+        }
         
         const positioningDuration = smartEnd - smartStart;
-        const playbackDuration = track.duration - smartStart;
+        const playbackDuration = track.duration - smartStart; // Keep full duration for rendering tails
 
         let startTime = prevLayoutItem ? (prevLayoutItem.endTime) : 0;
         let isTalkUpIntro = false;
@@ -694,25 +703,11 @@ const AppContent: React.FC = () => {
         if (prevLayoutItem) {
             const prevTrack = prevLayoutItem.track;
 
-            // --- Transition Logic ---
+            // --- Simplified Transition Logic ---
             if (prevTrack.type === 'music') {
-                let overlapDuration: number | undefined;
-
-                if (track.type === 'spoken' && trimSilenceEnabled) {
-                    const prevTrackBuffer = decodedAudioBuffers.current.get(prevTrack.id);
-                    if (prevTrackBuffer) {
-                        const { smartTrimEnd: prevMusicSmartEnd } = analyzeTrackBoundaries(prevTrackBuffer, silenceThreshold);
-                        const tailDuration = prevTrack.duration - prevMusicSmartEnd;
-                        overlapDuration = Math.max(0, tailDuration);
-                    }
-                }
-                
-                // If overlapDuration is still undefined (because it wasn't a spoken track, AI is off, or buffer was missing),
-                // use the default mixDuration for the overlap. This covers Music->Music and Music->Jingle.
-                if (overlapDuration === undefined) {
-                    overlapDuration = mixDuration;
-                }
-        
+                // For Music -> [Music, Jingle, Spoken], apply a standard crossfade.
+                // The "smart" part for spoken word is handled by adjusting the music track's `positioningDuration` above.
+                const overlapDuration = mixDuration;
                 startTime -= overlapDuration;
 
             } else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
@@ -735,7 +730,6 @@ const AppContent: React.FC = () => {
             isTalkUpIntro
         };
         layout.push(newItem);
-        timeCursor = newItem.endTime;
     }
 
     const underlayLayout = [];
