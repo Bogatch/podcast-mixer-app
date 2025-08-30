@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -681,23 +682,22 @@ const AppContent: React.FC = () => {
         const prevTrack = prevLayoutItem?.track;
         const nextTrack = (i + 1 < tracksWithFiles.length) ? tracksWithFiles[i + 1] : null;
 
-        // 1. Determine effective start, end, and durations for the CURRENT track.
+        // 1. Determine effective start and positioning duration for CURRENT track.
         let effectiveStart = 0;
-        let effectiveEnd = track.duration;
+        let positioningDuration = track.duration;
         
         if (trimSilenceEnabled && track.smartTrimStart !== undefined && track.smartTrimEnd !== undefined) {
-            // For spoken/jingle, always use their smart trims.
+            // Spoken/Jingles are always trimmed for their own length calculation.
             if (track.type === 'spoken' || track.type === 'jingle') {
                 effectiveStart = track.smartTrimStart;
-                effectiveEnd = track.smartTrimEnd;
+                positioningDuration = track.smartTrimEnd - track.smartTrimStart;
             } 
-            // For music, ONLY use its smartTrimEnd for positioning if it's followed by speech.
+            // A Music track's positioning duration is ONLY shortened if it's followed by speech.
             else if (track.type === 'music' && nextTrack?.type === 'spoken') {
-                effectiveEnd = track.smartTrimEnd;
+                positioningDuration = track.smartTrimEnd;
             }
         }
         
-        const positioningDuration = effectiveEnd - effectiveStart;
         const playbackDuration = track.duration - effectiveStart;
 
         // 2. Determine startTime based on the PREVIOUS track's layout.
@@ -705,18 +705,24 @@ const AppContent: React.FC = () => {
         let isTalkUpIntro = false;
 
         if (prevTrack) {
-            if (prevTrack.type === 'music') {
-                // ANY track following music gets crossfaded.
-                // For Music -> Spoken, this creates the desired overlap into the music's tail.
+            // Music -> Music: Standard crossfade
+            if (prevTrack.type === 'music' && track.type === 'music') {
                 startTime -= mixDuration;
-            } else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
-                // Music under speech is a "talk-up intro".
+            } 
+            // Music -> Spoken: Crossfade using the smart-trimmed end of the music
+            else if (prevTrack.type === 'music' && track.type === 'spoken') {
+                startTime -= mixDuration;
+            }
+            // Music -> Jingle: NO crossfade. Jingle starts right after music's positioning block.
+            // Let this fall through to the default behavior.
+
+            // Spoken/Jingle -> Music: Talk-up intro
+            else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
                 isTalkUpIntro = true;
                 const overlap = track.vocalStartTime ?? 0;
                 // The overlap should not be longer than the previous track's content.
                 startTime -= Math.min(overlap, prevLayoutItem.positioningDuration);
             }
-            // Other transitions like spoken -> jingle have no overlap by default.
         }
 
         // 3. Create the layout item. `endTime` is for positioning the *next* item.
