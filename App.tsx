@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -61,97 +60,93 @@ const calculateRMS = (audioBuffer: AudioBuffer): number => {
 };
 
 
-const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { smartTrimStart: number; smartTrimEnd: number } => {
-    const threshold = Math.pow(10, thresholdDb / 20); // Linear RMS threshold
-    const sampleRate = buffer.sampleRate;
-    const allChannelData = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
-    const bufferLength = buffer.length;
+// Robustná detekcia začiatku/konca so „silence gate“
+const analyzeTrackBoundaries = (
+  buffer: AudioBuffer,
+  thresholdDb: number,             // dBFS z UI (napr. -40)
+  opts: Partial<{
+    windowMs: number;              // šírka RMS okna
+    hopMs: number;                 // krok okna
+    minSilenceMs: number;          // koľko ms musí byť pod prahom, aby to bolo ticho
+    preRollMs: number;             // nechaj pár ms pred začiatkom
+    postRollMs: number;            // nechaj pár ms za koncom
+    hysteresisDb: number;          // rozdiel pre zapnutie vs. vypnutie
+  }> = {}
+): { smartTrimStart: number; smartTrimEnd: number } => {
+  const sr = buffer.sampleRate;
+  const windowMs     = opts.windowMs     ?? 25;   // 25 ms
+  const hopMs        = opts.hopMs        ?? 10;   // 10 ms
+  const minSilenceMs = opts.minSilenceMs ?? 180;  // 180 ms
+  const preRollMs    = opts.preRollMs    ?? 30;   // 30 ms
+  const postRollMs   = opts.postRollMs   ?? 120;  // 120 ms
+  const hysteresisDb = opts.hysteresisDb ?? 6;    // 6 dB
 
-    // --- Configuration for RMS analysis ---
-    const windowDuration = 0.05; // 50ms window
-    const windowSamples = Math.floor(sampleRate * windowDuration);
-    const safetyMarginDuration = 0.15; // 150ms safety margin at the end
-    const safetyMarginSamples = Math.floor(sampleRate * safetyMarginDuration);
+  // zmysluplné obmedzenia prahu
+  if (thresholdDb > -6)   thresholdDb = -6;
+  if (thresholdDb < -80)  thresholdDb = -80;
 
-    let smartTrimStart = 0;
-    let smartTrimEnd = buffer.duration;
-    
-    // --- Find Smart Trim Start (first sound) ---
-    for (let i = 0; i < bufferLength; i += windowSamples) {
-        const windowEnd = Math.min(i + windowSamples, bufferLength);
-        let sumOfSquares = 0;
-        
-        for (const channel of allChannelData) {
-            for (let j = i; j < windowEnd; j++) {
-                sumOfSquares += channel[j] * channel[j];
-            }
-        }
-        
-        const numSamplesInWindow = (windowEnd - i) * buffer.numberOfChannels;
-        const rms = numSamplesInWindow > 0 ? Math.sqrt(sumOfSquares / numSamplesInWindow) : 0;
-        
-        if (rms > threshold) {
-            // We found the first window with sound. Now find the precise start within it.
-            let firstSample = i;
-            for(let k = i; k < windowEnd; k++) {
-                let isSampleAboveThreshold = false;
-                for (const channel of allChannelData) {
-                    if (Math.abs(channel[k]) > threshold) {
-                        isSampleAboveThreshold = true;
-                        break;
-                    }
-                }
-                if (isSampleAboveThreshold) {
-                    firstSample = k;
-                    break;
-                }
-            }
-            smartTrimStart = firstSample / sampleRate;
-            break;
-        }
+  const win  = Math.max(1, Math.round(sr * windowMs / 1000));
+  const hop  = Math.max(1, Math.round(sr * hopMs    / 1000));
+  const minSilenceFrames = Math.max(1, Math.round(minSilenceMs / hopMs));
+
+  const onDb  = thresholdDb + hysteresisDb; // „zapnúť zvuk“
+  const offDb = thresholdDb;                // „vypnúť zvuk“
+
+  const n      = buffer.length;
+  const chans  = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+  const rmsDb: number[] = [];
+
+  // krátke posuvné RMS v dBFS
+  for (let start = 0; start < n; start += hop) {
+    const end = Math.min(n, start + win);
+    let sum = 0;
+    const len = (end - start) * chans.length;
+    for (const ch of chans) {
+      for (let i = start; i < end; i++) sum += ch[i] * ch[i];
     }
+    const rms = Math.sqrt(sum / Math.max(1, len));
+    rmsDb.push(rms > 0 ? 20 * Math.log10(rms) : -Infinity);
+  }
 
-    // --- Find Smart Trim End (last sound) ---
-    let lastSoundWindowEnd = 0;
-    for (let i = bufferLength; i > 0; i -= windowSamples) {
-        const windowStart = Math.max(0, i - windowSamples);
-        let sumOfSquares = 0;
+  // nájdi prvý zvuk (dopredu)
+  let firstSample = 0;
+  let started = false;
+  for (let f = 0; f < rmsDb.length; f++) {
+    if (rmsDb[f] >= onDb) { started = true; firstSample = f * hop; break; }
+  }
+  if (!started) return { smartTrimStart: 0, smartTrimEnd: buffer.duration }; // všetko ticho alebo prah príliš vysoko
 
-        for (const channel of allChannelData) {
-            for (let j = windowStart; j < i; j++) {
-                 sumOfSquares += channel[j] * channel[j];
-            }
-        }
+  // nájdi posledný zvuk (dozadu)
+  let lastSample = n;
+  let ended = false;
+  for (let f = rmsDb.length - 1; f >= 0; f--) {
+    if (rmsDb[f] >= onDb) { ended = true; lastSample = Math.min(n, f * hop + win); break; }
+  }
+  if (!ended || lastSample <= firstSample) return { smartTrimStart: 0, smartTrimEnd: buffer.duration };
 
-        const numSamplesInWindow = (i - windowStart) * buffer.numberOfChannels;
-        const rms = numSamplesInWindow > 0 ? Math.sqrt(sumOfSquares / numSamplesInWindow) : 0;
-        
-        if (rms > threshold) {
-            // This is the last window with significant sound.
-            lastSoundWindowEnd = i;
-            break;
-        }
-    }
-    
-    if (lastSoundWindowEnd > 0) {
-       const endSample = Math.min(lastSoundWindowEnd + safetyMarginSamples, bufferLength);
-       smartTrimEnd = endSample / sampleRate;
-    }
+  // zreťazené ticho na začiatku/konci (stabilita)
+  let below = 0;
+  for (let f = 0; f < rmsDb.length; f++) {
+    if (rmsDb[f] < offDb) { below++; if (below >= minSilenceFrames) { firstSample = Math.max(0, (f + 1) * hop); below = 0; } }
+    else below = 0;
+    if (firstSample > 0) break;
+  }
+  below = 0;
+  for (let f = rmsDb.length - 1; f >= 0; f--) {
+    if (rmsDb[f] < offDb) { below++; if (below >= minSilenceFrames) { lastSample = Math.min(n, (f + 1) * hop + win); break; } }
+    else below = 0;
+  }
 
+  // prerol/postrol
+  firstSample = Math.max(0, firstSample - Math.round(sr * preRollMs  / 1000));
+  lastSample  = Math.min(n, lastSample  + Math.round(sr * postRollMs / 1000));
 
-    // If the entire track is silent, or end is before start, return full duration.
-    if (smartTrimEnd <= smartTrimStart) {
-        return { smartTrimStart: 0, smartTrimEnd: buffer.duration };
-    }
-    
-    // Ensure smartTrimEnd doesn't exceed the actual duration
-    smartTrimEnd = Math.min(smartTrimEnd, buffer.duration);
+  if (lastSample <= firstSample) return { smartTrimStart: 0, smartTrimEnd: buffer.duration };
 
-    // Rounding to prevent infinitesimal changes causing re-renders
-    return { 
-        smartTrimStart: Math.round(smartTrimStart * 10000) / 10000, 
-        smartTrimEnd: Math.round(smartTrimEnd * 10000) / 10000 
-    };
+  return {
+    smartTrimStart: +((firstSample / sr).toFixed(4)),
+    smartTrimEnd:   +((lastSample  / sr).toFixed(4)),
+  };
 };
 
 const SuccessIcon = () => (
