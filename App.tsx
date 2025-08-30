@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -57,6 +58,72 @@ const calculateRMS = (audioBuffer: AudioBuffer): number => {
     const rms = Math.sqrt(sumOfSquares / (audioBuffer.length * audioBuffer.numberOfChannels));
     if (rms === 0) return -Infinity; // Avoid log(0)
     return 20 * Math.log10(rms); // Convert to dBFS
+};
+
+// Nájde čas (s) v hudbe, kde krátkodobá hlasitosť klesla o `dropDb` dB
+// oproti maximu z posledných `lookbackMs` (relatívny pokles).
+// Ak nič nenájde, vráti celú dĺžku (t.j. nestrihaj hudbu).
+const findRelativeDropPoint = (
+  buffer: AudioBuffer,
+  dropDb: number,                // napr. 5 znamená „o 5 dB dole“
+  opts: Partial<{
+    winMs: number;              // RMS okno
+    hopMs: number;              // krok
+    lookbackMs: number;         // dĺžka pamäte na „nedávne maximum“
+    persistMs: number;          // požadovaná doba pod prahom (debounce)
+  }> = {}
+): number => {
+  const sr = buffer.sampleRate;
+  const winMs      = opts.winMs      ?? 20;   // 20 ms okno
+  const hopMs      = opts.hopMs      ?? 10;   // 10 ms krok
+  const lookbackMs = opts.lookbackMs ?? 2000; // 2 s pamäť
+  const persistMs  = opts.persistMs  ?? 120;  // 120 ms stabilita
+
+  const win  = Math.max(1, Math.round(sr * winMs / 1000));
+  const hop  = Math.max(1, Math.round(sr * hopMs / 1000));
+  const look = Math.max(1, Math.round(lookbackMs / hopMs));
+  const need = Math.max(1, Math.round(persistMs  / hopMs));
+
+  // RMS dBFS po oknách
+  const chans = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+  const n = buffer.length;
+  const rmsDb: number[] = [];
+  for (let start = 0; start < n; start += hop) {
+    const end = Math.min(n, start + win);
+    let sum = 0;
+    const len = (end - start) * chans.length;
+    for (const ch of chans) for (let i = start; i < end; i++) sum += ch[i] * ch[i];
+    const rms = Math.sqrt(sum / Math.max(1, len));
+    rmsDb.push(rms > 0 ? 20 * Math.log10(rms) : -Infinity);
+  }
+
+  // Relatívny referenčný „nedávny max“ v okne lookback
+  const recentMax: number[] = [];
+  for (let i = 0; i < rmsDb.length; i++) {
+    let mx = -Infinity;
+    const from = Math.max(0, i - look);
+    for (let j = from; j <= i; j++) if (rmsDb[j] > mx) mx = rmsDb[j];
+    recentMax.push(mx);
+  }
+
+  // Prvý moment, keď (recentMax - rmsDb) >= dropDb a drží sa to min. persistMs
+  let run = 0;
+  for (let i = 0; i < rmsDb.length; i++) {
+    const diff = recentMax[i] - rmsDb[i]; // koľko dB sme padli oproti nedávnemu max
+    if (diff >= dropDb) {
+      run++;
+      if (run >= need) {
+        const frame = i - need + 1;             // začiatok stabilného poklesu
+        const time  = frame * hop / sr;
+        return Math.min(buffer.duration, Math.max(0, time));
+      }
+    } else {
+      run = 0;
+    }
+  }
+
+  // nič – nestrihaj hudbu
+  return buffer.duration;
 };
 
 
@@ -173,7 +240,7 @@ const AppContent: React.FC = () => {
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
   const [trimSilenceEnabled, setTrimSilenceEnabled] = useState(true);
-  const [silenceThreshold, setSilenceThreshold] = useState(-45);
+  const [silenceThreshold, setSilenceThreshold] = useState(-5);
   const [normalizeTracks, setNormalizeTracks] = useState(true);
   const [normalizeOutput, setNormalizeOutput] = useState(true);
 
@@ -349,7 +416,7 @@ const AppContent: React.FC = () => {
         setRampUpDuration(projectData.mixerSettings.rampUpDuration ?? 1.5);
         setUnderlayVolume(projectData.mixerSettings.underlayVolume ?? 0.5);
         setTrimSilenceEnabled(projectData.mixerSettings.trimSilenceEnabled ?? true);
-        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -45);
+        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -5);
         setNormalizeTracks(projectData.mixerSettings.normalizeTracks ?? true);
         setNormalizeOutput(projectData.mixerSettings.normalizeOutput ?? true);
       }
@@ -402,7 +469,7 @@ const AppContent: React.FC = () => {
                 setRampUpDuration(settings.rampUpDuration ?? 1.5);
                 setUnderlayVolume(settings.underlayVolume ?? 0.5);
                 setTrimSilenceEnabled(settings.trimSilenceEnabled ?? true);
-                setSilenceThreshold(settings.silenceThreshold ?? -45);
+                setSilenceThreshold(settings.silenceThreshold ?? -5);
                 setNormalizeTracks(settings.normalizeTracks ?? true);
                 setNormalizeOutput(settings.normalizeOutput ?? true);
             }
@@ -548,15 +615,20 @@ const AppContent: React.FC = () => {
           
           const trackUpdates: Partial<Track> = {};
 
-          // Analyze boundaries for all tracks if enabled, to have the data ready for timeline calculation.
           if (trimSilenceEnabled) {
+            if (track.type === 'music') {
+              const dropDb = Math.max(1, Math.min(24, Math.abs(silenceThreshold))); 
+              const talkAt = findRelativeDropPoint(buffer, dropDb);
+              trackUpdates.smartTrimEnd = talkAt;
+              trackUpdates.smartTrimStart = 0; // Music start is always 0 for positioning
+            } else { // spoken or jingle
               const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
               trackUpdates.smartTrimStart = smartTrimStart;
-              trackUpdates.smartTrimEnd = smartTrimEnd;
+              trackUpdates.smartTrimEnd   = smartTrimEnd;
+            }
           } else {
-              // When trimming is disabled, ensure no smart trim is applied.
-              trackUpdates.smartTrimStart = undefined;
-              trackUpdates.smartTrimEnd = undefined;
+            trackUpdates.smartTrimStart = undefined;
+            trackUpdates.smartTrimEnd   = undefined;
           }
 
           if (normalizeTracks) {
@@ -705,7 +777,8 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
             } 
             // A Music track's positioning duration is ONLY shortened if it's followed by speech.
             else if (track.type === 'music' && nextTrack?.type === 'spoken') {
-                positioningDuration = track.smartTrimEnd;
+                const cut = Math.max(0, Math.min(track.duration, track.smartTrimEnd ?? track.duration));
+                positioningDuration = cut;
             }
         }
         
