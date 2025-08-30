@@ -623,16 +623,9 @@ const AppContent: React.FC = () => {
           const trackUpdates: Partial<Track> = {};
 
           if (track.type === 'music') {
-              const talkPoint = findTalkOverPoint(buffer, talkoverDropDb);
-              let safeTalk = (talkPoint ?? null);
-              if (safeTalk != null) {
-                const posDur = track.duration;
-                const minSec = Math.max(0.5, mixDuration * 0.6);
-                if (safeTalk < minSec || safeTalk > posDur) {
-                    safeTalk = null;
-                }
-              }
-              trackUpdates.talkOverPoint = safeTalk ?? undefined;
+              const talk = findTalkOverPoint(buffer, talkoverDropDb);
+              if (talk != null) console.log(`[TalkOver] ${track.name}: ${talk.toFixed(2)}s pri drop ${talkoverDropDb} dB`);
+              trackUpdates.talkOverPoint = (talk != null && isFinite(talk)) ? talk : undefined;
               trackUpdates.smartTrimStart = 0;
               trackUpdates.smartTrimEnd = undefined;
           } else { // spoken or jingle
@@ -682,7 +675,7 @@ const AppContent: React.FC = () => {
     };
 
     analyzeAllTracks();
-  }, [trimSilenceEnabled, talkoverDropDb, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix, mixDuration]);
+  }, [trimSilenceEnabled, talkoverDropDb, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
 
   const handleReorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
     setTracks(prevTracks => {
@@ -822,14 +815,20 @@ const timelineLayout = useMemo(() => {
         startTime = prev.endTime - MIX;
       }
 
-      // Music -> Spoken : talk-over (ak máme spoľahlivý bod), inak klasika
+      // Music -> Spoken : talk-over
       else if (prevTrack.type === 'music' && track.type === 'spoken') {
-        let spokenStart = prev.endTime - MIX; // default
+        // chceme mať prekryv aspoň OVERLAP aj keď MIX=0, inak to nevyzerá ako talk-over
+        const OVERLAP = Math.max(MIX, 0.5); // garantuj minimálne 0.5 s prekryv
+
+        // default bez talk-over bodu
+        let spokenStart = prev.endTime - OVERLAP;
 
         if (typeof prevTrack.talkOverPoint === 'number' && isFinite(prevTrack.talkOverPoint)) {
           const minInside = prev.startTime + MIN_HEAD;
-          const wish = prev.startTime + prevTrack.talkOverPoint - MIX;
-          const maxInside = Math.max(minInside, prev.endTime - MIX);
+          // ideálne miesto = kde hudba padla o talkoverDropDb, ale posunieme o prekryv
+          const wish = prev.startTime + prevTrack.talkOverPoint - OVERLAP;
+          // najneskor môžeme začať tak, aby stále zostal aspoň OVERLAP prekryv
+          const maxInside = prev.endTime - OVERLAP;
           spokenStart = clamp(wish, minInside, maxInside);
         }
 
@@ -875,8 +874,9 @@ const timelineLayout = useMemo(() => {
     const prev = layout[i - 1];
     const cur = layout[i];
 
-    // najskôr: nepustiť za legálny crossfade
-    const earliest = Math.max(0, prev.endTime - MIX);
+    const OVERLAP = Math.max(MIX, 0.5);
+    const earliest = Math.max(0, prev.endTime - OVERLAP);
+
     cur.startTime = Math.max(cur.startTime, earliest, prev.startTime + MIN_SPACING, MIN_HEAD);
     cur.endTime = cur.startTime + cur.positioningDuration;
   }
