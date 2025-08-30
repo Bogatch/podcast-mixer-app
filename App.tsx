@@ -65,24 +65,31 @@ function rmsDb(v: number) {
   return 20 * Math.log10(v);
 }
 
+function clamp(n: number, lo: number, hi: number) {
+  return Math.min(Math.max(n, lo), hi);
+}
+
+/**
+ * Nájde prvý bod, kde krátkodobý RMS klesne o `dropDb` pod baseline.
+ * Baseline = 90. percentil RMS počas prvých 30 s. Vyžaduje trvanie poklesu (sustain).
+ * Vracia čas v sekundách alebo null, ak nič spoľahlivé.
+ */
 function findTalkOverPoint(buffer: AudioBuffer, dropDb: number): number | null {
   const sr = buffer.sampleRate;
-  if (buffer.numberOfChannels === 0) return null;
-  const ch = buffer.getChannelData(0); // stačí jeden kanál
+  const ch = buffer.getChannelData(0);
   const len = ch.length;
 
-  // --- Parametre okna ---
-  const winMs = 50;            // 50 ms okno
-  const hopMs = 25;            // 25 ms posun
-  const sustainMs = 300;       // musí to držať aspoň 300 ms
-  const minSearchStartMs = 1500; // nezačíname úplne od 0 (eliminácia intro klikov)
+  const winMs = 50;
+  const hopMs = 25;
+  const sustainMs = 300;
+  const minSearchStartMs = 1500;
 
   const win = Math.max(1, Math.floor(sr * (winMs / 1000)));
   const hop = Math.max(1, Math.floor(sr * (hopMs / 1000)));
   const sustainWins = Math.max(1, Math.floor(sustainMs / hopMs));
   const startHop = Math.floor((minSearchStartMs / 1000) * sr / hop);
 
-  // --- baseline: 90. percentil krátkodobého RMS z prvých 30 s (alebo celé, ak kratšie) ---
+  // baseline z prvých 30 s
   const baselineDur = Math.min(len, Math.floor(sr * 30));
   const rmsVals: number[] = [];
   for (let i = 0; i + win <= baselineDur; i += hop) {
@@ -97,11 +104,9 @@ function findTalkOverPoint(buffer: AudioBuffer, dropDb: number): number | null {
   const baselineR = rmsVals[idx];
   const baselineDb = rmsDb(baselineR);
 
-  // prah je baseline - dropDb, prepočítaný späť na lineárny RMS
   const thrDb = baselineDb - dropDb;
   const thrR = Math.pow(10, thrDb / 20);
 
-  // --- hľadanie prvého úseku, kde RMS < prah a vydrží aspoň sustainMs ---
   let belowCount = 0;
   for (let h = startHop; ; h++) {
     const i = h * hop;
@@ -122,8 +127,7 @@ function findTalkOverPoint(buffer: AudioBuffer, dropDb: number): number | null {
       belowCount = 0;
     }
   }
-
-  return null; // nenašli sme spoľahlivý bod
+  return null;
 }
 
 
@@ -767,111 +771,145 @@ const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
   return frac * mixDur;                        // sekundy
 };
 
-  const timelineLayout = useMemo(() => {
-    const layout = [];
-    const tracksWithFiles = tracks.filter(t => t.file);
+const timelineLayout = useMemo(() => {
+  const layout: Array<{
+    track: Track;
+    startTime: number;
+    endTime: number;
+    playOffset: number;
+    playbackDuration: number;
+    positioningDuration: number;
+    isTalkUpIntro?: boolean;
+  }> = [];
 
-    for (let i = 0; i < tracksWithFiles.length; i++) {
-        const track = tracksWithFiles[i];
-        const prevLayoutItem = i > 0 ? layout[i - 1] : null;
-        const prevTrack = prevLayoutItem?.track;
-        const nextTrack = (i + 1 < tracksWithFiles.length) ? tracksWithFiles[i + 1] : null;
+  const tracksWithFiles = tracks.filter(t => t.file);
+  const MIN_HEAD = 0.20;            // nedovoľ začiatok položky úplne pri nule
+  const MIN_SPACING = 0.05;         // minimálny rozdiel štartov, aby sa „nenaskladalo“
+  const MIX = Math.max(0, mixDuration);
 
-        // 1. Determine effective start and positioning duration for CURRENT track.
-        let effectiveStart = 0;
-        let positioningDuration = track.duration;
-        
-        if (track.type === 'spoken' || track.type === 'jingle') {
-            if (trimSilenceEnabled && track.smartTrimStart !== undefined && track.smartTrimEnd !== undefined) {
-                effectiveStart = track.smartTrimStart;
-                positioningDuration = track.smartTrimEnd - track.smartTrimStart;
-            }
-        } 
-        else if (track.type === 'music' && (nextTrack?.type === 'spoken' || nextTrack?.type === 'jingle')) {
-             if (typeof track.talkOverPoint === 'number' && isFinite(track.talkOverPoint)) {
-                const cut = Math.max(0, Math.min(track.duration, track.talkOverPoint));
-                positioningDuration = cut;
-            }
-        }
-        
-        const playbackDuration = track.duration - effectiveStart;
+  for (let i = 0; i < tracksWithFiles.length; i++) {
+    const track = tracksWithFiles[i];
+    const prev = i > 0 ? layout[i - 1] : null;
+    const nextTrack = (i + 1 < tracksWithFiles.length) ? tracksWithFiles[i + 1] : null;
 
-        // 2. Determine startTime based on the PREVIOUS track's layout.
-        let startTime = prevLayoutItem ? prevLayoutItem.endTime : 0;
-        let isTalkUpIntro = false;
+    // ---- 1) Effective start & durations ------------------------------------
+    let effectiveStart = 0;            // offset v zdroji
+    let playbackDuration = track.duration;
+    let positioningDuration = track.duration; // HUDOBU nikdy neskracujeme „na umelo“
 
-        if (prevTrack && prevLayoutItem) {
-            // Music -> Music: Standard crossfade
-            if (prevTrack.type === 'music' && track.type === 'music') {
-                startTime -= mixDuration;
-            } 
-            // Music -> Spoken/Jingle: Crossfade using the talk-over point of the music.
-            else if (prevTrack.type === 'music' && (track.type === 'spoken' || track.type === 'jingle')) {
-                let spokenStart = prevLayoutItem.endTime - mixDuration;
-                const talk = prevTrack.talkOverPoint;
-                if (typeof talk === 'number' && isFinite(talk)) {
-                    const earliest = prevLayoutItem.startTime;
-                    const latest = prevLayoutItem.endTime;
-                    const wish = prevLayoutItem.startTime + talk - mixDuration;
-                    const minAllowed = Math.max(0, earliest);
-                    const maxAllowed = Math.max(minAllowed, latest - mixDuration);
-                    spokenStart = Math.min(Math.max(wish, minAllowed), maxAllowed);
-                }
-                startTime = spokenStart;
-            }
-            // Spoken/Jingle -> Music: Talk-up intro
-            else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
-                isTalkUpIntro = true;
-                const overlap = track.vocalStartTime ?? 0;
-                // The overlap should not be longer than the previous track's content.
-                startTime -= Math.min(overlap, prevLayoutItem.positioningDuration);
-            }
-        }
-
-        // 3. Create the layout item. `endTime` is for positioning the *next* item.
-        const newItem = {
-            track,
-            startTime: Math.max(0, startTime),
-            endTime: Math.max(0, startTime) + positioningDuration,
-            playOffset: effectiveStart,
-            playbackDuration,
-            positioningDuration,
-            isTalkUpIntro
-        };
-        layout.push(newItem);
+    if (trimSilenceEnabled && track.smartTrimStart != null && track.smartTrimEnd != null) {
+      if (track.type === 'spoken' || track.type === 'jingle') {
+        effectiveStart = Math.max(0, track.smartTrimStart);
+        playbackDuration = Math.max(0, track.smartTrimEnd - effectiveStart);
+        positioningDuration = playbackDuration; // hlas/jingle = polohujeme toľko, koľko reálne hrá
+      } else {
+        // music: smartTrim si necháme len na odhad refrénu / vizualizáciu, nie na polohu
+        effectiveStart = 0;
+        playbackDuration = track.duration;
+        positioningDuration = track.duration;
+      }
     }
 
-    const underlayLayout = [];
-    if (underlayTrack && underlayTrack.file) {
-        const musicItems = layout.filter(item => item.track.type === 'music');
-        
-        for (let i = 0; i < musicItems.length - 1; i++) {
-            const firstMusicItem = musicItems[i];
-            const secondMusicItem = musicItems[i+1];
+    // ---- 2) Štart podľa predošlej položky -----------------------------------
+    let startTime = prev ? prev.endTime : 0;
+    let isTalkUpIntro = false;
 
-            const underlayStart = firstMusicItem.endTime;
-            const underlayEnd = secondMusicItem.startTime;
-            
-            if (underlayEnd > underlayStart) {
-                const underlaySmartStart = (trimSilenceEnabled && underlayTrack.smartTrimStart !== undefined) ? underlayTrack.smartTrimStart : 0;
-                
-                underlayLayout.push({
-                    track: underlayTrack,
-                    startTime: underlayStart,
-                    endTime: underlayEnd + mixDuration,
-                    playOffset: underlaySmartStart, 
-                    playbackDuration: (underlayEnd - underlayStart) + mixDuration,
-                    positioningDuration: underlayEnd - underlayStart,
-                });
-            }
+    if (prev) {
+      const prevTrack = prev.track;
+
+      // Music -> Music : klasický prechod
+      if (prevTrack.type === 'music' && track.type === 'music') {
+        startTime = prev.endTime - MIX;
+      }
+
+      // Music -> Spoken : talk-over (ak máme spoľahlivý bod), inak klasika
+      else if (prevTrack.type === 'music' && track.type === 'spoken') {
+        let spokenStart = prev.endTime - MIX; // default
+
+        if (typeof prevTrack.talkOverPoint === 'number' && isFinite(prevTrack.talkOverPoint)) {
+          const minInside = prev.startTime + MIN_HEAD;
+          const wish = prev.startTime + prevTrack.talkOverPoint - MIX;
+          const maxInside = Math.max(minInside, prev.endTime - MIX);
+          spokenStart = clamp(wish, minInside, maxInside);
         }
+
+        startTime = spokenStart;
+      }
+
+      // Spoken/Jingle -> Music : talk-up intro
+      else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
+        isTalkUpIntro = true;
+        const overlap = Math.max(0, track.vocalStartTime ?? 0);
+        const allowed = Math.min(overlap, prev.positioningDuration);
+        startTime = prev.endTime - allowed;
+      }
+
+      // iné kombinácie: sekvenčne
+      else {
+        startTime = prev.endTime;
+      }
+
+      // --- tvrdé zábradlia proti „naskladaniu“ ---
+      // nesmie to spadnúť pred „legálny“ crossfade s predchádzajúcou položkou
+      const earliest = Math.max(0, prev.endTime - MIX);
+      // nesmie to byť takmer totožný čas štartu ako predchádzajúci
+      startTime = Math.max(startTime, prev.startTime + MIN_SPACING, earliest, MIN_HEAD);
+    } else {
+      // prvá položka
+      startTime = MIN_HEAD;
     }
 
-    const actualEndTimes = layout.map(item => item.startTime + item.playbackDuration);
-    const totalDuration = layout.length > 0 ? Math.max(0, ...actualEndTimes, ...underlayLayout.map(item => item.endTime)) : 0;
-    
-    return { layout, underlayLayout, totalDuration };
-}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, talkoverDropDb]);
+    const endTime = startTime + positioningDuration;
+
+    layout.push({
+      track, startTime, endTime,
+      playOffset: effectiveStart,
+      playbackDuration,
+      positioningDuration,
+      isTalkUpIntro
+    });
+  }
+
+  // ---- 3) Repair pass: garantuj monotónnosť a rozumné prekrývanie ----------
+  for (let i = 1; i < layout.length; i++) {
+    const prev = layout[i - 1];
+    const cur = layout[i];
+
+    // najskôr: nepustiť za legálny crossfade
+    const earliest = Math.max(0, prev.endTime - MIX);
+    cur.startTime = Math.max(cur.startTime, earliest, prev.startTime + MIN_SPACING, MIN_HEAD);
+    cur.endTime = cur.startTime + cur.positioningDuration;
+  }
+
+  // ---- 4) Underlay (pozadie) medzi hudobnými blokmi ------------------------
+  const underlayLayout: typeof layout = [];
+  if (underlayTrack && underlayTrack.file) {
+    const musicItems = layout.filter(x => x.track.type === 'music');
+    for (let i = 0; i < musicItems.length - 1; i++) {
+      const a = musicItems[i];
+      const b = musicItems[i + 1];
+      const uStart = a.endTime;
+      const uEnd = Math.max(uStart, b.startTime + MIX); // necháme doznieť do crossfadu
+      if (uEnd > uStart + 0.05) {
+        underlayLayout.push({
+          track: underlayTrack,
+          startTime: uStart,
+          endTime: uEnd,
+          playOffset: underlayTrack.smartTrimStart ?? 0,
+          playbackDuration: (uEnd - uStart),
+          positioningDuration: (uEnd - uStart)
+        } as any);
+      }
+    }
+  }
+
+  const actualEnds = layout.map(x => x.startTime + x.playbackDuration);
+  const totalDuration = layout.length > 0
+    ? Math.max(0, ...actualEnds, ...underlayLayout.map(u => u.endTime))
+    : 0;
+
+  return { layout, underlayLayout, totalDuration };
+}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled]);
 
 const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> => {
     const { layout, underlayLayout, totalDuration } = timelineLayout;
