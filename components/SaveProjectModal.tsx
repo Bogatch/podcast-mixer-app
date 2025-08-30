@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import type { SavedProject } from '../types';
 import { SaveIcon, SpinnerIcon, TrashIcon, FolderOpenIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
@@ -9,6 +9,7 @@ interface SaveProjectModalProps {
   onClose: () => void;
   onSave: (name: string, id?: number) => Promise<void>;
   onLoad: (id: number) => Promise<void>;
+  onLoadFromFile: (file: File) => Promise<void>;
   isSaving: boolean;
   currentProjectName: string;
   currentProjectId: number | null;
@@ -23,12 +24,13 @@ const formatDate = (dateString: string) => {
 };
 
 export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({ 
-    onClose, onSave, onLoad, isSaving, currentProjectName, currentProjectId
+    onClose, onSave, onLoad, onLoadFromFile, isSaving, currentProjectName, currentProjectId
 }) => {
   const { t } = useContext(I18nContext);
   const [projectName, setProjectName] = useState(currentProjectName);
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setProjectName(currentProjectName);
@@ -71,9 +73,24 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
     await onLoad(id);
     onClose();
   };
+  
+  const handleFileLoad = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        await onLoadFromFile(file);
+        onClose();
+    }
+  };
 
   return (
     <ModalShell title={t('save_project_modal_title')} onClose={onClose} maxWidth="max-w-2xl">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        accept=".zip" 
+        onChange={handleFileLoad} 
+      />
         <div className="space-y-6">
             {/* Save Section */}
             <div className="bg-slate-800/50 p-4 rounded-lg">
@@ -109,7 +126,16 @@ export const SaveProjectModal: React.FC<SaveProjectModalProps> = ({
             
             {/* Load Section */}
             <div>
-                <h3 className="text-lg font-semibold text-gray-200 mb-3">{t('save_project_modal_saved_projects_title')}</h3>
+                 <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold text-gray-200">{t('save_project_modal_saved_projects_title')}</h3>
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center space-x-2 px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-xs font-semibold text-white rounded-md transition-colors"
+                    >
+                        <FolderOpenIcon className="w-4 h-4" />
+                        <span>{t('load_from_disk')}</span>
+                    </button>
+                </div>
                 {isLoading ? (
                     <div className="text-center py-4 text-gray-400">{t('loading')}...</div>
                 ) : savedProjects.length > 0 ? (

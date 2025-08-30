@@ -47,6 +47,7 @@ export const translations = {
     'info_pro_activated': 'PRO version successfully activated! All features are now unlocked.',
     'info_project_saved': 'Project successfully saved.',
     'info_project_loaded': 'Project successfully loaded.',
+    'info_project_loaded_from_file': 'Project loaded successfully from file.',
 
     // Errors
     'error_export_failed': 'Export failed.',
@@ -62,6 +63,7 @@ export const translations = {
     'error_local_save_failed': 'Failed to save project to browser storage.',
     'error_project_save_failed': 'Failed to save the project. Your browser storage might be full.',
     'error_project_load_failed': 'Failed to load the project.',
+    'error_project_load_from_file_failed': 'Failed to load project from file. The file may be corrupted or in an invalid format.',
     'error_invalid_license': 'The entered email or license key is not valid. Please check them and try again.',
     'error_fetch_license_failed': 'Could not connect to the license server. Please check your internet connection and try again.',
     'error_suggestion_failed': 'Content suggestion failed. Please try again.',
@@ -98,6 +100,7 @@ export const translations = {
     'delete_project': 'Delete',
     'confirm_delete_project': 'Are you sure you want to permanently delete this project?',
     'saved_at': 'Saved:',
+    'load_from_disk': 'Browse...',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
@@ -365,6 +368,7 @@ export const translations = {
     'info_pro_activated': 'PRO verzia bola úspešne aktivovaná! Všetky funkcie sú teraz odomknuté.',
     'info_project_saved': 'Projekt bol úspešne uložený.',
     'info_project_loaded': 'Projekt bol úspešne načítaný.',
+    'info_project_loaded_from_file': 'Projekt bol úspešne načítaný zo súboru.',
     
     // Errors
     'error_export_failed': 'Export zlyhal.',
@@ -380,6 +384,7 @@ export const translations = {
     'error_local_save_failed': 'Nepodarilo sa uložiť projekt do úložiska prehliadača.',
     'error_project_save_failed': 'Nepodarilo sa uložiť projekt. Úložisko vášho prehliadača môže byť plné.',
     'error_project_load_failed': 'Nepodarilo sa načítať projekt.',
+    'error_project_load_from_file_failed': 'Nepodarilo sa načítať projekt zo súboru. Súbor môže byť poškodený alebo v neplatnom formáte.',
     'error_invalid_license': 'Zadaný e-mail alebo licenčný kľúč nie je platný. Skontrolujte ich a skúste to znova.',
     'error_fetch_license_failed': 'Nepodarilo sa pripojiť k licenčnému serveru. Skontrolujte pripojenie na internet a skúste to znova.',
     'error_suggestion_failed': 'Návrh obsahu zlyhal. Skúste to prosím znova.',
@@ -416,6 +421,7 @@ export const translations = {
     'delete_project': 'Zmazať',
     'confirm_delete_project': 'Naozaj chcete natrvalo odstrániť tento projekt?',
     'saved_at': 'Uložené:',
+    'load_from_disk': 'Prehľadávať...',
 
     // Header
     'header_title': 'Podcast Mixer Studio',
