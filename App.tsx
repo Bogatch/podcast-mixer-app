@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -202,6 +203,9 @@ const AppContent: React.FC = () => {
   const [showStripePopup, setShowStripePopup] = useState(false);
   const [showActivatedPopup, setShowActivatedPopup] = useState(false);
   const wasProRef = useRef(isPro);
+
+  // Prah pre štart reči počas fade-outu hudby
+  const speechStartDb = -5; // dBFS (napr. -5 dB)
 
 
   // AI Content
@@ -672,6 +676,18 @@ const AppContent: React.FC = () => {
     resetMix();
   }, [resetMix]);
   
+// dB → lineárny pomer (0..1)
+const dbToLin = (db: number) => Math.pow(10, db / 20);
+
+// Časový posun (v sekundách) od začiatku fade-outu hudby, kedy má začať reč,
+// aby úroveň hudby bola ≤ speechStartDb. Pri lineárnom fade 1.0 → 0.0 počas mixDuration
+// platí: offset = (1 - lin) * mixDuration, kde lin = 10^(dB/20).
+const speechOffsetFromFadeStart = (speechStartDb: number, mixDur: number) => {
+  const r = dbToLin(speechStartDb);           // 0..1
+  const frac = Math.min(1, Math.max(0, 1 - r));
+  return frac * mixDur;                        // sekundy
+};
+
   const timelineLayout = useMemo(() => {
     const layout = [];
     const tracksWithFiles = tracks.filter(t => t.file);
@@ -711,7 +727,10 @@ const AppContent: React.FC = () => {
             } 
             // Music -> Spoken: Crossfade using the smart-trimmed end of the music
             else if (prevTrack.type === 'music' && track.type === 'spoken') {
-                startTime -= mixDuration;
+                // reč má začať až keď hudba pri svojom fade-oute klesne pod speechStartDb
+                const offset = speechOffsetFromFadeStart(speechStartDb, mixDuration);
+                const fadeStart = prevLayoutItem.endTime - mixDuration;  // začiatok fade-outu hudby
+                startTime = Math.max(0, fadeStart + offset);
             }
             // Music -> Jingle: NO crossfade. Jingle starts right after music's positioning block.
             // Let this fall through to the default behavior.
@@ -768,7 +787,7 @@ const AppContent: React.FC = () => {
     const totalDuration = layout.length > 0 ? Math.max(0, ...actualEndTimes, ...underlayLayout.map(item => item.endTime)) : 0;
     
     return { layout, underlayLayout, totalDuration };
-}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, silenceThreshold]);
+}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, silenceThreshold, speechStartDb]);
 
 const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> => {
     const { layout, underlayLayout, totalDuration } = timelineLayout;
