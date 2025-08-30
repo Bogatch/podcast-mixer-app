@@ -548,14 +548,17 @@ const AppContent: React.FC = () => {
           
           const trackUpdates: Partial<Track> = {};
 
-          if (trimSilenceEnabled) {
+          // Apply smart trimming only to spoken word and jingles, not music.
+          if (trimSilenceEnabled && (track.type === 'spoken' || track.type === 'jingle')) {
               const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
               trackUpdates.smartTrimStart = smartTrimStart;
               trackUpdates.smartTrimEnd = smartTrimEnd;
           } else {
+              // For music tracks, or when trimming is disabled, ensure no smart trim is applied.
               trackUpdates.smartTrimStart = undefined;
               trackUpdates.smartTrimEnd = undefined;
           }
+
 
           if (normalizeTracks) {
               const targetLoudness = -16; // Target RMS in dBFS
