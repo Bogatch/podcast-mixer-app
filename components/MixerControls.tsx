@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon, SaveIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
@@ -121,6 +122,7 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   const recommendedDuckingAmount = 0.8;
   const recommendedRampUpDuration = 1.1;
   const recommendedUnderlayVolume = 0.2;
+  const recommendedSilenceThreshold = -45;
 
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
@@ -262,14 +264,21 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
               <div>
                   <div className="flex items-center space-x-2"><label htmlFor="auto-trim-threshold" className="block text-sm font-medium text-gray-400">{t('ai_threshold')}</label><InfoTooltip text={t('tooltip_ai_threshold_vocal')} position="right" /></div>
                   <div className="flex items-center space-x-4 mt-2">
-                  <input id="auto-trim-threshold" type="range" min="-60" max="-5" step="1" value={silenceThreshold}
-                      onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                      disabled={isMixing || !trimSilenceEnabled}
-                  />
-                  <span className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                    {t('decibel_unit', { value: silenceThreshold.toFixed(0) })}
-                  </span>
+                    <div className="relative w-full flex items-center">
+                      <input id="auto-trim-threshold" type="range" min="-60" max="-5" step="1" value={silenceThreshold}
+                          onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                          disabled={isMixing || !trimSilenceEnabled}
+                      />
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-purple-500 rounded-full pointer-events-none"
+                        style={{ left: `calc(${((recommendedSilenceThreshold - -60) / (-5 - -60)) * 100}% - 0.5px)` }}
+                        title={`${t('tooltip_recommended_setting')}: ${recommendedSilenceThreshold}dB`}
+                      />
+                    </div>
+                    <span className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
+                      {t('decibel_unit', { value: silenceThreshold.toFixed(0) })}
+                    </span>
                   </div>
               </div>
             </ControlWrapper>
