@@ -2,19 +2,26 @@ import React, { useRef, useContext, useState, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrashIcon, MusicNoteIcon, UserIcon, MarkerPinIcon, PlayIcon, PauseIcon, DragHandleIcon, BellIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon } from './icons';
 import { I18nContext } from '../lib/i18n';
+import { Waveform } from './Waveform';
 
 interface TrackControllerProps {
   track: Track;
   index: number;
   onDelete: () => void;
   onVocalStartTimeChange: (time: number) => void;
+  onManualCrossfadeChange: (time: number) => void;
+  onTrimTimeChange: (times: { start?: number; end?: number }) => void;
   onPreview: () => void;
-  isPreviewing: boolean;
+  onWaveformClick: (trackId: string, time: number, isShiftClick: boolean) => void;
+  previewState: { trackId: string | null; isPlaying: boolean; currentTime: number; };
   onRelinkFile: (file: File) => void;
   onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragEnter: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+  audioBuffer: AudioBuffer | undefined;
+  autoCrossfadeEnabled: boolean;
+  defaultCrossfadePoint?: number;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -39,13 +46,19 @@ export const TrackController: React.FC<TrackControllerProps> = ({
   track,
   onDelete,
   onVocalStartTimeChange,
+  onManualCrossfadeChange,
+  onTrimTimeChange,
   onPreview,
-  isPreviewing,
+  onWaveformClick,
+  previewState,
   onRelinkFile,
   onDragStart,
   onDragEnter,
   onDragEnd,
   onDragOver,
+  audioBuffer,
+  autoCrossfadeEnabled,
+  defaultCrossfadePoint,
 }) => {
   const { t } = useContext(I18nContext);
   const [vocalStartTimeInput, setVocalStartTimeInput] = useState(track.vocalStartTime?.toFixed(2) || '0.00');
@@ -53,12 +66,29 @@ export const TrackController: React.FC<TrackControllerProps> = ({
   const Icon = ICONS[track.type];
   const relinkInputRef = useRef<HTMLInputElement>(null);
   const vocalTimeInputRef = useRef<HTMLInputElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
+  const [waveformWidth, setWaveformWidth] = useState(0);
+  
+  const isPreviewing = previewState.trackId === track.id && previewState.isPlaying;
 
   useEffect(() => {
     if (document.activeElement !== vocalTimeInputRef.current) {
       setVocalStartTimeInput(track.vocalStartTime?.toFixed(2) ?? '0.00');
     }
   }, [track.vocalStartTime]);
+
+  useEffect(() => {
+    if (waveformContainerRef.current) {
+        const resizeObserver = new ResizeObserver(entries => {
+            if (entries[0]) {
+                setWaveformWidth(entries[0].contentRect.width);
+            }
+        });
+        resizeObserver.observe(waveformContainerRef.current);
+        return () => resizeObserver.disconnect();
+    }
+  }, [isExpanded]); // Rerun observer logic when the container becomes visible
 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,6 +133,19 @@ export const TrackController: React.FC<TrackControllerProps> = ({
     onVocalStartTimeChange(clampedValue);
     setVocalStartTimeInput(clampedValue.toFixed(2));
   };
+  
+  const handleLocalWaveformClick = (time: number, modifiers: { altKey: boolean; shiftKey: boolean }) => {
+    if (modifiers.altKey) {
+        onManualCrossfadeChange(time);
+    } else {
+        onWaveformClick(track.id, time, modifiers.shiftKey);
+    }
+  };
+  
+  const handleTrimChange = (times: { start?: number; end?: number }) => {
+    onTrimTimeChange(times);
+  };
+
 
   if (!track.file) {
     return (
@@ -134,17 +177,21 @@ export const TrackController: React.FC<TrackControllerProps> = ({
         </div>
     )
   }
+  
+  const effectiveCrossfadePoint = track.manualCrossfadePoint ?? (autoCrossfadeEnabled ? defaultCrossfadePoint : undefined);
 
   return (
     <div
-      className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/50 space-y-3 overflow-hidden cursor-grab active:cursor-grabbing"
-      draggable
-      onDragStart={onDragStart}
-      onDragEnter={onDragEnter}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
+      className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/50 space-y-3 overflow-hidden"
     >
-      <div className="flex items-start">
+      <div 
+        className="flex items-start cursor-grab active:cursor-grabbing"
+        draggable
+        onDragStart={onDragStart}
+        onDragEnter={onDragEnter}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+      >
         <div className="flex items-center space-x-3 flex-grow min-w-0">
            <span className="flex-shrink-0" title={t('track_drag_handle_title')}>
             <DragHandleIcon className="w-5 h-5 text-gray-400" />
@@ -157,65 +204,113 @@ export const TrackController: React.FC<TrackControllerProps> = ({
             <p className="text-xs text-gray-400 font-mono">{formatDuration(track.duration)}</p>
           </div>
         </div>
-        <div className="flex items-center ml-4">
+        <div className="flex items-center ml-4 space-x-2">
+           <button 
+                onClick={() => setIsExpanded(!isExpanded)} 
+                className="flex items-center space-x-1 px-3 py-1.5 bg-gray-600/50 hover:bg-gray-600 text-xs font-semibold text-gray-300 rounded-md transition-colors"
+                title={isExpanded ? t('close') : t('track_setup_button')}
+            >
+                <span>{t('track_setup_button')}</span>
+                {isExpanded ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+            </button>
           <button onClick={onDelete} className="p-2 rounded-md hover:bg-red-500/20 transition-colors">
             <TrashIcon className="w-4 h-4 text-red-400" />
           </button>
         </div>
       </div>
 
-      {track.type === 'music' && (
-        <div className="space-y-2 pt-2 border-t border-gray-600/50">
-          <label htmlFor={`vocal-start-${track.id}`} className="flex items-center text-sm font-medium text-gray-400">
-            <MarkerPinIcon className="w-4 h-4 mr-2 text-red-400" />
-            {t('track_vocal_start_label')}
-          </label>
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button onClick={onPreview} className="p-2 rounded-full hover:bg-gray-600 transition-colors flex-shrink-0">
-              {isPreviewing ? <PauseIcon className="w-5 h-5 text-red-400" /> : <PlayIcon className="w-5 h-5 text-gray-300" />}
-            </button>
-            <input
-              id={`vocal-start-range-${track.id}`}
-              type="range"
-              min="0"
-              max={track.duration}
-              step="0.1"
-              value={track.vocalStartTime}
-              onChange={(e) => onVocalStartTimeChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-red-500"
-            />
-            <div className="flex items-center flex-shrink-0">
-                <input
-                  id={`vocal-start-${track.id}`}
-                  ref={vocalTimeInputRef}
-                  type="text"
-                  value={vocalStartTimeInput}
-                  onFocus={(e) => e.target.select()}
-                  onChange={handleVocalTimeInputChange}
-                  onBlur={handleVocalTimeInputBlur}
-                  onKeyDown={handleVocalTimeInputKeyDown}
-                  className="w-20 bg-gray-800/60 text-red-400 font-mono text-sm sm:text-base text-center py-1 rounded-l-md border-y border-l border-gray-600 focus:ring-red-500 focus:border-red-500 focus:z-10 relative"
-                />
-                <div className="flex flex-col -ml-px">
-                    <button
-                        type="button"
-                        onClick={() => handleVocalTimeAdjust(0.1)}
-                        className="p-1 bg-gray-700 hover:bg-gray-600 border-t border-r border-b border-gray-600 rounded-tr-md focus:z-10"
-                        aria-label={t('track_vocal_start_increase')}
-                    >
-                        <ChevronUpIcon className="w-3 h-3 text-gray-300" />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleVocalTimeAdjust(-0.1)}
-                        className="p-1 bg-gray-700 hover:bg-gray-600 border-b border-r border-gray-600 rounded-br-md focus:z-10"
-                        aria-label={t('track_vocal_start_decrease')}
-                    >
-                        <ChevronDownIcon className="w-3 h-3 text-gray-300" />
-                    </button>
+      {isExpanded && (
+        <div className="space-y-3 pt-3 border-t border-gray-600/50">
+           {audioBuffer && (
+            <>
+              <div ref={waveformContainerRef} className="bg-gray-900/50 p-1 rounded-md cursor-pointer">
+                {waveformWidth > 0 && <Waveform 
+                    audioBuffer={audioBuffer} 
+                    width={waveformWidth}
+                    height={50}
+                    color={trackColor.bg}
+                    trimStart={track.smartTrimStart}
+                    trimEnd={track.smartTrimEnd}
+                    vocalStartTime={track.type === 'music' ? track.vocalStartTime : undefined}
+                    manualCrossfadePoint={track.manualCrossfadePoint}
+                    autoCrossfadeEnabled={autoCrossfadeEnabled}
+                    defaultCrossfadePoint={defaultCrossfadePoint}
+                    playheadTime={previewState.trackId === track.id ? previewState.currentTime : undefined}
+                    onWaveformClick={handleLocalWaveformClick}
+                    onTrimTimeChange={handleTrimChange}
+                    onSetCrossfadePoint={onManualCrossfadeChange}
+                />}
+              </div>
+              <p className="text-xs text-gray-500 text-center px-2">{t('track_waveform_help')}</p>
+            </>
+          )}
+          {track.type === 'music' && (
+            <div className="space-y-2">
+              <label htmlFor={`vocal-start-${track.id}`} className="flex items-center text-sm font-medium text-gray-400">
+                <MarkerPinIcon className="w-4 h-4 mr-2 text-red-400" />
+                {t('track_vocal_start_label')}
+              </label>
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <button onClick={onPreview} className="p-2 rounded-full hover:bg-gray-600 transition-colors flex-shrink-0">
+                  {isPreviewing ? <PauseIcon className="w-5 h-5 text-red-400" /> : <PlayIcon className="w-5 h-5 text-gray-300" />}
+                </button>
+                <div className="relative w-full flex items-center">
+                    <input
+                      id={`vocal-start-range-${track.id}`}
+                      type="range"
+                      min="0"
+                      max={track.duration}
+                      step="0.1"
+                      value={track.vocalStartTime}
+                      onChange={(e) => onVocalStartTimeChange(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-red-500"
+                    />
+                    {effectiveCrossfadePoint && effectiveCrossfadePoint > 0 && (
+                        <div 
+                          className="absolute w-2.5 h-2.5 bg-green-400 rounded-full pointer-events-none"
+                          style={{ 
+                            left: `calc(${(effectiveCrossfadePoint / track.duration) * 100}% - 5px)`,
+                            top: '50%',
+                            transform: 'translateY(-50%)'
+                          }}
+                          title={`${track.manualCrossfadePoint ? t('track_crossfade_marker_title') : t('track_autocrossfade_marker_title')}: ${effectiveCrossfadePoint.toFixed(1)}s`}
+                        />
+                    )}
                 </div>
+                <div className="flex items-center flex-shrink-0">
+                    <input
+                      id={`vocal-start-${track.id}`}
+                      ref={vocalTimeInputRef}
+                      type="text"
+                      value={vocalStartTimeInput}
+                      onFocus={(e) => e.target.select()}
+                      onChange={handleVocalTimeInputChange}
+                      onBlur={handleVocalTimeInputBlur}
+                      onKeyDown={handleVocalTimeInputKeyDown}
+                      className="w-20 bg-gray-800/60 text-red-400 font-mono text-sm sm:text-base text-center py-1 rounded-l-md border-y border-l border-gray-600 focus:ring-red-500 focus:border-red-500 focus:z-10 relative"
+                    />
+                    <div className="flex flex-col -ml-px">
+                        <button
+                            type="button"
+                            onClick={() => handleVocalTimeAdjust(0.1)}
+                            className="p-1 bg-gray-700 hover:bg-gray-600 border-t border-r border-b border-gray-600 rounded-tr-md focus:z-10"
+                            aria-label={t('track_vocal_start_increase')}
+                        >
+                            <ChevronUpIcon className="w-3 h-3 text-gray-300" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleVocalTimeAdjust(-0.1)}
+                            className="p-1 bg-gray-700 hover:bg-gray-600 border-b border-r border-gray-600 rounded-br-md focus:z-10"
+                            aria-label={t('track_vocal_start_decrease')}
+                        >
+                            <ChevronDownIcon className="w-3 h-3 text-gray-300" />
+                        </button>
+                    </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

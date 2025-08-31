@@ -134,6 +134,7 @@ export const translations = {
 
     // MixerControls
     'mixer_title': 'Mixer Settings',
+    'mixer_auto_crossfade': 'Enable Auto Crossfade',
     'mixer_crossfade': 'Music Crossfade',
     'mixer_ducking': 'Music Ducking Under Spoken Word',
     'mixer_ramp_up': 'Music Return Time',
@@ -163,6 +164,7 @@ export const translations = {
     'output_upload_prompt': 'Please upload at least one file.',
 
     // Tooltips
+    'tooltip_auto_crossfade': 'Enables or disables automatic crossfading between tracks. When on, music tracks will blend into each other, and transitions between speech and music will be handled automatically.',
     'tooltip_crossfade': 'The duration of the smooth transition between two consecutive music tracks. Spoken word and jingles do not crossfade.',
     'tooltip_ducking': 'How much the music volume is reduced when spoken word plays over it. Appears if you have speech followed by music.',
     'tooltip_ramp_up': 'How quickly the music returns to its original volume after the spoken word ends.',
@@ -178,6 +180,7 @@ export const translations = {
     'tooltip_disabled_ducking': 'This option is available when you have a spoken track followed by a music track in the timeline.',
     'tooltip_disabled_underlay': 'This option is available when you upload Background Music and have at least two Music Tracks.',
     'tooltip_load_from_disk': 'Select the main project folder. The app will find `project.json` and the `source_files` subfolder inside it.',
+    'tooltip_recommended_setting': 'Recommended Setting',
 
     // Monitoring Panel
     'monitoring_title': 'Track Overview',
@@ -189,9 +192,13 @@ export const translations = {
     'track_missing_file': 'Missing file',
     'track_find_file': 'Find File',
     'track_drag_handle_title': 'Drag to reorder',
-    'track_vocal_start_label': 'Mark the start of vocals',
+    'track_vocal_start_label': 'Mark the start of vocals (Shift + Click)',
+    'track_setup_button': 'Setup',
     'track_vocal_start_increase': 'Increase time',
     'track_vocal_start_decrease': 'Decrease time',
+    'track_waveform_help': 'Tip: Shift+Click sets vocal start (red). Alt+Click sets manual crossfade (green).',
+    'track_crossfade_marker_title': 'Manual Crossfade',
+    'track_autocrossfade_marker_title': 'Auto Crossfade (Drag to customize)',
     
     // Timeline
     'timeline_title': 'Timeline Visualization',
@@ -458,6 +465,7 @@ export const translations = {
 
     // MixerControls
     'mixer_title': 'Nastavenie Mixu',
+    'mixer_auto_crossfade': 'Povoliť automatické prelínanie',
     'mixer_crossfade': 'Prelínanie hudby (Crossfade)',
     'mixer_ducking': 'Stíšenie hudby pod slovom',
     'mixer_ramp_up': 'Čas návratu hudby',
@@ -487,6 +495,7 @@ export const translations = {
     'output_upload_prompt': 'Nahrajte aspoň jeden súbor.',
 
     // Tooltips
+    'tooltip_auto_crossfade': 'Zapína alebo vypína automatické prelínanie medzi stopami. Keď je zapnuté, hudobné stopy sa budú navzájom prelínať a prechody medzi hovoreným slovom a hudbou sa budú riadiť automaticky.',
     'tooltip_crossfade': 'Dĺžka plynulého prechodu medzi dvoma po sebe idúcimi hudobnými stopami. Hovorené slovo a jingle sa neprelínajú.',
     'tooltip_ducking': 'O koľko percent sa má stíšiť hudba, keď nad ňou hrá hovorené slovo. Zobrazí sa, ak máte slovo, po ktorom nasleduje hudba.',
     'tooltip_ramp_up': 'Ako rýchlo sa hudba vráti do pôvodnej hlasitosti po skončení hovoreného slova.',
@@ -502,6 +511,7 @@ export const translations = {
     'tooltip_disabled_ducking': 'Táto možnosť je dostupná, keď máte na časovej osi hlasovú stopu nasledovanú hudobnou stopou.',
     'tooltip_disabled_underlay': 'Táto možnosť je dostupná, keď nahráte hudobný podklad a máte aspoň dve hudobné stopy.',
     'tooltip_load_from_disk': 'Vyberte hlavný priečinok projektu. Aplikácia v ňom nájde súbor `project.json` a podpriečinok `source_files`.',
+    'tooltip_recommended_setting': 'Odporúčané nastavenie',
 
     // Monitoring Panel
     'monitoring_title': 'Prehľad Stôp',
@@ -513,9 +523,13 @@ export const translations = {
     'track_missing_file': 'Chýbajúci súbor',
     'track_find_file': 'Nájsť Súbor',
     'track_drag_handle_title': 'Potiahnutím zmeníte poradie',
-    'track_vocal_start_label': 'Označte začiatok spevu',
+    'track_vocal_start_label': 'Označte začiatok spevu (Shift + Klik)',
+    'track_setup_button': 'Nastavenie',
     'track_vocal_start_increase': 'Zvýšiť čas',
     'track_vocal_start_decrease': 'Znížiť čas',
+    'track_waveform_help': 'Tip: Shift+Klik označí začiatok spevu (červená). Alt+Klik označí manuálne prelínanie (zelená).',
+    'track_crossfade_marker_title': 'Manuálne Prelínanie',
+    'track_autocrossfade_marker_title': 'Automatické Prelínanie (Potiahnutím upravíte)',
 
     // Timeline
     'timeline_title': 'Vizualizácia časovej osi',

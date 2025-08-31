@@ -1,4 +1,5 @@
 
+
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon, SaveIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
@@ -8,6 +9,8 @@ import { usePro } from '../context/ProContext';
 interface MixerControlsProps {
   mixDuration: number;
   onMixDurationChange: (duration: number) => void;
+  autoCrossfadeEnabled: boolean;
+  onAutoCrossfadeChange: (enabled: boolean) => void;
   duckingAmount: number;
   onDuckingAmountChange: (amount: number) => void;
   rampUpDuration: number;
@@ -94,7 +97,7 @@ const ControlWrapper: React.FC<{ isEnabled: boolean; children: React.ReactNode }
 );
 
 export const MixerControls: React.FC<MixerControlsProps> = ({
-  mixDuration, onMixDurationChange, duckingAmount, onDuckingAmountChange,
+  mixDuration, onMixDurationChange, autoCrossfadeEnabled, onAutoCrossfadeChange, duckingAmount, onDuckingAmountChange,
   rampUpDuration, onRampUpDurationChange, underlayVolume, onUnderlayVolumeChange,
   trimSilenceEnabled, onTrimSilenceChange, silenceThreshold, onSilenceThresholdChange,
   normalizeTracks, onNormalizeTracksChange, normalizeOutput, onNormalizeOutputChange,
@@ -112,31 +115,56 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
   const canSuggest = !isDisabled && !isMixing && !isSuggestingContent && hasTracks;
 
+  // Recommended settings
+  const recommendedMixDuration = 2.0;
+  const recommendedDuckingAmount = 0.8;
+  const recommendedRampUpDuration = 1.1;
+  const recommendedUnderlayVolume = 0.2;
+
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4 text-gray-200">{t('mixer_title')}</h3>
         
         <ControlWrapper isEnabled={hasTracks}>
-          <div className="mb-6">
-            <div className="flex items-center space-x-2">
-              <label htmlFor="mix-duration" className="block text-sm font-medium text-gray-400">
-                {t('mixer_crossfade')}
-              </label>
-              <InfoTooltip text={hasTracks ? t('tooltip_crossfade') : t('tooltip_disabled_no_tracks')} position="right" />
-            </div>
-            <div className="flex items-center space-x-4 mt-2">
-              <input
-                id="mix-duration" type="range" min="0" max="10" step="0.1" value={mixDuration}
-                onChange={(e) => onMixDurationChange(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
-                disabled={isMixing || !hasTracks}
-              />
-              <span className="w-24 bg-gray-800/60 text-teal-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                {t('seconds_short_unit', { value: mixDuration.toFixed(1) })}
-              </span>
-            </div>
+          <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <label htmlFor="auto-crossfade-enable" className="text-sm font-medium text-gray-400">{t('mixer_auto_crossfade')}</label>
+                 <InfoTooltip text={t('tooltip_auto_crossfade')} position="left" />
+                <button id="auto-crossfade-enable" onClick={() => onAutoCrossfadeChange(!autoCrossfadeEnabled)}
+                    className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 ${autoCrossfadeEnabled ? 'bg-teal-600' : 'bg-gray-600'}`} disabled={isMixing || !hasTracks}>
+                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${autoCrossfadeEnabled ? 'translate-x-5' : 'translate-x-0'}`}/>
+                </button>
+              </div>
           </div>
+          <ControlWrapper isEnabled={hasTracks && autoCrossfadeEnabled}>
+            <div className="mb-6">
+              <div className="flex items-center space-x-2">
+                <label htmlFor="mix-duration" className="block text-sm font-medium text-gray-400">
+                  {t('mixer_crossfade')}
+                </label>
+                <InfoTooltip text={hasTracks ? t('tooltip_crossfade') : t('tooltip_disabled_no_tracks')} position="right" />
+              </div>
+              <div className="flex items-center space-x-4 mt-2">
+                <div className="relative w-full flex items-center">
+                  <input
+                    id="mix-duration" type="range" min="0" max="10" step="0.1" value={mixDuration}
+                    onChange={(e) => onMixDurationChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                    disabled={isMixing || !hasTracks || !autoCrossfadeEnabled}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-teal-500 rounded-full pointer-events-none"
+                    style={{ left: `calc(${(recommendedMixDuration / 10) * 100}% - 0.5px)` }}
+                    title={`${t('tooltip_recommended_setting')}: ${recommendedMixDuration.toFixed(1)}s`}
+                  />
+                </div>
+                <span className="w-24 bg-gray-800/60 text-teal-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
+                  {t('seconds_short_unit', { value: mixDuration.toFixed(1) })}
+                </span>
+              </div>
+            </div>
+          </ControlWrapper>
         </ControlWrapper>
         
         <ControlWrapper isEnabled={showDuckingControl}>
@@ -146,11 +174,18 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 <InfoTooltip text={showDuckingControl ? t('tooltip_ducking') : t('tooltip_disabled_ducking')} position="right" />
               </div>
               <div className="flex items-center space-x-4 mt-2">
-                <input id="ducking-amount" type="range" min="0" max="1" step="0.05" value={duckingAmount}
-                  onChange={(e) => onDuckingAmountChange(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
-                  disabled={isMixing || !showDuckingControl}
-                />
+                <div className="relative w-full flex items-center">
+                  <input id="ducking-amount" type="range" min="0" max="1" step="0.05" value={duckingAmount}
+                    onChange={(e) => onDuckingAmountChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                    disabled={isMixing || !showDuckingControl}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-pink-500 rounded-full pointer-events-none"
+                    style={{ left: `calc(${(recommendedDuckingAmount / 1) * 100}% - 0.5px)` }}
+                    title={`${t('tooltip_recommended_setting')}: -${(recommendedDuckingAmount * 100).toFixed(0)}%`}
+                  />
+                </div>
                  <span className="w-24 bg-gray-800/60 text-pink-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
                    {t('mixer_ducking_display', { value: (duckingAmount * 100).toFixed(0) })}
                  </span>
@@ -162,11 +197,18 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
                 <InfoTooltip text={showDuckingControl ? t('tooltip_ramp_up') : t('tooltip_disabled_ducking')} position="right" />
               </div>
               <div className="flex items-center space-x-4 mt-2">
-                <input id="ramp-up-duration" type="range" min="0.1" max="5" step="0.1" value={rampUpDuration}
-                  onChange={(e) => onRampUpDurationChange(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                  disabled={isMixing || !showDuckingControl}
-                />
+                <div className="relative w-full flex items-center">
+                  <input id="ramp-up-duration" type="range" min="0.1" max="5" step="0.1" value={rampUpDuration}
+                    onChange={(e) => onRampUpDurationChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                    disabled={isMixing || !showDuckingControl}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-sky-500 rounded-full pointer-events-none"
+                    style={{ left: `calc(${((recommendedRampUpDuration - 0.1) / (5 - 0.1)) * 100}% - 0.5px)` }}
+                    title={`${t('tooltip_recommended_setting')}: ${recommendedRampUpDuration.toFixed(1)}s`}
+                  />
+                </div>
                 <span className="w-24 bg-gray-800/60 text-sky-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
                   {t('seconds_short_unit', { value: rampUpDuration.toFixed(1) })}
                 </span>
@@ -181,11 +223,18 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
               <InfoTooltip text={showUnderlayControl ? t('tooltip_underlay_volume') : t('tooltip_disabled_underlay')} position="right" />
             </div>
             <div className="flex items-center space-x-4 mt-2">
-              <input id="underlay-volume" type="range" min="0" max="1" step="0.05" value={underlayVolume}
-                onChange={(e) => onUnderlayVolumeChange(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                disabled={isMixing || !showUnderlayControl}
-              />
+              <div className="relative w-full flex items-center">
+                <input id="underlay-volume" type="range" min="0" max="1" step="0.05" value={underlayVolume}
+                  onChange={(e) => onUnderlayVolumeChange(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  disabled={isMixing || !showUnderlayControl}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-amber-500 rounded-full pointer-events-none"
+                  style={{ left: `calc(${(recommendedUnderlayVolume / 1) * 100}% - 0.5px)` }}
+                  title={`${t('tooltip_recommended_setting')}: ${(recommendedUnderlayVolume * 100).toFixed(0)}%`}
+                />
+              </div>
                <span className="w-24 bg-gray-800/60 text-amber-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
                  {t('percent_unit', { value: (underlayVolume * 100).toFixed(0) })}
                </span>

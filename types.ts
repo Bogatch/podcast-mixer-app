@@ -12,6 +12,7 @@ export interface Track {
   talkOverPoint?: number;  // Time where music drops for talk-over
   fileBuffer?: ArrayBuffer; // In-memory buffer of the file content
   normalizationGain?: number; // Gain applied for volume leveling
+  manualCrossfadePoint?: number; // User-defined point in seconds to start the next track
 }
 
 export interface SavedProject {

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -135,6 +133,7 @@ const AppContent: React.FC = () => {
 
   // Mixer Settings
   const [mixDuration, setMixDuration] = useState(2);
+  const [autoCrossfadeEnabled, setAutoCrossfadeEnabled] = useState(true);
   const [duckingAmount, setDuckingAmount] = useState(0.7);
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
@@ -171,9 +170,15 @@ const AppContent: React.FC = () => {
   const [suggestedDescription, setSuggestedDescription] = useState('');
   const [isSuggestingContent, setIsSuggestingContent] = useState(false);
 
+  // Refs for audio playback
   const audioContextRef = useRef<AudioContext | null>(null);
-  const [previewState, setPreviewState] = useState<{ trackId: string | null; sourceNode: AudioBufferSourceNode | null, timeoutId: number | null }>({ trackId: null, sourceNode: null, timeoutId: null });
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const playbackStartInfoRef = useRef<{ audioContextStartTime: number, trackStartTime: number } | null>(null);
   const decodedAudioBuffers = useRef<Map<string, AudioBuffer>>(new Map());
+  
+  // State for UI display of playback
+  const [previewState, setPreviewState] = useState<{ trackId: string | null; isPlaying: boolean; currentTime: number; }>({ trackId: null, isPlaying: false, currentTime: 0 });
 
   // Detect ?payment_success=true on load
   useEffect(() => {
@@ -308,6 +313,7 @@ const AppContent: React.FC = () => {
       
       if (projectData.mixerSettings) {
         setMixDuration(projectData.mixerSettings.mixDuration ?? 2);
+        setAutoCrossfadeEnabled(projectData.mixerSettings.autoCrossfadeEnabled ?? true);
         setDuckingAmount(projectData.mixerSettings.duckingAmount ?? 0.7);
         setRampUpDuration(projectData.mixerSettings.rampUpDuration ?? 1.5);
         setUnderlayVolume(projectData.mixerSettings.underlayVolume ?? 0.5);
@@ -361,6 +367,7 @@ const AppContent: React.FC = () => {
             const settings = JSON.parse(savedSettings);
             if (settings) {
                 setMixDuration(settings.mixDuration ?? 2);
+                setAutoCrossfadeEnabled(settings.autoCrossfadeEnabled ?? true);
                 setDuckingAmount(settings.duckingAmount ?? 0.7);
                 setRampUpDuration(settings.rampUpDuration ?? 1.5);
                 setUnderlayVolume(settings.underlayVolume ?? 0.5);
@@ -374,9 +381,9 @@ const AppContent: React.FC = () => {
   }, []);
 
   const mixerSettings = useMemo(() => ({
-      mixDuration, duckingAmount, rampUpDuration, underlayVolume,
+      mixDuration, autoCrossfadeEnabled, duckingAmount, rampUpDuration, underlayVolume,
       trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput
-  }), [mixDuration, duckingAmount, rampUpDuration, underlayVolume,
+  }), [mixDuration, autoCrossfadeEnabled, duckingAmount, rampUpDuration, underlayVolume,
       trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput]);
 
   // Save mixer settings whenever they change
@@ -395,10 +402,15 @@ const AppContent: React.FC = () => {
         tracks: tracks.map(t => ({
             id: t.id, name: t.name, fileName: t.fileName, duration: t.duration, type: t.type,
             vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer, fileType: t.fileType,
+            manualCrossfadePoint: t.manualCrossfadePoint,
+            smartTrimStart: t.smartTrimStart,
+            smartTrimEnd: t.smartTrimEnd,
         })),
         underlayTrack: underlayTrack ? {
             id: underlayTrack.id, name: underlayTrack.name, fileName: underlayTrack.fileName,
             duration: underlayTrack.duration, type: underlayTrack.type, fileBuffer: underlayTrack.fileBuffer, fileType: underlayTrack.fileType,
+            smartTrimStart: underlayTrack.smartTrimStart,
+            smartTrimEnd: underlayTrack.smartTrimEnd,
         } : null,
         mixerSettings: mixerSettings
     };
@@ -510,12 +522,17 @@ const AppContent: React.FC = () => {
           }
           
           const trackUpdates: Partial<Track> = {};
+          const currentTrackState = track.id.startsWith('underlay-') ? underlayTrack : tracks.find(t => t.id === track.id);
 
+          // Only auto-analyze if trim times haven't been set yet (or feature is toggled)
           if (trimSilenceEnabled) {
-              const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
-              trackUpdates.smartTrimStart = smartTrimStart;
-              trackUpdates.smartTrimEnd = smartTrimEnd;
+              if (currentTrackState?.smartTrimStart === undefined || currentTrackState?.smartTrimEnd === undefined) {
+                  const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
+                  trackUpdates.smartTrimStart = smartTrimStart;
+                  trackUpdates.smartTrimEnd = smartTrimEnd;
+              }
           } else {
+              // Reset if feature is disabled
               trackUpdates.smartTrimStart = undefined;
               trackUpdates.smartTrimEnd = undefined;
           }
@@ -533,7 +550,6 @@ const AppContent: React.FC = () => {
               trackUpdates.normalizationGain = undefined;
           }
           
-          const currentTrackState = track.id.startsWith('underlay-') ? underlayTrack : tracks.find(t => t.id === track.id);
           const needsUpdate = Object.keys(trackUpdates).some(key => trackUpdates[key as keyof Track] !== currentTrackState?.[key as keyof Track]);
           
           if (needsUpdate) {
@@ -577,54 +593,128 @@ const AppContent: React.FC = () => {
     setTracks(current => current.map(t => t.id === id ? { ...t, vocalStartTime: time } : t));
     resetMix();
   }, [resetMix]);
+  
+  const updateManualCrossfadePoint = useCallback((id: string, time: number) => {
+    setTracks(current => current.map(t => t.id === id ? { ...t, manualCrossfadePoint: time } : t));
+    resetMix();
+  }, [resetMix]);
 
-  const handlePreview = useCallback(async (trackId: string) => {
+  const updateTrimTimes = useCallback((id: string, times: { start?: number; end?: number }) => {
+    const updateFunc = (current: Track[]): Track[] => current.map(t => {
+        if (t.id === id) {
+            return {
+                ...t,
+                smartTrimStart: times.start ?? t.smartTrimStart,
+                smartTrimEnd: times.end ?? t.smartTrimEnd,
+            };
+        }
+        return t;
+    });
+    setTracks(updateFunc);
+    // Also update underlay if needed
+    if (underlayTrack && underlayTrack.id === id) {
+        setUnderlayTrack(t => t ? ({...t, smartTrimStart: times.start ?? t.smartTrimStart, smartTrimEnd: times.end ?? t.smartTrimEnd}) : null);
+    }
+    resetMix();
+  }, [underlayTrack, resetMix]);
+
+   const stopCurrentPreview = useCallback(() => {
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+    if (sourceNodeRef.current) {
+      sourceNodeRef.current.stop();
+      sourceNodeRef.current.onended = null;
+      sourceNodeRef.current = null;
+    }
+    playbackStartInfoRef.current = null;
+    if (previewState.isPlaying) {
+      setPreviewState(prev => ({ ...prev, isPlaying: false }));
+    }
+  }, [previewState.isPlaying]);
+
+
+  const updatePreviewTime = useCallback(() => {
+    if (!audioContextRef.current || !playbackStartInfoRef.current || !previewState.isPlaying) {
+      return;
+    }
+    const elapsedTime = audioContextRef.current.currentTime - playbackStartInfoRef.current.audioContextStartTime;
+    const newCurrentTime = playbackStartInfoRef.current.trackStartTime + elapsedTime;
+    
+    setPreviewState(prev => {
+      const track = [...tracks, underlayTrack].find(t => t?.id === prev.trackId);
+      if (!track || newCurrentTime >= track.duration) {
+        stopCurrentPreview();
+        return { trackId: prev.trackId, isPlaying: false, currentTime: track?.duration ?? 0 };
+      }
+      return { ...prev, currentTime: newCurrentTime };
+    });
+    
+    animationFrameIdRef.current = requestAnimationFrame(updatePreviewTime);
+  }, [tracks, underlayTrack, previewState.isPlaying, stopCurrentPreview]);
+
+
+  const handlePreview = useCallback(async (trackId: string, startTime?: number) => {
     if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const audioContext = audioContextRef.current;
 
-    if (previewState.sourceNode) {
-        previewState.sourceNode.stop();
-        if (previewState.timeoutId) clearTimeout(previewState.timeoutId);
-        setPreviewState({ trackId: null, sourceNode: null, timeoutId: null });
-        if (previewState.trackId === trackId) return;
+    stopCurrentPreview();
+
+    // Pause logic
+    if (previewState.isPlaying && previewState.trackId === trackId && startTime === undefined) {
+      setPreviewState(prev => ({ ...prev, isPlaying: false }));
+      return;
     }
+
+    const track = [...tracks, underlayTrack].find(t => t?.id === trackId);
+    if (!track || !track.fileBuffer) return;
+
+    // Determine start time: from parameter, or resume, or from beginning
+    const timeToStart = startTime !== undefined ? startTime :
+      (previewState.trackId === trackId ? previewState.currentTime : 0);
     
-    const track = tracks.find(t => t.id === trackId);
-    if (!track || !track.file || track.type !== 'music' || (track.vocalStartTime ?? 0) >= track.duration) return;
+    if (timeToStart >= track.duration) return;
 
     try {
-        let buffer = decodedAudioBuffers.current.get(trackId);
-        if (!buffer) {
-          if (!track.fileBuffer) {
-             throw new Error("Preview failed: audio data not available.");
-          }
-          buffer = await audioContext.decodeAudioData(track.fileBuffer.slice(0));
-          decodedAudioBuffers.current.set(trackId, buffer);
-        }
-        
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContext.destination);
-        
-        const previewDuration = 3;
-        source.start(0, track.vocalStartTime, previewDuration);
-        
-        const timeoutId = window.setTimeout(() => {
-             setPreviewState(prev => prev.trackId === trackId ? { trackId: null, sourceNode: null, timeoutId: null } : prev);
-        }, previewDuration * 1000);
+      let buffer = decodedAudioBuffers.current.get(trackId);
+      if (!buffer) {
+        buffer = await audioContext.decodeAudioData(track.fileBuffer.slice(0));
+        decodedAudioBuffers.current.set(trackId, buffer);
+      }
 
-        source.onended = () => {
-             setPreviewState(prev => prev.trackId === trackId ? { trackId: null, sourceNode: null, timeoutId: null } : prev);
-        };
-        
-        setPreviewState({ trackId, sourceNode: source, timeoutId });
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0, timeToStart);
+
+      sourceNodeRef.current = source;
+      playbackStartInfoRef.current = { audioContextStartTime: audioContext.currentTime, trackStartTime: timeToStart };
+
+      setPreviewState({ trackId, isPlaying: true, currentTime: timeToStart });
+      
+      animationFrameIdRef.current = requestAnimationFrame(updatePreviewTime);
+
+      source.onended = () => {
+        if (sourceNodeRef.current === source) {
+            stopCurrentPreview();
+        }
+      };
 
     } catch (err) {
-        handleError('error_preview_failed', { fileName: track.name }, err);
+      handleError('error_preview_failed', { fileName: track.name }, err);
     }
-  }, [tracks, previewState, t]);
+  }, [previewState, stopCurrentPreview, tracks, underlayTrack, t, updatePreviewTime]);
+
+  const handleWaveformClick = (trackId: string, time: number, isShiftClick: boolean) => {
+    const track = tracks.find(t => t.id === trackId);
+    if (track && track.type === 'music' && isShiftClick) {
+        updateVocalStartTime(trackId, time);
+    }
+    handlePreview(trackId, time);
+  };
   
   const handleUpdateTrackOrder = useCallback((newOrder: Track[]) => {
     setTracks(newOrder);
@@ -633,63 +723,77 @@ const AppContent: React.FC = () => {
   }, [resetMix]);
   
   const timelineLayout = useMemo(() => {
-    const layout = [];
-    let timeCursor = 0;
-    
+    const layout: any[] = [];
     const tracksWithFiles = tracks.filter(t => t.file);
+
+    let currentTime = 0;
 
     for (let i = 0; i < tracksWithFiles.length; i++) {
         const track = tracksWithFiles[i];
-        const prevLayoutItem = i > 0 ? layout[i - 1] : null;
+        const prevTrack = i > 0 ? tracksWithFiles[i - 1] : null;
 
         const smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
         const smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
         
-        const positioningDuration = smartEnd - smartStart;
-        const playbackDuration = track.duration - smartStart;
+        const effectiveDuration = smartEnd - smartStart;
+        if (effectiveDuration <= 0) continue;
 
-        let startTime = prevLayoutItem ? (prevLayoutItem.startTime + prevLayoutItem.positioningDuration) : 0;
+        let startTime = currentTime;
         let isTalkUpIntro = false;
-
-        if (prevLayoutItem) {
-            const prevTrack = prevLayoutItem.track;
-            if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
-                isTalkUpIntro = true;
-                // No overlap, music starts after spoken word finishes.
-            } else if (prevTrack.type === 'music' && track.type === 'music') {
-                startTime -= mixDuration;
-            } else if (prevTrack.type === 'music' && track.type === 'spoken') {
-                startTime -= mixDuration;
+        
+        if (prevTrack) {
+            const prevLayoutItem = layout[layout.length - 1];
+            
+            if (prevTrack.manualCrossfadePoint !== undefined && prevTrack.manualCrossfadePoint > 0) {
+                 const prevEffectiveDuration = prevLayoutItem.playbackDuration;
+                 const crossfadePointInContext = prevTrack.manualCrossfadePoint - prevLayoutItem.playOffset;
+                 
+                 if (crossfadePointInContext > 0 && crossfadePointInContext < prevEffectiveDuration) {
+                    startTime = prevLayoutItem.startTime + crossfadePointInContext;
+                 } else {
+                    startTime = prevLayoutItem.endTime;
+                 }
+            } else if (autoCrossfadeEnabled) {
+                if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
+                    isTalkUpIntro = true;
+                    const introDuration = track.vocalStartTime ?? 0;
+                    startTime = prevLayoutItem.endTime - introDuration;
+                } else if (prevTrack.type === 'music' && track.type === 'music') {
+                    startTime = prevLayoutItem.endTime - mixDuration;
+                } else if (prevTrack.type === 'music' && (track.type === 'spoken' || track.type === 'jingle')) {
+                    startTime = prevLayoutItem.endTime - mixDuration;
+                } else {
+                    startTime = prevLayoutItem.endTime;
+                }
+            } else {
+                startTime = prevLayoutItem.endTime;
             }
         }
-
+        
+        const finalStartTime = Math.max(0, startTime);
         const newItem = {
             track,
-            startTime: Math.max(0, startTime),
-            endTime: Math.max(0, startTime) + positioningDuration,
+            startTime: finalStartTime,
+            endTime: finalStartTime + effectiveDuration,
             playOffset: smartStart,
-            playbackDuration: playbackDuration,
-            positioningDuration: positioningDuration,
+            playbackDuration: effectiveDuration,
             isTalkUpIntro
         };
         layout.push(newItem);
-        timeCursor = newItem.endTime;
+        currentTime = newItem.endTime;
     }
     
-    const actualEndTimes = layout.map(item => item.startTime + item.playbackDuration);
+    const actualEndTimes = layout.map(item => item.endTime);
     const totalDuration = layout.length > 0 ? Math.max(0, ...actualEndTimes) : 0;
 
-    const underlayLayout = [];
+    const underlayLayout: any[] = [];
     if (underlayTrack && underlayTrack.file) {
         const programTracks = new Set(['music', 'jingle']);
-
-        for (let i = 0; i < layout.length - 1; i++) {
+        for (let i = 0; i < layout.length; i++) {
             const currentItem = layout[i];
             const nextItem = layout[i+1];
-
-            if (programTracks.has(currentItem.track.type) && !programTracks.has(nextItem.track.type)) {
-                const underlayStart = currentItem.startTime + currentItem.playbackDuration;
-                
+            if (programTracks.has(currentItem.track.type) && nextItem && !programTracks.has(nextItem.track.type)) {
+                const underlayStart = currentItem.endTime;
                 let underlayEnd = totalDuration;
                 for (let j = i + 1; j < layout.length; j++) {
                     if (programTracks.has(layout[j].track.type)) {
@@ -700,14 +804,12 @@ const AppContent: React.FC = () => {
 
                 if (underlayEnd > underlayStart) {
                      const underlaySmartStart = (trimSilenceEnabled && underlayTrack.smartTrimStart !== undefined) ? underlayTrack.smartTrimStart : 0;
-                     
                      underlayLayout.push({
                          track: underlayTrack,
                          startTime: underlayStart,
-                         endTime: underlayEnd + mixDuration,
+                         endTime: underlayEnd,
                          playOffset: underlaySmartStart, 
-                         playbackDuration: (underlayEnd - underlayStart) + mixDuration,
-                         positioningDuration: underlayEnd - underlayStart,
+                         playbackDuration: underlayEnd - underlayStart,
                      });
                 }
             }
@@ -717,7 +819,31 @@ const AppContent: React.FC = () => {
     const finalTotalDuration = Math.max(totalDuration, ...underlayLayout.map(item => item.endTime));
     
     return { layout, underlayLayout, totalDuration: finalTotalDuration };
-}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled]);
+}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, rampUpDuration, autoCrossfadeEnabled]);
+
+  const defaultCrossfadePoints = useMemo(() => {
+    const points = new Map<string, number>();
+    tracks.forEach((track, index) => {
+        // A crossfade point is only relevant for tracks that have a next track
+        // and are of a type that can fade out (music).
+        if (track.type === 'music' && index < tracks.length - 1) {
+            const nextTrack = tracks[index + 1];
+            // Only create auto-crossfade points for music->music or music->spoken/jingle transitions
+            if (nextTrack.type === 'music' || nextTrack.type === 'spoken' || nextTrack.type === 'jingle') {
+                const smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
+                // The crossfade happens 'mixDuration' seconds before the effective end of the track.
+                const point = smartEnd - mixDuration;
+
+                const smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+                // Ensure the point is after the start of the audible content
+                if (point > smartStart) {
+                    points.set(track.id, point);
+                }
+            }
+        }
+    });
+    return points;
+  }, [tracks, mixDuration, trimSilenceEnabled]);
 
 const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> => {
     const { layout, underlayLayout, totalDuration } = timelineLayout;
@@ -760,6 +886,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             source.loop = true;
             gain.setValueAtTime(0.0, item.startTime);
             gain.linearRampToValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), item.startTime + 0.1);
+            
             const fadeOutStartTime = item.endTime - mixDuration;
             if (fadeOutStartTime > item.startTime + 0.1) {
                 gain.setValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), fadeOutStartTime);
@@ -775,14 +902,20 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               
               let fadeInEndTime = item.startTime;
               
-              if (item.isTalkUpIntro) {
-                  const rampUpStartTime = item.startTime;
-                  const rampUpEndTime = rampUpStartTime + rampUpDuration;
-                  gain.setValueAtTime(duckedGain, rampUpStartTime);
-                  gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
-                  fadeInEndTime = rampUpEndTime;
-              } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music') {
-                  const rampUpEndTime = item.startTime + mixDuration;
+              if (item.isTalkUpIntro && prevItem) {
+                  // Music starts ducked under spoken word, then ramps up to full volume as spoken word ends.
+                  const rampUpStartPoint = Math.max(item.startTime, prevItem.endTime - rampUpDuration);
+                  const rampUpEndPoint = prevItem.endTime;
+                  
+                  gain.setValueAtTime(duckedGain, item.startTime);
+                  if(rampUpStartPoint > item.startTime) {
+                    gain.setValueAtTime(duckedGain, rampUpStartPoint);
+                  }
+                  gain.linearRampToValueAtTime(baseGain, rampUpEndPoint);
+                  fadeInEndTime = rampUpEndPoint;
+              } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music' && (autoCrossfadeEnabled || prevItem.track.manualCrossfadePoint)) {
+                  const crossfadeDuration = prevItem.track.manualCrossfadePoint ? (item.startTime - prevItem.startTime) : mixDuration;
+                  const rampUpEndTime = item.startTime + crossfadeDuration;
                   gain.setValueAtTime(0.0, item.startTime);
                   gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
                   fadeInEndTime = rampUpEndTime;
@@ -790,16 +923,24 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   gain.setValueAtTime(baseGain, item.startTime);
               }
 
-              if (item.track.type === 'music' && nextItem && (nextItem.track.type === 'music' || nextItem.track.type === 'jingle' || nextItem.track.type === 'spoken')) {
-                  const fadeOutStartTime = Math.max(fadeInEndTime, nextItem.startTime);
-                  const fadeOutFinishTime = item.endTime;
-                  if (fadeOutFinishTime > fadeOutStartTime) {
-                      gain.setValueAtTime(baseGain, fadeOutStartTime);
-                      gain.linearRampToValueAtTime(0.0, fadeOutFinishTime);
+              if (item.track.type === 'music' && nextItem) {
+                  const useCrossfade = item.track.manualCrossfadePoint || (autoCrossfadeEnabled && (nextItem.track.type === 'music' || nextItem.track.type === 'jingle' || nextItem.track.type === 'spoken'));
+                  if (useCrossfade) {
+                    const fadeOutStartTime = Math.max(fadeInEndTime, nextItem.startTime);
+                    const crossfadeDuration = item.track.manualCrossfadePoint ? (item.endTime - nextItem.startTime) : mixDuration;
+                    const fadeOutFinishTime = fadeOutStartTime + crossfadeDuration;
+                    const actualAudioEndTime = item.startTime + item.playbackDuration;
+                    const finalFadeEndTime = Math.min(fadeOutFinishTime, actualAudioEndTime);
+
+                    if (finalFadeEndTime > fadeOutStartTime) {
+                        gain.setValueAtTime(baseGain, fadeOutStartTime);
+                        gain.linearRampToValueAtTime(0.0, finalFadeEndTime);
+                    }
                   }
               } else if (!nextItem) {
+                  // Gentle fade out for the very last track in the mix
                   const actualEndTime = item.startTime + item.playbackDuration;
-                  const fadeDuration = Math.min(0.5, item.playbackDuration);
+                  const fadeDuration = Math.min(1.0, item.playbackDuration); // Fade for 1s or less
                   if (fadeDuration > 0.01) {
                       const fadeOutStartTime = Math.max(fadeInEndTime, actualEndTime - fadeDuration);
                       gain.setValueAtTime(baseGain, fadeOutStartTime);
@@ -809,7 +950,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         }
         
         source.start(item.startTime, item.playOffset);
-        const stopTime = isUnderlay ? item.endTime : item.startTime + item.playbackDuration;
+        const stopTime = item.startTime + item.playbackDuration;
         if (stopTime > item.startTime) {
             source.stop(stopTime);
         }
@@ -843,7 +984,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     }
     
     return mixedBuffer;
-}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration, normalizeTracks]);
+}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration, normalizeTracks, autoCrossfadeEnabled]);
 
 
   const estimatedDuration = timelineLayout.totalDuration;
@@ -1024,8 +1165,13 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
 
   const showUnderlayControl = useMemo(() => {
     if (!underlayTrack) return false;
-    const programTrackCount = tracks.filter(t => t.type === 'music' || t.type === 'jingle').length;
-    return programTrackCount >= 2;
+    // Show if there is at least one music track followed by a non-music track
+    for (let i = 0; i < tracks.length - 1; i++) {
+        if ((tracks[i].type === 'music' || tracks[i].type === 'jingle') && (tracks[i+1].type !== 'music' && tracks[i+1].type !== 'jingle')) {
+            return true;
+        }
+    }
+    return false;
   }, [tracks, underlayTrack]);
   
   const canMix = tracks.length > 0 && 
@@ -1140,6 +1286,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
             <MixerControls 
               mixDuration={mixDuration} 
               onMixDurationChange={(d) => { setMixDuration(d); resetMix(); }}
+              autoCrossfadeEnabled={autoCrossfadeEnabled}
+              onAutoCrossfadeChange={(e) => { setAutoCrossfadeEnabled(e); resetMix(); }}
               duckingAmount={duckingAmount}
               onDuckingAmountChange={(a) => { setDuckingAmount(a); resetMix(); }}
               rampUpDuration={rampUpDuration}
@@ -1183,10 +1331,16 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   onDeleteUnderlay={deleteUnderlay}
                   onReorderTracks={handleReorderTracks}
                   onUpdateVocalStartTime={updateVocalStartTime}
+                  onUpdateManualCrossfadePoint={updateManualCrossfadePoint}
+                  onUpdateTrimTimes={updateTrimTimes}
                   onPreview={handlePreview}
+                  onWaveformClick={handleWaveformClick}
                   onRelinkFile={handleRelinkFile}
-                  previewingTrackId={previewState.trackId}
+                  previewState={previewState}
                   onToggleReorder={() => setIsReordering(true)}
+                  decodedAudioBuffers={decodedAudioBuffers.current}
+                  autoCrossfadeEnabled={autoCrossfadeEnabled}
+                  defaultCrossfadePoints={defaultCrossfadePoints}
                 />
                 <Timeline 
                   timelineLayout={timelineLayout}
