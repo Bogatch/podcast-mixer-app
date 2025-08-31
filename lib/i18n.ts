@@ -1,4 +1,4 @@
-import React, { createContext } from 'react';
+import React from 'react';
 
 export const translations = {
   en: {
@@ -584,85 +584,81 @@ export const translations = {
     'verifying': 'Overuje sa...',
     'activation_success_title': 'Aktivácia úspešná!',
     'activation_success_message': 'Ďakujeme! Všetky PRO funkcie sú teraz odomknuté. Môžete zavrieť toto okno.',
-    'payment_success_title': 'Ďakujeme za vašu platbu!',
-    'payment_success_message': 'Aktivácia bola úspešná. Skontrolujte si prosím e-mailovú schránku pre váš licenčný kľúč.',
+    'payment_success_title': 'Ďakujeme za platbu!',
+    'payment_success_message': 'Aktivácia prebehla úspešne. Skontrolujte si e-mailovú schránku, kde nájdete licenčný kľúč.',
 
     // Thank You Modal
-    "thankyou_title": "Platba Úspešná",
+    "thankyou_title": "Platba úspešná",
     "thankyou_message_title": "Ďakujeme za váš nákup 🎉",
-    "thankyou_message_subtitle": "Vaša platba prebehla úspešne. Aktivačný kľúč sme vám zaslali na e-mail.",
-    "thankyou_message_check_email": "Prosím, skontrolujte si svoju doručenú poštu (aj priečinok so spamom).",
+    "thankyou_message_subtitle": "Platba prebehla úspešne. Aktivačný kód sme poslali na váš e-mail.",
+    "thankyou_message_check_email": "Skontrolujte si prosím schránku (aj spam).",
     "thankyou_button_ok": "Rozumiem",
-
+    
     // Stripe Return Banner
     'stripe_return_success_title': 'Platba úspešná',
-    'stripe_return_success_message': 'Vaša platba bola úspešná. Skontrolujte si e-mail pre aktivačný kód.',
+    'stripe_return_success_message': 'Platba prebehla. Skontrolujte, prosím, e-mail – poslali sme vám aktivačný kľúč.',
     'stripe_return_cancel_title': 'Platba zrušená',
-    'stripe_return_cancel_message': 'Platba bola zrušená. Môžete to skúsiť znova kedykoľvek.',
+    'stripe_return_cancel_message': 'Platbu ste zrušili. Môžete to skúsiť znova kedykoľvek.',
 
     // Help Modal
-    'help_title': 'Pomocník a sprievodca funkciami',
-    'help_tracks_title': 'Nahrávanie a správa stôp',
+    'help_title': 'Pomocník a Sprievodca Funkciami',
+    'help_tracks_title': 'Nahrávanie a Správa Stôp',
     'help_tracks_p1': 'Základom každého projektu sú zvukové stopy. Môžete ich pridať pomocou tlačidiel v sekcii "Pridať Súbory".',
-    'help_tracks_music_title': 'Hudba',
+    'help_tracks_music_title': 'Hudba:',
     'help_tracks_music_desc': 'Súbory, ktoré tvoria hlavný hudobný podklad. Podliehajú prelínaniu (crossfade).',
-    'help_tracks_spoken_title': 'Slovo',
-    'help_tracks_spoken_desc': 'Hovorené slovo, napr. komentár alebo rozhovor. Neprelína sa, ale dokáže stíšiť hudbu pod sebou (ducking).',
-    'help_tracks_jingle_title': 'Znelka',
-    'help_tracks_jingle_desc': 'Krátke zvukové prechody alebo znelky. Správajú sa podobne ako hovorené slovo.',
-    'help_tracks_underlay_title': 'Hudobný podkres',
-    'help_tracks_underlay_desc': 'Dlhá hudobná slučka, ktorá hrá v pozadí medzi hlavnými hudobnými stopami na vyplnenie ticha. Do projektu je možné pridať iba jeden hudobný podkres.',
+    'help_tracks_spoken_title': 'Slovo:',
+    'help_tracks_spoken_desc': 'Hovorené slovo, napr. komentár alebo rozhovor. Neprelína sa, ale môže stíšiť hudbu pod sebou (ducking).',
+    'help_tracks_jingle_title': 'Znelka/Jingle:',
+    'help_tracks_jingle_desc': 'Krátke zvukové prechody alebo zvučky. Správajú sa podobne ako slovo.',
+    'help_tracks_underlay_title': 'Hudba do pozadia:',
+    'help_tracks_underlay_desc': 'Dlhá hudobná slučka, ktorá hrá na pozadí medzi hlavnými hudobnými stopami na vyplnenie ticha. Do projektu je možné pridať iba jednu hudbu do pozadia.',
     'help_tracks_subtitle2': 'Správa poradia a úprava stôp',
-    'help_tracks_p2': 'V paneli "Prehľad Stôp" môžete jednoducho meniť poradie potiahnutím (drag-and-drop) alebo cez tlačidlo "Spravovať Poradie". Pri hudobných stopách môžete navyše označiť začiatok spevu. Tento bod slúži ako referencia pre funkciu ducking, čo umožňuje hudbe plynulo ustúpiť pod hovorené slovo.',
+    'help_tracks_p2': 'V paneli "Prehľad Stôp" môžete jednoducho meniť poradie potiahnutím myšou (drag & drop) alebo cez tlačidlo "Spravovať Poradie". Pri hudobných stopách môžete tiež označiť začiatok spevu. Tento bod slúži ako referencia pre funkciu stíšenia (ducking), aby hudba plynulo prešla pod hovorené slovo.',
 
-    'help_mixer_title': 'Nastavenia Mixu',
-    'help_mixer_p1': 'Tieto nastavenia určujú, ako budú jednotlivé stopy na seba nadväzovať a ako bude znieť výsledný mix.',
-    'help_mixer_crossfade_title': 'Prelínanie hudby (Crossfade)',
+    'help_mixer_title': 'Nastavenie Mixu',
+    'help_mixer_p1': 'Tieto nastavenia určujú, ako budú jednotlivé stopy na seba nadväzovať a ako bude znieť finálny mix.',
+    'help_mixer_crossfade_title': 'Prelínanie hudby (Crossfade):',
     'help_mixer_crossfade_desc': 'Dĺžka v sekundách, počas ktorej sa dve po sebe idúce hudobné stopy plynulo prelínajú.',
-    'help_mixer_ducking_title': 'Stíšenie hudby pod slovom',
-    'help_mixer_ducking_desc': 'Toto nastavenie sa zobrazí, ak máte stopu s hovoreným slovom nasledovanú hudobnou stopou. Určuje, o koľko sa hudba stíši, aby bol komentár zreteľný.',
-    'help_mixer_ramp_up_title': 'Čas návratu hudby',
-    'help_mixer_ramp_up_desc': 'Rýchlosť, akou sa hudba vráti na pôvodnú hlasitosť po skončení hovoreného slova.',
-    'help_mixer_underlay_volume_title': 'Hlasitosť hudby v pozadí',
-    'help_mixer_underlay_volume_desc': 'Zobrazí sa, ak ste pridali hudobný podkres a máte aspoň dve hudobné stopy. Ovláda hlasitosť hudby v pozadí.',
-
+    'help_mixer_ducking_title': 'Stíšenie hudby pod slovom (Ducking):',
+    'help_mixer_ducking_desc': 'Toto nastavenie sa zobrazí, ak máte v poradí stop hovorené slovo, po ktorom nasleduje hudba. Určuje, o koľko sa hudba stíši, aby bol komentár zreteľný.',
+    'help_mixer_ramp_up_title': 'Čas návratu hudby:',
+    'help_mixer_ramp_up_desc': 'Rýchlosť, akou sa hudba vráti do pôvodnej hlasitosti po skončení slova.',
+    'help_mixer_underlay_volume_title': 'Hlasitosť hudby v pozadí:',
+    'help_mixer_underlay_volume_desc': 'Zobrazí sa, ak ste pridali hudbu do pozadia a máte aspoň dve hudobné stopy. Reguluje hlasitosť hudby v pozadí.',
+    
     'help_ai_title': 'Inteligentné Strihanie (AI)',
     'help_ai_p1': 'Tieto nástroje využívajú jednoduchú analýzu zvuku na automatické vylepšenie vášho mixu.',
-    'help_ai_trim_title': 'Strihať ticho',
-    'help_ai_trim_desc': 'Keď je zapnuté, aplikácia automaticky odstráni tiché pasáže zo začiatku a konca každej stopy. Zabezpečí to plynulejšie a rýchlejšie prechody.',
-    'help_ai_threshold_title': 'Prah ticha',
-    'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyššie hodnoty (napr. -20 dB) odstránia len úplné ticho.',
+    'help_ai_trim_title': 'Strihať ticho:',
+    'help_ai_trim_desc': 'Ak je funkcia zapnutá, aplikácia automaticky odstráni tiché pasáže na začiatku a na konci každej stopy. Tým sa zabezpečia plynulejšie a rýchlejšie prechody.',
+    'help_ai_threshold_title': 'Prah stíšenia:',
+    'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyžšie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
 
     'help_export_title': 'Konečný Výstup a Export',
-    'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Export je dostupný v PRO verzii.',
+    'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Exportovanie je dostupné v PRO verzii.',
     'help_export_subtitle2': 'Mixovanie a Export',
-    'help_export_mix_title': 'Generovať Mix',
-    'help_export_mix_desc': 'Týmto tlačidlom spustíte proces mixovania a vytvoríte náhľad výsledného súboru, ktorý si môžete vypočuť.',
-    'help_export_normalize_title': 'Normalizovať Hlasitosť',
-    'help_export_normalize_desc': 'Odporúčame nechať zapnuté. Táto funkcia automaticky zosilní alebo stíši celý mix na štandardnú úroveň, čím zabráni príliš tichému alebo skreslenému výstupu.',
-    'help_export_audio_title': 'Exportovať Audio',
+    'help_export_mix_title': 'Generovať Mix:',
+    'help_export_mix_desc': 'Toto tlačidlo spustí proces mixovania a vytvorí náhľad výsledného súboru, ktorý si môžete vypočuť.',
+    'help_export_normalize_title': 'Normalizovať Hlasitosť:',
+    'help_export_normalize_desc': 'Odporúčame nechať zapnuté. Táto funkcia automaticky zosilní alebo stíši celý mix na štandardnú úroveň, čím sa zabráni príliš tichému alebo skreslenému výstupu.',
+    'help_export_audio_title': 'Exportovať Audio:',
     'help_export_audio_desc': 'V PRO verzii môžete výsledok exportovať do formátu MP3 (menšia veľkosť, dobrá kvalita) alebo WAV (bezstratová kvalita, väčšia veľkosť).',
-    'help_export_project_title': 'Exportovať Projekt',
-    'help_export_project_desc': 'V PRO verzii môžete vytvoriť ZIP archív obsahujúci finálny mix a všetky pôvodné zvukové súbory. Ideálne na zálohovanie.',
+    'help_export_project_title': 'Exportovať Projekt:',
+    'help_export_project_desc': 'V PRO verzii môžete vytvoriť ZIP archív, ktorý obsahuje finálny mix a všetky pôvodné zvukové súbory. Ideálne pre zálohovanie.',
 
     // Footer
     'footer_version': 'Verzia',
   },
 };
-// FIX: Export Locale, TranslationKey, and I18nContext types and context object.
+
 export type Locale = keyof typeof translations;
 export type TranslationKey = keyof typeof translations['en'];
 
-export interface I18nContextType {
-  t: (key: TranslationKey, params?: { [key: string]: string | number }) => string;
-  setLocale: (locale: Locale) => void;
-  locale: Locale;
-}
-
-const defaultContextValue: I18nContextType = {
-  t: (key) => key,
-  setLocale: () => console.warn('I18nContext: setLocale called outside of a Provider.'),
-  locale: 'en',
-};
-
-export const I18nContext = createContext<I18nContextType>(defaultContextValue);
+export const I18nContext = React.createContext<{
+    t: (key: TranslationKey, params?: { [key: string]: string | number }) => string;
+    setLocale: (locale: Locale) => void;
+    locale: Locale;
+}>({
+    t: (key) => key,
+    setLocale: () => {},
+    locale: 'en',
+});

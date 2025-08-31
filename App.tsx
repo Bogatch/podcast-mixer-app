@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
@@ -651,12 +653,9 @@ const AppContent: React.FC = () => {
 
         if (prevLayoutItem) {
             const prevTrack = prevLayoutItem.track;
-
             if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
                 isTalkUpIntro = true;
-                const vocalStart = track.vocalStartTime ?? 0;
-                const overlapDuration = vocalStart > 0 ? vocalStart : mixDuration;
-                startTime -= Math.min(overlapDuration, prevLayoutItem.positioningDuration);
+                // No overlap, music starts after spoken word finishes.
             } else if (prevTrack.type === 'music' && track.type === 'music') {
                 startTime -= mixDuration;
             } else if (prevTrack.type === 'music' && track.type === 'spoken') {
@@ -689,7 +688,7 @@ const AppContent: React.FC = () => {
             const nextItem = layout[i+1];
 
             if (programTracks.has(currentItem.track.type) && !programTracks.has(nextItem.track.type)) {
-                const underlayStart = currentItem.endTime;
+                const underlayStart = currentItem.startTime + currentItem.playbackDuration;
                 
                 let underlayEnd = totalDuration;
                 for (let j = i + 1; j < layout.length; j++) {
@@ -775,18 +774,12 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               const duckedGain = baseGain * (1 - duckingAmount);
               
               let fadeInEndTime = item.startTime;
-
-              if (item.isTalkUpIntro && prevItem && prevItem.endTime > item.startTime) {
-                  const duckingEndTime = prevItem.endTime;
-                  const rampDuration = Math.min(rampUpDuration, item.startTime + item.playbackDuration - duckingEndTime);
-                  const rampUpEndTime = duckingEndTime + rampDuration;
-                  
-                  gain.setValueAtTime(duckedGain, item.startTime);
-                  if (duckingEndTime > item.startTime) gain.setValueAtTime(duckedGain, duckingEndTime);
-                 
-                  if (rampUpEndTime > duckingEndTime) gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
-                  else gain.setValueAtTime(baseGain, duckingEndTime);
-                  
+              
+              if (item.isTalkUpIntro) {
+                  const rampUpStartTime = item.startTime;
+                  const rampUpEndTime = rampUpStartTime + rampUpDuration;
+                  gain.setValueAtTime(duckedGain, rampUpStartTime);
+                  gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
                   fadeInEndTime = rampUpEndTime;
               } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music') {
                   const rampUpEndTime = item.startTime + mixDuration;
