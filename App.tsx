@@ -861,28 +861,22 @@ const timelineLayout = useMemo(() => {
     const prev = layout[i - 1];
     const cur = layout[i];
     
-    // Rule 1: Monotonicity. Current track must start after previous track starts.
-    cur.startTime = Math.max(cur.startTime, prev.startTime + MIN_SPACING, MIN_HEAD);
-
-    // Rule 2: Limit overlap for specific transition types.
     const prevType = prev.track.type;
     const curType = cur.track.type;
 
     const isTalkOver = prevType === 'music' && (curType === 'spoken' || curType === 'jingle');
-    const isTalkUp = (prevType === 'spoken' || prevType === 'jingle') && curType === 'music';
     const isMusicCrossfade = prevType === 'music' && curType === 'music';
-    
-    if (isMusicCrossfade) {
-      // For Music->Music, enforce the crossfade duration as the max overlap.
-      const earliest = prev.endTime - MIX;
-      cur.startTime = Math.max(cur.startTime, earliest);
-    } else if (!isTalkOver && !isTalkUp) {
-      // For all other sequential transitions (Spoken->Spoken, etc.),
-      // they should start at or after the previous one ends (no overlap).
-      cur.startTime = Math.max(cur.startTime, prev.endTime);
+
+    if (isTalkOver) {
+        // For talk-over, just ensure monotonicity. The initial overlap is trusted.
+        cur.startTime = Math.max(cur.startTime, prev.startTime + MIN_SPACING, MIN_HEAD);
+    } else {
+        // For everything else, including Music->Music and Spoken->Music (talk-up),
+        // enforce a sequential or limited overlap. This prevents timeline corruption.
+        const overlap = isMusicCrossfade ? MIX : 0;
+        const earliest = prev.endTime - overlap;
+        cur.startTime = Math.max(cur.startTime, earliest, prev.startTime + MIN_SPACING, MIN_HEAD);
     }
-    // For talk-over and talk-up, the initial calculation is trusted.
-    // The monotonicity rule is sufficient to prevent invalid layouts.
     
     cur.endTime = cur.startTime + cur.positioningDuration;
   }
@@ -895,7 +889,7 @@ const timelineLayout = useMemo(() => {
       const a = musicItems[i];
       const b = musicItems[i + 1];
       const uStart = a.endTime;
-      const uEnd = Math.max(uStart, b.startTime + MIX); // necháme doznieť do crossfadu
+      const uEnd = b.startTime;
       if (uEnd > uStart + 0.05) {
         underlayLayout.push({
           track: underlayTrack,
