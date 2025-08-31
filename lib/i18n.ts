@@ -297,7 +297,6 @@ export const translations = {
     'help_tracks_underlay_desc': 'A long musical loop that plays in the background between main music tracks to fill silence. Only one background music track can be added to a project.',
     'help_tracks_subtitle2': 'Managing order and editing tracks',
     'help_tracks_p2': 'In the "Track Overview" panel, you can easily change the order by dragging and dropping or via the "Manage Order" button. For music tracks, you can also mark the start of vocals. This point serves as a reference for the ducking feature, allowing the music to smoothly fade under the spoken word.',
-
     'help_mixer_title': 'Mixer Settings',
     'help_mixer_p1': 'These settings determine how individual tracks will follow each other and what the final mix will sound like.',
     'help_mixer_crossfade_title': 'Music Crossfade',
@@ -308,14 +307,12 @@ export const translations = {
     'help_mixer_ramp_up_desc': 'The speed at which the music returns to its original volume after the spoken word ends.',
     'help_mixer_underlay_volume_title': 'Background Music Volume',
     'help_mixer_underlay_volume_desc': 'Appears if you have added background music and have at least two music tracks. It controls the volume of the background music.',
-    
     'help_ai_title': 'Smart Cutting (AI)',
     'help_ai_p1': 'These tools use simple audio analysis to automatically enhance your mix.',
     'help_ai_trim_title': 'Trim Silence',
     'help_ai_trim_desc': 'When enabled, the application automatically removes silent passages from the beginning and end of each track. This ensures smoother and quicker transitions.',
     'help_ai_threshold_title': 'Silence Threshold',
     'help_ai_threshold_desc': 'Determines the volume level (in dB) that is considered silence. Lower values (e.g., -50 dB) are more sensitive and will remove very quiet sounds. Higher values (e.g., -20 dB) will only remove complete silence.',
-
     'help_export_title': 'Final Output and Export',
     'help_export_p1': 'After setting all parameters, you can create a preview of the mix. Exporting is available in the PRO version.',
     'help_export_subtitle2': 'Mixing and Exporting',
@@ -327,9 +324,36 @@ export const translations = {
     'help_export_audio_desc': 'In the PRO version, you can export the result to MP3 format (smaller size, good quality) or WAV (lossless quality, larger size).',
     'help_export_project_title': 'Export Project',
     'help_export_project_desc': 'In the PRO version, you can create a ZIP archive containing the final mix and all original audio files. Ideal for backing up.',
-    
-    // Footer
     'footer_version': 'Version',
+
+    // New Help Modal Keys
+    'help_section_getting_started': 'Getting Started: Uploading Tracks',
+    'help_detail_getting_started_p1': 'Every project begins with your audio files. You can upload different types of tracks, and the application will handle them intelligently:',
+    'help_section_track_editing': 'Editing & Arranging Tracks',
+    'help_detail_reordering_title': 'Changing Track Order',
+    'help_detail_reordering_p1': 'The final mix is created based on the order of tracks in the "Track Overview" panel. You can change this order at any time by dragging a track with your mouse or by clicking the "Manage Order" button for a more detailed view.',
+    'help_detail_track_setup_title': 'Advanced Track Setup (Waveform)',
+    'help_detail_track_setup_p1': 'For detailed adjustments, click the "Setup" button on any track. This will expand the view to show the audio waveform, where you can make precise edits:',
+    'help_detail_waveform_click': 'A simple {{key}} anywhere on the waveform will start or pause the audio preview from that exact point.',
+    'help_detail_waveform_shift': 'Holding {{key}} on a music track sets the "Vocal Start" point (red line). This marker is crucial for the "Music Ducking" feature, as it tells the app when the singing or main melody begins, allowing for a perfect fade-in after spoken word.',
+    'help_detail_waveform_alt': 'Holding {{key}} sets a "Manual Crossfade" point (solid green line). This gives you full control over when the next track should begin, overriding the automatic setting from the mixer.',
+    'help_detail_waveform_auto': 'When "Auto Crossfade" is on, a dashed green line may appear, showing where the app plans to start the next track. You can simply drag this line with your mouse to fine-tune its position, turning it into a manual crossfade point.',
+    'help_detail_waveform_trim': 'If "Trim Silence" is enabled, the app grays out silent parts at the start and end. You can manually adjust these trimmed areas by dragging the white handles at the boundaries of the colored waveform.',
+    'help_section_mixer': 'The Mixer: Blending Your Tracks',
+    'help_detail_mixer_intro': 'The Mixer panel lets you control how your tracks blend together to create a smooth, professional-sounding final product.',
+    'help_detail_mixer_recommended_title': 'Recommended Settings',
+    'help_detail_mixer_recommended_p1': 'On the main sliders in the mixer, you will see small, colored tick marks. These indicate our recommended starting points for achieving a balanced and professional-sounding mix. Feel free to use them as a guide and adjust to your liking.',
+    'help_section_ai_tools': 'Smart Tools (AI)',
+    'help_detail_ai_leveling_title': 'Smart Leveling (Normalize Tracks)',
+    'help_detail_ai_leveling_p1': 'When enabled, this feature analyzes each track and adjusts its volume to a standard, consistent level. This prevents some tracks from being too loud and others too quiet. We highly recommend keeping this enabled.',
+    'help_detail_ai_content_p1': 'Based on the names of your uploaded tracks, the AI can generate a catchy title and an engaging short description for your podcast episode. This is a great way to find inspiration for your show notes.',
+    'help_section_output': 'Final Output & Exporting',
+    'help_section_saving': 'Saving & Loading Projects',
+    'help_detail_saving_p1': 'You can save your work in two ways:',
+    'help_detail_saving_browser_title': 'Save/Load (Browser)',
+    'help_detail_saving_browser_p1': 'This option saves your entire project (track list, settings, and audio data) directly into your web browser\'s local storage. It\'s a quick way to save your progress without downloading any files. Note that this data is tied to this specific browser on this computer.',
+    'help_detail_saving_disk_title': 'Import from Folder / Export Project to Disk',
+    'help_detail_saving_disk_p1': 'Exporting the project packages everything into a single .zip file: the final mix, all your original source audio files, and a `project.json` file with all your settings. This is perfect for backups or moving your project to another computer. You can then re-import it using the "Import from Folder" button.',
   },
   sk: {
     // General
@@ -628,7 +652,6 @@ export const translations = {
     'help_tracks_underlay_desc': 'Dlhá hudobná slučka, ktorá hrá na pozadí medzi hlavnými hudobnými stopami na vyplnenie ticha. Do projektu je možné pridať iba jednu hudbu do pozadia.',
     'help_tracks_subtitle2': 'Správa poradia a úprava stôp',
     'help_tracks_p2': 'V paneli "Prehľad Stôp" môžete jednoducho meniť poradie potiahnutím myšou (drag & drop) alebo cez tlačidlo "Spravovať Poradie". Pri hudobných stopách môžete tiež označiť začiatok spevu. Tento bod slúži ako referencia pre funkciu stíšenia (ducking), aby hudba plynulo prešla pod hovorené slovo.',
-
     'help_mixer_title': 'Nastavenie Mixu',
     'help_mixer_p1': 'Tieto nastavenia určujú, ako budú jednotlivé stopy na seba nadväzovať a ako bude znieť finálny mix.',
     'help_mixer_crossfade_title': 'Prelínanie hudby (Crossfade):',
@@ -639,14 +662,12 @@ export const translations = {
     'help_mixer_ramp_up_desc': 'Rýchlosť, akou sa hudba vráti do pôvodnej hlasitosti po skončení slova.',
     'help_mixer_underlay_volume_title': 'Hlasitosť hudby v pozadí:',
     'help_mixer_underlay_volume_desc': 'Zobrazí sa, ak ste pridali hudbu do pozadia a máte aspoň dve hudobné stopy. Reguluje hlasitosť hudby v pozadí.',
-    
     'help_ai_title': 'Inteligentné Strihanie (AI)',
     'help_ai_p1': 'Tieto nástroje využívajú jednoduchú analýzu zvuku na automatické vylepšenie vášho mixu.',
     'help_ai_trim_title': 'Strihať ticho:',
     'help_ai_trim_desc': 'Ak je funkcia zapnutá, aplikácia automaticky odstráni tiché pasáže na začiatku a na konci každej stopy. Tým sa zabezpečia plynulejšie a rýchlejšie prechody.',
     'help_ai_threshold_title': 'Prah stíšenia:',
     'help_ai_threshold_desc': 'Určuje úroveň hlasitosti (v dB), ktorá sa považuje za ticho. Nižšie hodnoty (napr. -50 dB) sú citlivejšie a odstránia aj veľmi tiché zvuky. Vyžšie hodnoty (napr. -20 dB) budú odstraňovať iba úplné ticho.',
-
     'help_export_title': 'Konečný Výstup a Export',
     'help_export_p1': 'Po nastavení všetkých parametrov môžete vytvoriť náhľad mixu. Exportovanie je dostupné v PRO verzii.',
     'help_export_subtitle2': 'Mixovanie a Export',
@@ -658,21 +679,48 @@ export const translations = {
     'help_export_audio_desc': 'V PRO verzii môžete výsledok exportovať do formátu MP3 (menšia veľkosť, dobrá kvalita) alebo WAV (bezstratová kvalita, väčšia veľkosť).',
     'help_export_project_title': 'Exportovať Projekt:',
     'help_export_project_desc': 'V PRO verzii môžete vytvoriť ZIP archív, ktorý obsahuje finálny mix a všetky pôvodné zvukové súbory. Ideálne pre zálohovanie.',
-
-    // Footer
     'footer_version': 'Verzia',
-  },
+
+    // New Help Modal Keys
+    'help_section_getting_started': 'Začíname: Nahrávanie Súborov',
+    'help_detail_getting_started_p1': 'Každý projekt začína vašimi audio súbormi. Môžete nahrávať rôzne typy stôp a aplikácia s nimi bude inteligentne pracovať:',
+    'help_section_track_editing': 'Úprava a Usporiadanie Stôp',
+    'help_detail_reordering_title': 'Zmena Poradia Stôp',
+    'help_detail_reordering_p1': 'Finálny mix sa tvorí na základe poradia stôp v paneli "Prehľad Stôp". Toto poradie môžete kedykoľvek zmeniť potiahnutím stopy myšou alebo cez tlačidlo "Spravovať Poradie" pre detailnejší pohľad.',
+    'help_detail_track_setup_title': 'Pokročilé Nastavenie Stopy (Waveform)',
+    'help_detail_track_setup_p1': 'Pre detailné úpravy kliknite na tlačidlo "Nastavenie" pri ktorejkoľvek stope. Tým sa rozbalí pohľad so zvukovou krivkou (waveform), kde môžete robiť presné úpravy:',
+    'help_detail_waveform_click': 'Jednoduchý {{key}} na akékoľvek miesto na zvukovej krivke spustí alebo pozastaví náhľad zvuku presne od daného bodu.',
+    'help_detail_waveform_shift': 'Podržaním {{key}} pri hudobnej stope nastavíte bod "Začiatok spevu" (červená čiara). Táto značka je kľúčová pre funkciu "Stíšenie hudby", pretože aplikácii povie, kedy začína spev alebo hlavná melódia, čo umožní dokonalé načasovanie stíšenia pod hovoreným slovom.',
+    'help_detail_waveform_alt': 'Podržaním {{key}} nastavíte "Manuálny bod prelínania" (plná zelená čiara). Tým získate plnú kontrolu nad tým, kedy má začať ďalšia stopa, a prepíšete tak automatické nastavenie z mixéra.',
+    'help_detail_waveform_auto': 'Keď je zapnuté "Automatické prelínanie", môže sa zobraziť prerušovaná zelená čiara, ktorá ukazuje, kde aplikácia plánuje začať prechod. Túto čiaru môžete jednoducho potiahnuť myšou a doladiť jej pozíciu, čím sa zmení na manuálny bod prelínania.',
+    'help_detail_waveform_trim': 'Ak je aktívne "Strihať ticho", aplikácia označí tiché miesta na začiatku a konci šedou farbou. Tieto orezané časti môžete manuálne upraviť potiahnutím bielych úchytov na hraniciach farebnej zvukovej vlny.',
+    'help_section_mixer': 'Mixér: Prelínanie Vašich Stôp',
+    'help_detail_mixer_intro': 'Panel mixéra vám umožňuje kontrolovať, ako sa vaše stopy navzájom prelínajú, aby ste vytvorili plynulý a profesionálne znejúci výsledok.',
+    'help_detail_mixer_recommended_title': 'Odporúčané Nastavenia',
+    'help_detail_mixer_recommended_p1': 'Na hlavných posuvníkoch v mixéri si všimnete malé farebné čiarky. Tieto značky indikujú nami odporúčané východiskové body pre dosiahnutie vyváženého a profesionálneho mixu. Použite ich ako pomôcku a ďalej si ich prispôsobte podľa svojho vkusu.',
+    'help_section_ai_tools': 'Inteligentné Nástroje (AI)',
+    'help_detail_ai_leveling_title': 'Smart Leveling (Normalizácia Stôp)',
+    'help_detail_ai_leveling_p1': 'Keď je táto funkcia zapnutá, analyzuje každú stopu a prispôsobí jej hlasitosť na štandardnú, konzistentnú úroveň. Zabraňuje tomu, aby niektoré stopy boli príliš hlasné a iné príliš tiché. Dôrazne odporúčame nechať túto možnosť zapnutú.',
+    'help_detail_ai_content_p1': 'Na základe názvov vašich nahratých stôp dokáže AI vygenerovať pútavý názov a krátky, zaujímavý popis pre vašu epizódu podcastu. Je to skvelý spôsob, ako nájsť inšpiráciu pre vaše poznámky k relácii.',
+    'help_section_output': 'Konečný Výstup & Exportovanie',
+    'help_section_saving': 'Ukladanie a Načítavanie Projektov',
+    'help_detail_saving_p1': 'Svoju prácu si môžete uložiť dvoma spôsobmi:',
+    'help_detail_saving_browser_title': 'Uložiť/Načítať (v Prehliadači)',
+    'help_detail_saving_browser_p1': 'Táto možnosť uloží celý váš projekt (zoznam stôp, nastavenia a zvukové dáta) priamo do lokálneho úložiska vášho webového prehliadača. Je to rýchly spôsob, ako si uložiť postup bez sťahovania akýchkoľvek súborov. Upozorňujeme, že tieto dáta sú viazané na tento konkrétny prehliadač na tomto počítači.',
+    'help_detail_saving_disk_title': 'Importovať z Priečinka / Exportovať Projekt na Disk',
+    'help_detail_saving_disk_p1': 'Exportovanie projektu zabalí všetko do jedného súboru .zip: finálny mix, všetky vaše pôvodné zdrojové audio súbory a súbor `project.json` so všetkými vašimi nastaveniami. Je to ideálne na zálohovanie alebo presun projektu na iný počítač. Následne ho môžete znova importovať pomocou tlačidla "Importovať z Priečinka".',
+  }
 };
 
 export type Locale = keyof typeof translations;
 export type TranslationKey = keyof typeof translations['en'];
 
 export const I18nContext = React.createContext<{
-    t: (key: TranslationKey, params?: { [key: string]: string | number }) => string;
-    setLocale: (locale: Locale) => void;
-    locale: Locale;
+  t: (key: TranslationKey, params?: { [key: string]: string | number }) => string;
+  setLocale: (locale: Locale) => void;
+  locale: Locale;
 }>({
-    t: (key) => key,
-    setLocale: () => {},
-    locale: 'en',
+  t: (key) => key,
+  setLocale: () => {},
+  locale: 'en',
 });
