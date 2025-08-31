@@ -783,7 +783,6 @@ const timelineLayout = useMemo(() => {
   for (let i = 0; i < tracksWithFiles.length; i++) {
     const track = tracksWithFiles[i];
     const prev = i > 0 ? layout[i - 1] : null;
-    const nextTrack = (i + 1 < tracksWithFiles.length) ? tracksWithFiles[i + 1] : null;
 
     // ---- 1) Effective start & durations ------------------------------------
     let effectiveStart = 0;            // offset v zdroji
@@ -815,25 +814,19 @@ const timelineLayout = useMemo(() => {
         startTime = prev.endTime - MIX;
       }
 
-      // Music -> Spoken : talk-over
-      else if (prevTrack.type === 'music' && track.type === 'spoken') {
-        // chceme mať prekryv aspoň OVERLAP aj keď MIX=0, inak to nevyzerá ako talk-over
-        const OVERLAP = Math.max(MIX, 0.5); // garantuj minimálne 0.5 s prekryv
-
-        // default bez talk-over bodu
+      // Music -> Spoken or Jingle : talk-over
+      else if (prevTrack.type === 'music' && (track.type === 'spoken' || track.type === 'jingle')) {
+        const OVERLAP = Math.max(MIX, 0.5);
         let spokenStart = prev.endTime - OVERLAP;
-
         if (typeof prevTrack.talkOverPoint === 'number' && isFinite(prevTrack.talkOverPoint)) {
           const minInside = prev.startTime + MIN_HEAD;
-          // ideálne miesto = kde hudba padla o talkoverDropDb, ale posunieme o prekryv
           const wish = prev.startTime + prevTrack.talkOverPoint - OVERLAP;
-          // najneskor môžeme začať tak, aby stále zostal aspoň OVERLAP prekryv
           const maxInside = prev.endTime - OVERLAP;
           spokenStart = clamp(wish, minInside, maxInside);
         }
-
         startTime = spokenStart;
       }
+
 
       // Spoken/Jingle -> Music : talk-up intro
       else if ((prevTrack.type === 'spoken' || prevTrack.type === 'jingle') && track.type === 'music') {
@@ -847,12 +840,6 @@ const timelineLayout = useMemo(() => {
       else {
         startTime = prev.endTime;
       }
-
-      // --- tvrdé zábradlia proti „naskladaniu“ ---
-      // nesmie to spadnúť pred „legálny“ crossfade s predchádzajúcou položkou
-      const earliest = Math.max(0, prev.endTime - MIX);
-      // nesmie to byť takmer totožný čas štartu ako predchádzajúci
-      startTime = Math.max(startTime, prev.startTime + MIN_SPACING, earliest, MIN_HEAD);
     } else {
       // prvá položka
       startTime = MIN_HEAD;
@@ -873,11 +860,30 @@ const timelineLayout = useMemo(() => {
   for (let i = 1; i < layout.length; i++) {
     const prev = layout[i - 1];
     const cur = layout[i];
+    
+    // Rule 1: Monotonicity. Current track must start after previous track starts.
+    cur.startTime = Math.max(cur.startTime, prev.startTime + MIN_SPACING, MIN_HEAD);
 
-    const OVERLAP = Math.max(MIX, 0.5);
-    const earliest = Math.max(0, prev.endTime - OVERLAP);
+    // Rule 2: Limit overlap for specific transition types.
+    const prevType = prev.track.type;
+    const curType = cur.track.type;
 
-    cur.startTime = Math.max(cur.startTime, earliest, prev.startTime + MIN_SPACING, MIN_HEAD);
+    const isTalkOver = prevType === 'music' && (curType === 'spoken' || curType === 'jingle');
+    const isTalkUp = (prevType === 'spoken' || prevType === 'jingle') && curType === 'music';
+    const isMusicCrossfade = prevType === 'music' && curType === 'music';
+    
+    if (isMusicCrossfade) {
+      // For Music->Music, enforce the crossfade duration as the max overlap.
+      const earliest = prev.endTime - MIX;
+      cur.startTime = Math.max(cur.startTime, earliest);
+    } else if (!isTalkOver && !isTalkUp) {
+      // For all other sequential transitions (Spoken->Spoken, etc.),
+      // they should start at or after the previous one ends (no overlap).
+      cur.startTime = Math.max(cur.startTime, prev.endTime);
+    }
+    // For talk-over and talk-up, the initial calculation is trusted.
+    // The monotonicity rule is sufficient to prevent invalid layouts.
+    
     cur.endTime = cur.startTime + cur.positioningDuration;
   }
 
