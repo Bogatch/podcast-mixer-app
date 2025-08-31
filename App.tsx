@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useMemo, useRef, useEffect, useContext } from 'react';
 import type { Track, SavedProject } from './types';
 import { MonitoringPanel } from './components/MonitoringPanel';
