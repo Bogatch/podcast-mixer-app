@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon, SaveIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
@@ -17,8 +18,6 @@ interface MixerControlsProps {
   onTrimSilenceChange: (enabled: boolean) => void;
   silenceThreshold: number;
   onSilenceThresholdChange: (threshold: number) => void;
-  talkoverDropDb: number;
-  onTalkoverDropDbChange: (value: number) => void;
   normalizeTracks: boolean;
   onNormalizeTracksChange: (enabled: boolean) => void;
   normalizeOutput: boolean;
@@ -98,7 +97,6 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   mixDuration, onMixDurationChange, duckingAmount, onDuckingAmountChange,
   rampUpDuration, onRampUpDurationChange, underlayVolume, onUnderlayVolumeChange,
   trimSilenceEnabled, onTrimSilenceChange, silenceThreshold, onSilenceThresholdChange,
-  talkoverDropDb, onTalkoverDropDbChange,
   normalizeTracks, onNormalizeTracksChange, normalizeOutput, onNormalizeOutputChange,
   onMix, isDisabled, isMixing, onOpenUnlockModal, onExportAudio, onExportProject,
   onSaveProject, isSaving, mixedAudioUrl, totalDuration, demoMaxDuration, 
@@ -201,22 +199,6 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
             <div className="flex items-center space-x-2 mb-4">
               <h3 className="text-lg font-semibold text-gray-200 flex items-center"><MagicWandIcon className="w-5 h-5 mr-2 text-purple-400" />{t('ai_title')}</h3>
               <InfoTooltip text={t('tooltip_ai')} position="right" />
-            </div>
-             <div className="mb-4">
-                <div className="flex items-center space-x-2">
-                    <label htmlFor="talkover-drop" className="block text-sm font-medium text-gray-400">{t('mixer_talkover_trigger')}</label>
-                    <InfoTooltip text={t('tooltip_talkover_trigger')} position="right" />
-                </div>
-                <div className="flex items-center space-x-4 mt-2">
-                    <input id="talkover-drop" type="range" min="3" max="12" step="1" value={talkoverDropDb}
-                        onChange={(e) => onTalkoverDropDbChange(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                        disabled={isMixing}
-                    />
-                    <span className="w-24 bg-gray-800/60 text-orange-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                        -{t('decibel_unit', { value: talkoverDropDb.toFixed(0) })}
-                    </span>
-                </div>
             </div>
             <div className="flex items-center justify-between mb-4">
               <label htmlFor="auto-trim-enable" className="text-sm font-medium text-gray-400">{t('ai_trim')}</label>
