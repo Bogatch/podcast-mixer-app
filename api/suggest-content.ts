@@ -55,8 +55,8 @@ ${trackList}`;
                             type: Type.STRING,
                             description: `A short, engaging description (2-3 sentences) for the podcast episode in ${language}.`
                         }
-                    },
-                    required: ["title", "description"]
+                    }
+                    // Removed 'required' property as it's not supported by the Gemini API schema and was causing function crashes.
                 }
             }
         });
@@ -68,7 +68,6 @@ ${trackList}`;
             throw new Error("The AI model returned an empty response. This could be due to safety filters.");
         }
         
-        // The response should be JSON, but let's parse it safely.
         const resultJson = JSON.parse(resultText);
 
         if (!resultJson.title || !resultJson.description) {
@@ -79,13 +78,16 @@ ${trackList}`;
         return res.status(200).json({ success: true, data: resultJson });
 
     } catch (error: any) {
-        console.error('Error in /api/suggest-content:', {
-            message: error.message,
-            body: req.body,
-        });
+        console.error('--- DETAILED ERROR in /api/suggest-content ---');
+        console.error('Error Message:', error.message);
+        if(error.response) {
+             console.error('Error Response:', JSON.stringify(error.response, null, 2));
+        }
+        console.error('Full Error Object:', JSON.stringify(error, null, 2));
+        console.error('Request Body:', JSON.stringify(req.body, null, 2));
+        console.error('--- END DETAILED ERROR ---');
         
         const errorMessage = error.message || 'An unknown error occurred on the server.';
-        // Ensure the error response is always JSON
         return res.status(500).json({ success: false, error: "Failed to get suggestion.", detail: errorMessage });
     }
 }
