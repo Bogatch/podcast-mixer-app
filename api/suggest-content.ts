@@ -13,14 +13,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
+    if (!process.env.API_KEY) {
+        if (process.env.GOOGLE_API) {
+            return res.status(500).json({
+                success: false,
+                error: 'Server configuration error.',
+                detail: 'An environment variable named "GOOGLE_API" was found. Please rename it to "API_KEY" in your Vercel project settings and redeploy.'
+            });
+        }
+        console.error('API_KEY is not configured in environment variables.');
+        return res.status(500).json({ 
+            success: false, 
+            error: 'Server configuration error.',
+            detail: 'The API_KEY environment variable is missing on the server.' 
+        });
+    }
+
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ success: false, error: 'Method Not Allowed' });
-    }
-
-    if (!process.env.API_KEY) {
-        console.error('API_KEY is not configured in environment variables.');
-        return res.status(500).json({ success: false, error: 'Server configuration error.' });
     }
 
     try {
@@ -32,9 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const language = locale === 'sk' ? 'Slovak' : 'English';
 
-        // More structured prompt with system instructions
-        const systemInstruction = `You are a creative assistant for podcasters. Your response must be in ${language} and conform to the provided JSON schema.`;
-        const userPrompt = `Based on this list of audio tracks, generate a creative podcast episode title and a short, engaging description.
+        // Combine all instructions into a single prompt for robustness.
+        const fullPrompt = `You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative podcast episode title and a short, engaging description. Your response must be in ${language}.
 
 Tracks:
 ${trackList}`;
@@ -42,9 +52,9 @@ ${trackList}`;
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }], // Use structured contents
+            contents: fullPrompt, // Using the new combined prompt
             config: {
-                systemInstruction: systemInstruction, // Use systemInstruction for role and language
+                // systemInstruction is removed to increase stability.
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
@@ -69,7 +79,13 @@ ${trackList}`;
             throw new Error("The AI model returned an empty response. This could be due to safety filters.");
         }
         
-        const resultJson = JSON.parse(resultText);
+        let resultJson;
+        try {
+            resultJson = JSON.parse(resultText);
+        } catch(e) {
+            console.error("Failed to parse Gemini response as JSON:", resultText);
+            throw new Error("AI response was not valid JSON.");
+        }
 
         if (!resultJson.title || !resultJson.description) {
             console.warn("Parsed JSON from Gemini is missing required fields:", resultJson);
