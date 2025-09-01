@@ -13,12 +13,14 @@ interface MonitoringPanelProps {
   onDeleteTrack: (id: string) => void;
   onDeleteUnderlay: () => void;
   onUpdateVocalStartTime: (id: string, time: number) => void;
-  onUpdateManualCrossfadePoint: (id: string, time: number) => void;
+  onUpdateManualCrossfadePoint: (id: string, time: number | undefined) => void;
+  onUpdateTrackVolume: (id: string, volume: number) => void;
   onUpdateTrimTimes: (id: string, times: { start?: number; end?: number }) => void;
   onPreview: (trackId: string, startTime?: number) => void;
+  onCuePlay: (trackId: string) => void;
   onWaveformClick: (trackId: string, time: number, isShiftClick: boolean) => void;
   onRelinkFile: (trackId: string, file: File) => void;
-  previewState: { trackId: string | null; isPlaying: boolean; currentTime: number };
+  previewState: { trackId: string | null; isPlaying: boolean; currentTime: number; vuLevel: number; };
   onToggleReorder: () => void;
   decodedAudioBuffers: Map<string, AudioBuffer>;
   autoCrossfadeEnabled: boolean;
@@ -32,7 +34,7 @@ const StaticTrackItem: React.FC<{
     icon: React.ReactNode, 
     color: string,
     audioBuffer: AudioBuffer | undefined,
-    previewState: { trackId: string | null; isPlaying: boolean; currentTime: number };
+    previewState: { trackId: string | null; isPlaying: boolean; currentTime: number; vuLevel: number; };
 }> = ({ track, onDelete, onRelinkFile, icon, color, audioBuffer, previewState}) => {
     const { t } = useContext(I18nContext);
     const relinkInputRef = useRef<HTMLInputElement>(null);
@@ -137,8 +139,10 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
     onDeleteUnderlay,
     onUpdateVocalStartTime,
     onUpdateManualCrossfadePoint,
+    onUpdateTrackVolume,
     onUpdateTrimTimes,
     onPreview,
+    onCuePlay,
     onWaveformClick,
     onRelinkFile,
     previewState,
@@ -183,8 +187,10 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
             onDelete={() => onDeleteTrack(track.id)}
             onVocalStartTimeChange={(time) => onUpdateVocalStartTime(track.id, time)}
             onManualCrossfadeChange={(time) => onUpdateManualCrossfadePoint(track.id, time)}
+            onUpdateTrackVolume={(volume) => onUpdateTrackVolume(track.id, volume)}
             onTrimTimeChange={(times) => onUpdateTrimTimes(track.id, times)}
             onPreview={() => onPreview(track.id)}
+            onCuePlay={() => onCuePlay(track.id)}
             onWaveformClick={onWaveformClick}
             previewState={previewState}
             onRelinkFile={(file) => onRelinkFile(track.id, file)}

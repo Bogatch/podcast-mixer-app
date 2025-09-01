@@ -14,7 +14,7 @@ interface WaveformProps {
   playheadTime?: number;
   onWaveformClick?: (time: number, modifiers: { altKey: boolean; shiftKey: boolean }) => void;
   onTrimTimeChange?: (times: { start?: number; end?: number }) => void;
-  onSetCrossfadePoint?: (time: number) => void;
+  onSetCrossfadePoint?: (time: number | undefined) => void;
 }
 
 const HANDLE_SIZE = 8;

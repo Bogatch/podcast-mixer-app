@@ -20,7 +20,7 @@ interface TimelineProps {
 }
 
 const COLORS = {
-  music: '#F472B6',
+  music: '#0EA5E9',
   spoken: '#34D399',
   jingle: '#A78BFA',
   underlay: '#FBBF24',

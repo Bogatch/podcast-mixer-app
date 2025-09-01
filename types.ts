@@ -6,6 +6,7 @@ export interface Track {
   fileType?: string; // Persisted MIME type
   duration: number; // in seconds
   type: 'music' | 'spoken' | 'jingle';
+  volume?: number; // User-defined volume from 0 to 1.5
   vocalStartTime?: number; // in seconds
   smartTrimStart?: number; // Time in seconds where content starts
   smartTrimEnd?: number;   // Time in seconds where content ends

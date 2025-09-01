@@ -173,12 +173,14 @@ const AppContent: React.FC = () => {
   // Refs for audio playback
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
   const playbackStartInfoRef = useRef<{ audioContextStartTime: number, trackStartTime: number } | null>(null);
   const decodedAudioBuffers = useRef<Map<string, AudioBuffer>>(new Map());
   
   // State for UI display of playback
-  const [previewState, setPreviewState] = useState<{ trackId: string | null; isPlaying: boolean; currentTime: number; }>({ trackId: null, isPlaying: false, currentTime: 0 });
+  const [previewState, setPreviewState] = useState<{ trackId: string | null; isPlaying: boolean; currentTime: number; vuLevel: number; }>({ trackId: null, isPlaying: false, currentTime: 0, vuLevel: 0 });
 
   // Detect ?payment_success=true on load
   useEffect(() => {
@@ -253,6 +255,7 @@ const AppContent: React.FC = () => {
           duration,
           type,
           fileBuffer: arrayBuffer,
+          volume: 1.0,
           ...(type === 'music' && { vocalStartTime: 0 }),
         };
         newTracks.push(newTrack);
@@ -285,6 +288,7 @@ const AppContent: React.FC = () => {
         fileType: file.type,
         duration,
         type: 'music',
+        volume: 1.0,
         fileBuffer: arrayBuffer,
       };
       setUnderlayTrack(newTrack);
@@ -401,6 +405,7 @@ const AppContent: React.FC = () => {
         projectName: projectName,
         tracks: tracks.map(t => ({
             id: t.id, name: t.name, fileName: t.fileName, duration: t.duration, type: t.type,
+            volume: t.volume,
             vocalStartTime: t.vocalStartTime, fileBuffer: t.fileBuffer, fileType: t.fileType,
             manualCrossfadePoint: t.manualCrossfadePoint,
             smartTrimStart: t.smartTrimStart,
@@ -408,7 +413,8 @@ const AppContent: React.FC = () => {
         })),
         underlayTrack: underlayTrack ? {
             id: underlayTrack.id, name: underlayTrack.name, fileName: underlayTrack.fileName,
-            duration: underlayTrack.duration, type: underlayTrack.type, fileBuffer: underlayTrack.fileBuffer, fileType: underlayTrack.fileType,
+            duration: underlayTrack.duration, type: underlayTrack.type, volume: underlayTrack.volume,
+            fileBuffer: underlayTrack.fileBuffer, fileType: underlayTrack.fileType,
             smartTrimStart: underlayTrack.smartTrimStart,
             smartTrimEnd: underlayTrack.smartTrimEnd,
         } : null,
@@ -589,12 +595,30 @@ const AppContent: React.FC = () => {
     resetMix();
   }, [resetMix]);
 
+  const updateTrackVolume = useCallback((id: string, volume: number) => {
+    const updateFunc = (current: Track[]): Track[] => current.map(t => {
+        if (t.id === id) {
+            return { ...t, volume };
+        }
+        return t;
+    });
+    setTracks(updateFunc);
+    if (underlayTrack && underlayTrack.id === id) {
+        setUnderlayTrack(t => t ? ({...t, volume }) : null);
+    }
+     // Live update preview gain if this track is playing
+    if (previewState.trackId === id && gainNodeRef.current && audioContextRef.current) {
+        gainNodeRef.current.gain.setValueAtTime(volume, audioContextRef.current.currentTime);
+    }
+    resetMix();
+  }, [underlayTrack, resetMix, previewState.trackId]);
+
   const updateVocalStartTime = useCallback((id: string, time: number) => {
     setTracks(current => current.map(t => t.id === id ? { ...t, vocalStartTime: time } : t));
     resetMix();
   }, [resetMix]);
   
-  const updateManualCrossfadePoint = useCallback((id: string, time: number) => {
+  const updateManualCrossfadePoint = useCallback((id: string, time: number | undefined) => {
     setTracks(current => current.map(t => t.id === id ? { ...t, manualCrossfadePoint: time } : t));
     resetMix();
   }, [resetMix]);
@@ -620,63 +644,105 @@ const AppContent: React.FC = () => {
 
    const stopCurrentPreview = useCallback(() => {
     if (animationFrameIdRef.current) {
-      cancelAnimationFrame(animationFrameIdRef.current);
-      animationFrameIdRef.current = null;
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+    }
+    if (analyserNodeRef.current) {
+        analyserNodeRef.current.disconnect();
+        analyserNodeRef.current = null;
+    }
+    if (gainNodeRef.current) {
+        gainNodeRef.current.disconnect();
+        gainNodeRef.current = null;
     }
     if (sourceNodeRef.current) {
-      sourceNodeRef.current.stop();
-      sourceNodeRef.current.onended = null;
-      sourceNodeRef.current = null;
+        sourceNodeRef.current.onended = null;
+        try { sourceNodeRef.current.stop(); } catch(e) { /* Can error if already stopped, which is fine */ }
+        sourceNodeRef.current.disconnect();
+        sourceNodeRef.current = null;
     }
+    const currentlyPlayingTrackId = playbackStartInfoRef.current ? previewState.trackId : null;
     playbackStartInfoRef.current = null;
-    if (previewState.isPlaying) {
-      setPreviewState(prev => ({ ...prev, isPlaying: false }));
+
+    if(currentlyPlayingTrackId) {
+        setPreviewState(prev => ({...prev, trackId: currentlyPlayingTrackId, isPlaying: false, vuLevel: 0}));
+    } else {
+         setPreviewState(prev => prev.isPlaying ? { ...prev, isPlaying: false, vuLevel: 0 } : prev);
     }
-  }, [previewState.isPlaying]);
+  }, [previewState.trackId]);
 
 
   const updatePreviewTime = useCallback(() => {
-    if (!audioContextRef.current || !playbackStartInfoRef.current || !previewState.isPlaying) {
+    if (!audioContextRef.current || !playbackStartInfoRef.current) {
+      animationFrameIdRef.current = null; // Ensure animation stops
       return;
     }
     const elapsedTime = audioContextRef.current.currentTime - playbackStartInfoRef.current.audioContextStartTime;
     const newCurrentTime = playbackStartInfoRef.current.trackStartTime + elapsedTime;
     
+    let vuLevel = 0;
+    if (analyserNodeRef.current) {
+        const bufferLength = analyserNodeRef.current.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserNodeRef.current.getByteFrequencyData(dataArray);
+        
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        vuLevel = Math.min(1, (average / 128)); 
+    }
+    
     setPreviewState(prev => {
-      const track = [...tracks, underlayTrack].find(t => t?.id === prev.trackId);
-      if (!track || newCurrentTime >= track.duration) {
-        stopCurrentPreview();
-        return { trackId: prev.trackId, isPlaying: false, currentTime: track?.duration ?? 0 };
-      }
-      return { ...prev, currentTime: newCurrentTime };
+        if (prev.isPlaying) {
+            return { ...prev, currentTime: newCurrentTime, vuLevel };
+        }
+        return prev;
     });
     
     animationFrameIdRef.current = requestAnimationFrame(updatePreviewTime);
-  }, [tracks, underlayTrack, previewState.isPlaying, stopCurrentPreview]);
-
+  }, []);
 
   const handlePreview = useCallback(async (trackId: string, startTime?: number) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const audioContext = audioContextRef.current;
-
-    stopCurrentPreview();
-
-    // Pause logic
-    if (previewState.isPlaying && previewState.trackId === trackId && startTime === undefined) {
-      setPreviewState(prev => ({ ...prev, isPlaying: false }));
-      return;
-    }
-
     const track = [...tracks, underlayTrack].find(t => t?.id === trackId);
     if (!track || !track.fileBuffer) return;
+    
+    // Toggle pause/play
+    if (previewState.isPlaying && previewState.trackId === trackId && startTime === undefined) {
+        stopCurrentPreview();
+        return;
+    }
+
+    // Stop any other track before playing a new one
+    if(previewState.isPlaying) {
+      stopCurrentPreview();
+    }
+    
+    // Set up a new playback from a specific time
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const audioContext = audioContextRef.current;
+    if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+    }
 
     // Determine start time: from parameter, or resume, or from beginning
-    const timeToStart = startTime !== undefined ? startTime :
-      (previewState.trackId === trackId ? previewState.currentTime : 0);
+    const isResumingFromPause = previewState.trackId === trackId && previewState.currentTime < track.duration && !previewState.isPlaying;
+
+    let timeToStart;
+    if (startTime !== undefined) { // 1. Direct click on waveform or CUE button
+        timeToStart = startTime;
+    } else if (isResumingFromPause) { // 2. Resuming a paused track
+        timeToStart = previewState.currentTime;
+    } else { // 3. Fresh play from beginning (for non-music) or 0 (for music without CUE)
+        timeToStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+    }
     
-    if (timeToStart >= track.duration) return;
+    if (timeToStart >= track.duration) {
+        timeToStart = 0; // Failsafe if CUE point is at the end
+    }
 
     try {
       let buffer = decodedAudioBuffers.current.get(trackId);
@@ -687,26 +753,50 @@ const AppContent: React.FC = () => {
 
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(audioContext.destination);
+      
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = track.volume ?? 1.0;
+      gainNodeRef.current = gainNode;
+
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyserNodeRef.current = analyser;
+
+      source.connect(gainNode);
+      gainNode.connect(analyser);
+      analyser.connect(audioContext.destination);
+      
       source.start(0, timeToStart);
 
       sourceNodeRef.current = source;
       playbackStartInfoRef.current = { audioContextStartTime: audioContext.currentTime, trackStartTime: timeToStart };
 
-      setPreviewState({ trackId, isPlaying: true, currentTime: timeToStart });
+      setPreviewState({ trackId, isPlaying: true, currentTime: timeToStart, vuLevel: 0 });
       
       animationFrameIdRef.current = requestAnimationFrame(updatePreviewTime);
 
       source.onended = () => {
         if (sourceNodeRef.current === source) {
             stopCurrentPreview();
+            setPreviewState(prev => ({ ...prev, trackId, isPlaying: false, currentTime: track.duration, vuLevel: 0 }));
         }
       };
 
     } catch (err) {
       handleError('error_preview_failed', { fileName: track.name }, err);
     }
-  }, [previewState, stopCurrentPreview, tracks, underlayTrack, t, updatePreviewTime]);
+  }, [previewState, stopCurrentPreview, tracks, underlayTrack, t, updatePreviewTime, trimSilenceEnabled]);
+
+  const handleCuePlay = useCallback((trackId: string) => {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    
+    const cueTime = track.type === 'music' 
+        ? track.vocalStartTime ?? 0 
+        : (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+        
+    handlePreview(trackId, cueTime);
+  }, [tracks, handlePreview, trimSilenceEnabled]);
 
   const handleWaveformClick = (trackId: string, time: number, isShiftClick: boolean) => {
     const track = tracks.find(t => t.id === trackId);
@@ -879,26 +969,25 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        const gain = gainNode.gain;
-        gain.setValueAtTime(item.track.normalizationGain ?? 1.0, 0);
+        const trackVolume = item.track.volume ?? 1.0;
+        const baseGainValue = (item.track.normalizationGain ?? 1.0) * trackVolume;
 
         if (isUnderlay) {
             source.loop = true;
-            gain.setValueAtTime(0.0, item.startTime);
-            gain.linearRampToValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), item.startTime + 0.1);
+            gainNode.gain.setValueAtTime(0.0, item.startTime);
+            gainNode.gain.linearRampToValueAtTime(underlayVolume * baseGainValue, item.startTime + 0.1);
             
             const fadeOutStartTime = item.endTime - mixDuration;
             if (fadeOutStartTime > item.startTime + 0.1) {
-                gain.setValueAtTime(underlayVolume * (item.track.normalizationGain ?? 1.0), fadeOutStartTime);
+                gainNode.gain.setValueAtTime(underlayVolume * baseGainValue, fadeOutStartTime);
             }
-            gain.linearRampToValueAtTime(0, item.endTime);
+            gainNode.gain.linearRampToValueAtTime(0, item.endTime);
         } else { 
               const mainLayoutIndex = layout.findIndex(l => l.track.id === item.track.id);
               const prevItem = mainLayoutIndex > 0 ? layout[mainLayoutIndex - 1] : null;
               const nextItem = mainLayoutIndex < layout.length - 1 ? layout[mainLayoutIndex + 1] : null;
 
-              const baseGain = item.track.normalizationGain ?? 1.0;
-              const duckedGain = baseGain * (1 - duckingAmount);
+              const duckedGain = baseGainValue * (1 - duckingAmount);
               
               let fadeInEndTime = item.startTime;
               
@@ -907,20 +996,20 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   const rampUpStartPoint = Math.max(item.startTime, prevItem.endTime - rampUpDuration);
                   const rampUpEndPoint = prevItem.endTime;
                   
-                  gain.setValueAtTime(duckedGain, item.startTime);
+                  gainNode.gain.setValueAtTime(duckedGain, item.startTime);
                   if(rampUpStartPoint > item.startTime) {
-                    gain.setValueAtTime(duckedGain, rampUpStartPoint);
+                    gainNode.gain.setValueAtTime(duckedGain, rampUpStartPoint);
                   }
-                  gain.linearRampToValueAtTime(baseGain, rampUpEndPoint);
+                  gainNode.gain.linearRampToValueAtTime(baseGainValue, rampUpEndPoint);
                   fadeInEndTime = rampUpEndPoint;
               } else if (prevItem && prevItem.track.type === 'music' && item.track.type === 'music' && (autoCrossfadeEnabled || prevItem.track.manualCrossfadePoint)) {
                   const crossfadeDuration = prevItem.track.manualCrossfadePoint ? (item.startTime - prevItem.startTime) : mixDuration;
                   const rampUpEndTime = item.startTime + crossfadeDuration;
-                  gain.setValueAtTime(0.0, item.startTime);
-                  gain.linearRampToValueAtTime(baseGain, rampUpEndTime);
+                  gainNode.gain.setValueAtTime(0.0, item.startTime);
+                  gainNode.gain.linearRampToValueAtTime(baseGainValue, rampUpEndTime);
                   fadeInEndTime = rampUpEndTime;
               } else {
-                  gain.setValueAtTime(baseGain, item.startTime);
+                  gainNode.gain.setValueAtTime(baseGainValue, item.startTime);
               }
 
               if (item.track.type === 'music' && nextItem) {
@@ -933,8 +1022,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                     const finalFadeEndTime = Math.min(fadeOutFinishTime, actualAudioEndTime);
 
                     if (finalFadeEndTime > fadeOutStartTime) {
-                        gain.setValueAtTime(baseGain, fadeOutStartTime);
-                        gain.linearRampToValueAtTime(0.0, finalFadeEndTime);
+                        gainNode.gain.setValueAtTime(baseGainValue, fadeOutStartTime);
+                        gainNode.gain.linearRampToValueAtTime(0.0, finalFadeEndTime);
                     }
                   }
               } else if (!nextItem) {
@@ -943,8 +1032,8 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   const fadeDuration = Math.min(1.0, item.playbackDuration); // Fade for 1s or less
                   if (fadeDuration > 0.01) {
                       const fadeOutStartTime = Math.max(fadeInEndTime, actualEndTime - fadeDuration);
-                      gain.setValueAtTime(baseGain, fadeOutStartTime);
-                      gain.linearRampToValueAtTime(0.0, actualEndTime);
+                      gainNode.gain.setValueAtTime(baseGainValue, fadeOutStartTime);
+                      gainNode.gain.linearRampToValueAtTime(0.0, actualEndTime);
                   }
               }
         }
@@ -1332,8 +1421,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
                   onReorderTracks={handleReorderTracks}
                   onUpdateVocalStartTime={updateVocalStartTime}
                   onUpdateManualCrossfadePoint={updateManualCrossfadePoint}
+                  onUpdateTrackVolume={updateTrackVolume}
                   onUpdateTrimTimes={updateTrimTimes}
                   onPreview={handlePreview}
+                  onCuePlay={handleCuePlay}
                   onWaveformClick={handleWaveformClick}
                   onRelinkFile={handleRelinkFile}
                   previewState={previewState}
