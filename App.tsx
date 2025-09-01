@@ -1217,10 +1217,24 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         body: JSON.stringify({ trackList, locale }),
       });
 
+      if (!response.ok) {
+        const responseText = await response.text();
+        let errorDetail = 'Failed to get suggestion.';
+        try {
+          const errorJson = JSON.parse(responseText);
+          errorDetail = errorJson.error || errorJson.detail || errorDetail;
+        } catch (e) {
+          if (responseText && !responseText.trim().startsWith('<')) {
+            errorDetail = responseText;
+          }
+        }
+        throw new Error(errorDetail);
+      }
+      
       const result = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to get suggestion. The server returned an error.');
+      if (!result.success) {
+        throw new Error(result.error || result.detail || 'Failed to get suggestion.');
       }
       
       const { title, description } = result.data;

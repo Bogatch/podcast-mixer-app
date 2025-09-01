@@ -26,15 +26,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const { trackList, locale } = req.body;
 
-        if (!trackList || typeof trackList !== 'string') {
-            return res.status(400).json({ success: false, error: 'trackList is required and must be a string.' });
+        if (!trackList || typeof trackList !== 'string' || trackList.trim() === '') {
+            return res.status(400).json({ success: false, error: 'trackList is required and must be a non-empty string.' });
         }
 
         const language = locale === 'sk' ? 'Slovak' : 'English';
 
-        const prompt = `Based on the following list of audio track names, generate a creative title and a short, engaging description for a podcast episode. The show is about music and interviews. The response must be in ${language}.
+        // Simplified and more direct prompt
+        const prompt = `Generate a creative podcast episode title and a short, engaging description based on this list of audio tracks. The response must be in ${language}.
 
-Track list:
+Tracks:
 ${trackList}`;
 
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -48,11 +49,11 @@ ${trackList}`;
                     properties: {
                         title: {
                             type: Type.STRING,
-                            description: `A creative and catchy title for the podcast episode, in ${language}.`
+                            description: `A creative title for the podcast episode in ${language}.`
                         },
                         description: {
                             type: Type.STRING,
-                            description: `A short, engaging description (2-3 sentences) for the podcast episode, in ${language}.`
+                            description: `A short, engaging description (2-3 sentences) for the podcast episode in ${language}.`
                         }
                     },
                     required: ["title", "description"]
@@ -61,16 +62,30 @@ ${trackList}`;
         });
 
         const resultText = response.text;
+        
         if (!resultText) {
-            throw new Error("The AI model returned an empty response. This could be due to safety filters or other issues.");
+            console.warn("Gemini API returned an empty response text.");
+            throw new Error("The AI model returned an empty response. This could be due to safety filters.");
         }
         
+        // The response should be JSON, but let's parse it safely.
         const resultJson = JSON.parse(resultText);
+
+        if (!resultJson.title || !resultJson.description) {
+            console.warn("Parsed JSON from Gemini is missing required fields:", resultJson);
+            throw new Error("AI response was malformed.");
+        }
+        
         return res.status(200).json({ success: true, data: resultJson });
 
     } catch (error: any) {
-        console.error('Error in /api/suggest-content:', error);
-        const errorMessage = error.message || 'An unknown error occurred.';
-        return res.status(500).json({ success: false, error: `AI model request failed: ${errorMessage}` });
+        console.error('Error in /api/suggest-content:', {
+            message: error.message,
+            body: req.body,
+        });
+        
+        const errorMessage = error.message || 'An unknown error occurred on the server.';
+        // Ensure the error response is always JSON
+        return res.status(500).json({ success: false, error: "Failed to get suggestion.", detail: errorMessage });
     }
 }
