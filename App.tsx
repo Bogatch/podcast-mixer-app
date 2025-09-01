@@ -122,7 +122,7 @@ const SuccessIcon = () => (
 
 
 const AppContent: React.FC = () => {
-  const { t } = useContext(I18nContext);
+  const { t, locale } = useContext(I18nContext);
   const { isPro, proUser } = usePro();
   
   // Project State
@@ -1214,12 +1214,19 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ trackList }),
+        body: JSON.stringify({ trackList, locale }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to get suggestion.' }));
-        throw new Error(errorData.error || `Server responded with status ${response.status}`);
+        let errorText;
+        try {
+          const errorData = await response.json();
+          errorText = errorData.error || `Server error: ${response.status}`;
+        } catch (e) {
+            const rawText = await response.text().catch(() => 'Failed to get suggestion.');
+            errorText = rawText.trim() ? rawText : 'Failed to get suggestion.';
+        }
+        throw new Error(errorText);
       }
       
       const result = await response.json();

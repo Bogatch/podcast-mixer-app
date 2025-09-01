@@ -24,19 +24,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { trackList } = req.body;
+        const { trackList, locale } = req.body;
 
         if (!trackList || typeof trackList !== 'string') {
             return res.status(400).json({ success: false, error: 'trackList is required and must be a string.' });
         }
 
+        const lang = locale === 'sk' ? 'Slovak' : 'English';
+
         const prompt = `
-          You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative title and a short, engaging description for a podcast episode. The show is about music, interviews and jingles.
+          You are a creative assistant for podcasters. Your response must be in ${lang}.
+          Based on the following list of audio tracks, generate a creative title and a short, engaging description for a podcast episode. The show is about music, interviews and jingles.
           
           Track list:
           ${trackList}
-
-          Provide the response in a JSON format.
         `;
 
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -56,13 +57,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             type: Type.STRING,
                             description: 'A short, engaging description (2-3 sentences) for the podcast episode.'
                         }
-                    }
+                    },
+                    propertyOrdering: ["title", "description"]
                 }
             }
         });
 
         const resultText = response.text.trim();
-        // The API should return valid JSON because of responseSchema, but let's be safe.
         try {
             const resultJson = JSON.parse(resultText);
             return res.status(200).json({ success: true, data: resultJson });
@@ -76,6 +77,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: error.message,
             stack: error.stack,
         });
-        return res.status(500).json({ success: false, error: 'An unexpected server error occurred.' });
+        const errorMessage = error.message || 'An unexpected server error occurred.';
+        const userFriendlyError = error.toString().includes('FETCH_ERROR') 
+            ? 'Could not connect to the AI service.' 
+            : errorMessage;
+        return res.status(500).json({ success: false, error: userFriendlyError });
     }
 }
