@@ -1217,22 +1217,10 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         body: JSON.stringify({ trackList, locale }),
       });
 
-      if (!response.ok) {
-        let errorText;
-        try {
-          const errorData = await response.json();
-          errorText = errorData.error || `Server error: ${response.status}`;
-        } catch (e) {
-            const rawText = await response.text().catch(() => 'Failed to get suggestion.');
-            errorText = rawText.trim() ? rawText : 'Failed to get suggestion.';
-        }
-        throw new Error(errorText);
-      }
-      
       const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to get suggestion from API.');
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to get suggestion. The server returned an error.');
       }
       
       const { title, description } = result.data;
@@ -1240,8 +1228,9 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
       setSuggestedTitle(title || '');
       setSuggestedDescription(description || '');
 
-    } catch (err) {
-      handleError('error_suggestion_failed', {}, err);
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unknown error occurred.';
+      handleError('error_suggestion_failed', {}, { message: errorMessage });
     } finally {
       setIsSuggestingContent(false);
     }
