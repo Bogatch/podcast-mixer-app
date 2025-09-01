@@ -32,8 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const language = locale === 'sk' ? 'Slovak' : 'English';
 
-        // Simplified and more direct prompt
-        const prompt = `Generate a creative podcast episode title and a short, engaging description based on this list of audio tracks. The response must be in ${language}.
+        // More structured prompt with system instructions
+        const systemInstruction = `You are a creative assistant for podcasters. Your response must be in ${language} and conform to the provided JSON schema.`;
+        const userPrompt = `Based on this list of audio tracks, generate a creative podcast episode title and a short, engaging description.
 
 Tracks:
 ${trackList}`;
@@ -41,8 +42,9 @@ ${trackList}`;
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: prompt,
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }], // Use structured contents
             config: {
+                systemInstruction: systemInstruction, // Use systemInstruction for role and language
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
@@ -56,7 +58,6 @@ ${trackList}`;
                             description: `A short, engaging description (2-3 sentences) for the podcast episode in ${language}.`
                         }
                     }
-                    // Removed 'required' property as it's not supported by the Gemini API schema and was causing function crashes.
                 }
             }
         });
