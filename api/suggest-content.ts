@@ -1,8 +1,16 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const runtime = 'nodejs';
+
+// Helper to safely parse JSON
+function safeJsonParse(text: string): { ok: boolean; data?: any; error?: string } {
+    try {
+        return { ok: true, data: JSON.parse(text) };
+    } catch (e: any) {
+        return { ok: false, error: e?.message || 'Invalid JSON' };
+    }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS headers
@@ -14,25 +22,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
     
-    if (!process.env.API_KEY) {
-        if (process.env.GOOGLE_API) {
-            return res.status(500).json({
-                success: false,
-                error: 'Server configuration error.',
-                detail: 'An environment variable named "GOOGLE_API" was found. Please rename it to "API_KEY" in your Vercel project settings and redeploy.'
-            });
-        }
-        console.error('API_KEY is not configured in environment variables.');
-        return res.status(500).json({ 
-            success: false, 
-            error: 'Server configuration error.',
-            detail: 'The API_KEY environment variable is missing on the server.' 
-        });
-    }
-
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    }
+
+    const API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_API;
+    if (!API_KEY) {
+        return res.status(500).json({
+            success: false,
+            error: 'Server configuration error',
+            detail: 'Missing API_KEY in environment variables.',
+        });
     }
 
     try {
@@ -51,7 +52,7 @@ The language of the title and description must be ${language}.
 Tracks:
 ${trackList}`;
 
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -82,14 +83,13 @@ ${trackList}`;
             throw new Error("The AI model returned an empty response. This could be due to safety filters.");
         }
         
-        let resultJson;
-        try {
-            resultJson = JSON.parse(resultText);
-        } catch(e) {
+        const parsedResult = safeJsonParse(resultText);
+        if (!parsedResult.ok || !parsedResult.data) {
             console.error("Failed to parse Gemini response as JSON:", resultText);
-            throw new Error("AI response was not valid JSON.");
+            throw new Error(`AI response was not valid JSON. Details: ${parsedResult.error}`);
         }
 
+        const resultJson = parsedResult.data;
         if (!resultJson.title || !resultJson.description) {
             console.warn("Parsed JSON from Gemini is missing required fields:", resultJson);
             throw new Error("AI response was malformed or missing required fields.");
