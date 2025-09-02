@@ -1,9 +1,5 @@
-
-
-
-
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { MixIcon, SpinnerIcon, DownloadIcon, MagicWandIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, LightBulbIcon, ClipboardDocumentIcon, CheckIcon as CheckMarkIcon, SaveIcon } from './icons';
+import { MixIcon, SpinnerIcon, DownloadIcon, SpeakerWaveIcon, ArchiveBoxIcon, SparklesIcon, SaveIcon, MagicWandIcon } from './icons';
 import { InfoTooltip } from './InfoTooltip';
 import { I18nContext, TranslationKey } from '../lib/i18n';
 import { usePro } from '../context/ProContext';
@@ -19,14 +15,14 @@ interface MixerControlsProps {
   onRampUpDurationChange: (duration: number) => void;
   underlayVolume: number;
   onUnderlayVolumeChange: (volume: number) => void;
-  trimSilenceEnabled: boolean;
+  normalizeOutput: boolean;
+  onNormalizeOutputChange: (enabled: boolean) => void;
+  trimSilence: boolean;
   onTrimSilenceChange: (enabled: boolean) => void;
   silenceThreshold: number;
   onSilenceThresholdChange: (threshold: number) => void;
-  normalizeTracks: boolean;
-  onNormalizeTracksChange: (enabled: boolean) => void;
-  normalizeOutput: boolean;
-  onNormalizeOutputChange: (enabled: boolean) => void;
+  smartLeveling: boolean;
+  onSmartLevelingChange: (enabled: boolean) => void;
   onMix: () => void;
   isDisabled: boolean;
   isMixing: boolean;
@@ -40,58 +36,12 @@ interface MixerControlsProps {
   demoMaxDuration: number;
   showDuckingControl: boolean;
   showUnderlayControl: boolean;
-  onSuggestContent: () => void;
-  isSuggestingContent: boolean;
-  suggestedTitle: string;
-  suggestedDescription: string;
 }
 
 const formatDuration = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes.toString().padStart(1, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
-const CopyableField: React.FC<{label: string, value: string, t: (key: TranslationKey) => string}> = ({ label, value, t }) => {
-    const [copied, setCopied] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-    useEffect(() => {
-        const textarea = textareaRef.current;
-        if (textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
-        }
-    }, [value]);
-
-    const handleCopy = () => {
-        if (copied) return;
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
-            <div className="relative">
-                <textarea
-                    ref={textareaRef}
-                    readOnly
-                    value={value}
-                    className="w-full bg-gray-900/70 border border-gray-600 rounded-md p-2 pr-10 text-sm text-gray-200 resize-none overflow-hidden"
-                    rows={1}
-                />
-                <button
-                    onClick={handleCopy}
-                    title={copied ? t('copied') : t('copy')}
-                    className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-white hover:bg-gray-600 transition-colors"
-                >
-                    {copied ? <CheckMarkIcon className="w-4 h-4 text-green-400" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
-                </button>
-            </div>
-        </div>
-    );
 };
 
 const ControlWrapper: React.FC<{ isEnabled: boolean; children: React.ReactNode }> = ({ isEnabled, children }) => (
@@ -101,12 +51,12 @@ const ControlWrapper: React.FC<{ isEnabled: boolean; children: React.ReactNode }
 export const MixerControls: React.FC<MixerControlsProps> = ({
   mixDuration, onMixDurationChange, autoCrossfadeEnabled, onAutoCrossfadeChange, duckingAmount, onDuckingAmountChange,
   rampUpDuration, onRampUpDurationChange, underlayVolume, onUnderlayVolumeChange,
-  trimSilenceEnabled, onTrimSilenceChange, silenceThreshold, onSilenceThresholdChange,
-  normalizeTracks, onNormalizeTracksChange, normalizeOutput, onNormalizeOutputChange,
+  normalizeOutput, onNormalizeOutputChange,
+  trimSilence, onTrimSilenceChange, silenceThreshold, onSilenceThresholdChange,
+  smartLeveling, onSmartLevelingChange,
   onMix, isDisabled, isMixing, onOpenUnlockModal, onExportAudio, onExportProject,
   onSaveProject, isSaving, mixedAudioUrl, totalDuration, demoMaxDuration, 
-  showDuckingControl, showUnderlayControl, onSuggestContent, isSuggestingContent,
-  suggestedTitle, suggestedDescription,
+  showDuckingControl, showUnderlayControl
 }) => {
   const { t } = useContext(I18nContext);
   const { isPro } = usePro();
@@ -115,14 +65,12 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
   const canMix = !isDisabled && !isMixing;
   const canAttemptExport = !!mixedAudioUrl && !isMixing;
   const isDemoLimitExceeded = !isPro && totalDuration > demoMaxDuration;
-  const canSuggest = !isDisabled && !isMixing && !isSuggestingContent && hasTracks;
 
   // Recommended settings
   const recommendedMixDuration = 2.0;
   const recommendedDuckingAmount = 0.8;
   const recommendedRampUpDuration = 1.1;
   const recommendedUnderlayVolume = 0.2;
-  const recommendedSilenceThreshold = -45;
 
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg space-y-6">
@@ -246,64 +194,53 @@ export const MixerControls: React.FC<MixerControlsProps> = ({
         </ControlWrapper>
       </div>
 
-      <div className="border-t border-gray-700/50 pt-6 space-y-6">
-         <div >
-            <div className="flex items-center space-x-2 mb-4">
-              <h3 className="text-lg font-semibold text-gray-200 flex items-center"><MagicWandIcon className="w-5 h-5 mr-2 text-purple-400" />{t('ai_title')}</h3>
-              <InfoTooltip text={t('tooltip_ai')} position="right" />
-            </div>
-            <div className="flex items-center justify-between mb-4">
-              <label htmlFor="auto-trim-enable" className="text-sm font-medium text-gray-400">{t('ai_trim')}</label>
-              <button id="auto-trim-enable" onClick={() => onTrimSilenceChange(!trimSilenceEnabled)}
-                  className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${trimSilenceEnabled ? 'bg-purple-600' : 'bg-gray-600'}`} disabled={isMixing}>
-                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${trimSilenceEnabled ? 'translate-x-5' : 'translate-x-0'}`}/>
+       <div className="border-t border-gray-700/50 pt-6">
+        <h3 className="text-base font-semibold mb-4 text-gray-200 flex items-center space-x-2">
+          <MagicWandIcon className="w-5 h-5 text-purple-400" />
+          <span>{t('smart_cutting_title')}</span>
+        </h3>
+        <ControlWrapper isEnabled={hasTracks}>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <label htmlFor="trim-silence-enable" className="text-sm font-medium text-gray-400">{t('smart_cutting_trim_silence')}</label>
+              <InfoTooltip text={t('tooltip_trim_silence')} position="left" />
+              <button id="trim-silence-enable" onClick={() => onTrimSilenceChange(!trimSilence)}
+                className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${trimSilence ? 'bg-purple-600' : 'bg-gray-600'}`} disabled={isMixing || !hasTracks}>
+                <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${trimSilence ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
-            
-            <ControlWrapper isEnabled={trimSilenceEnabled}>
+            <ControlWrapper isEnabled={hasTracks && trimSilence}>
               <div>
-                  <div className="flex items-center space-x-2"><label htmlFor="auto-trim-threshold" className="block text-sm font-medium text-gray-400">{t('ai_threshold')}</label><InfoTooltip text={t('tooltip_ai_threshold_vocal')} position="right" /></div>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <div className="relative w-full flex items-center">
-                      <input id="auto-trim-threshold" type="range" min="-60" max="-5" step="1" value={silenceThreshold}
-                          onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
-                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                          disabled={isMixing || !trimSilenceEnabled}
-                      />
-                      <div
-                        className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-purple-500 rounded-full pointer-events-none"
-                        style={{ left: `calc(${((recommendedSilenceThreshold - -60) / (-5 - -60)) * 100}% - 0.5px)` }}
-                        title={`${t('tooltip_recommended_setting')}: ${recommendedSilenceThreshold}dB`}
-                      />
-                    </div>
-                    <span className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
-                      {t('decibel_unit', { value: silenceThreshold.toFixed(0) })}
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="silence-threshold" className="block text-sm font-medium text-gray-400">{t('smart_cutting_silence_threshold')}</label>
+                  <InfoTooltip text={t('tooltip_silence_threshold')} position="right" />
+                </div>
+                <div className="flex items-center space-x-4 mt-2">
+                  <input
+                    id="silence-threshold" type="range" min="-96" max="0" step="1" value={silenceThreshold}
+                    onChange={(e) => onSilenceThresholdChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                    disabled={isMixing || !hasTracks || !trimSilence}
+                  />
+                  <span className="w-24 bg-gray-800/60 text-purple-400 font-mono text-sm sm:text-base text-center py-1 rounded-md border border-gray-600">
+                    {t('decibel_unit', { value: silenceThreshold.toFixed(0) })}
+                  </span>
+                </div>
               </div>
             </ControlWrapper>
-             <div className="flex items-center justify-between mt-4">
-              <label htmlFor="normalize-tracks" className="text-sm font-medium text-gray-400">{t('mixer_normalize_tracks')}</label>
-              <InfoTooltip text={t('tooltip_normalize_tracks')} position="left" />
-              <button id="normalize-tracks" onClick={() => onNormalizeTracksChange(!normalizeTracks)}
-                  className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${normalizeTracks ? 'bg-purple-600' : 'bg-gray-600'}`} disabled={isMixing}>
-                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${normalizeTracks ? 'translate-x-5' : 'translate-x-0'}`}/>
+            <div className="flex items-center justify-between">
+              <label htmlFor="smart-leveling-enable" className="text-sm font-medium text-gray-400">{t('smart_cutting_smart_leveling')}</label>
+              <InfoTooltip text={t('tooltip_smart_leveling')} position="left" />
+              <button id="smart-leveling-enable" onClick={() => onSmartLevelingChange(!smartLeveling)}
+                className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 ${smartLeveling ? 'bg-purple-600' : 'bg-gray-600'}`} disabled={isMixing || !hasTracks}>
+                <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${smartLeveling ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
-        </div>
+          </div>
+        </ControlWrapper>
+      </div>
 
-        {hasTracks && (
-            <div className="space-y-4">
-                <div className="flex items-center space-x-2"><h3 className="text-lg font-semibold text-gray-200 flex items-center"><LightBulbIcon className="w-5 h-5 mr-2 text-yellow-400" />{t('ai_content_assistant_title')}</h3><InfoTooltip text={t('tooltip_ai_content')} position="right" /></div>
-                {!isPro ? (<button onClick={onOpenUnlockModal} className="w-full flex items-center justify-center px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/40 border border-yellow-600/50 text-yellow-300 font-semibold rounded-md transition-colors"><SparklesIcon className="w-5 h-5 mr-2" /><span>{t('header_get_pro')}</span></button>) : (<>
-                        <button onClick={onSuggestContent} disabled={!canSuggest} className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed">
-                            {isSuggestingContent ? (<><SpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />{t('ai_content_suggesting_button')}</>) : (<><SparklesIcon className="w-5 h-5 mr-2" />{t('ai_content_suggest_button')}</>)}
-                        </button>
-                        {(suggestedTitle || suggestedDescription) && (<div className="space-y-3 pt-2">{suggestedTitle && <CopyableField label={t('ai_content_title_label')} value={suggestedTitle} t={t} />}{suggestedDescription && <CopyableField label={t('ai_content_description_label')} value={suggestedDescription} t={t} />}</div>)}
-                    </>)}
-            </div>
-         )}
-
+      <div className="border-t border-gray-700/50 pt-6 space-y-6">
         <div>
             <h3 className="text-lg font-semibold mb-2 text-gray-200">{t('output_title')}</h3>
             <div className="bg-gray-900/70 p-4 rounded-md text-center mb-4 space-y-2">

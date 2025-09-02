@@ -44,75 +44,6 @@ const readAudioFile = (file: File): Promise<{ duration: number; arrayBuffer: Arr
   });
 };
 
-const calculateRMS = (audioBuffer: AudioBuffer): number => {
-    // Use the average power of all channels for a more balanced loudness measure
-    let sumOfSquares = 0;
-    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
-        const data = audioBuffer.getChannelData(i);
-        for (let j = 0; j < data.length; j++) {
-            sumOfSquares += data[j] * data[j];
-        }
-    }
-    const rms = Math.sqrt(sumOfSquares / (audioBuffer.length * audioBuffer.numberOfChannels));
-    if (rms === 0) return -Infinity; // Avoid log(0)
-    return 20 * Math.log10(rms); // Convert to dBFS
-};
-
-
-const analyzeTrackBoundaries = (buffer: AudioBuffer, thresholdDb: number): { smartTrimStart: number; smartTrimEnd: number } => {
-    const threshold = Math.pow(10, thresholdDb / 20);
-    const sampleRate = buffer.sampleRate;
-    const minSilenceDuration = 0.1; // 100ms of silence to confirm
-    const minSilenceSamples = Math.floor(minSilenceDuration * sampleRate);
-    const channelData = buffer.getChannelData(0);
-
-    let smartTrimStart = 0;
-    let smartTrimEnd = buffer.duration;
-
-    // Find first non-silent sample from the start
-    let firstNonSilentSample = 0;
-    for (let i = 0; i < channelData.length; i += minSilenceSamples) {
-        const segment = channelData.subarray(i, i + minSilenceSamples);
-        const isSilent = segment.every(sample => Math.abs(sample) < threshold);
-        if (!isSilent) {
-            firstNonSilentSample = i;
-            break;
-        }
-    }
-     // Find the precise start
-    for (let i = firstNonSilentSample; i < channelData.length; i++) {
-        if (Math.abs(channelData[i]) > threshold) {
-            smartTrimStart = i / sampleRate;
-            break;
-        }
-    }
-    
-    // Find last non-silent sample from the end
-    let lastNonSilentSample = channelData.length - 1;
-    for (let i = channelData.length; i > 0; i -= minSilenceSamples) {
-        const segment = channelData.subarray(i - minSilenceSamples, i);
-        const isSilent = segment.every(sample => Math.abs(sample) < threshold);
-        if (!isSilent) {
-            lastNonSilentSample = i;
-            break;
-        }
-    }
-    // Find precise end
-    for (let i = lastNonSilentSample; i >= 0; i--) {
-        if (Math.abs(channelData[i]) > threshold) {
-            smartTrimEnd = (i + 1) / sampleRate;
-            break;
-        }
-    }
-    
-    if (smartTrimEnd <= smartTrimStart) {
-        return { smartTrimStart: 0, smartTrimEnd: buffer.duration };
-    }
-
-    // Rounding to prevent infinitesimal changes causing re-renders
-    return { smartTrimStart: Math.round(smartTrimStart * 10000) / 10000, smartTrimEnd: Math.round(smartTrimEnd * 10000) / 10000 };
-};
-
 const SuccessIcon = () => (
   <svg viewBox="0 0 24 24" className="h-6 w-6 text-green-400">
     <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -137,10 +68,10 @@ const AppContent: React.FC = () => {
   const [duckingAmount, setDuckingAmount] = useState(0.7);
   const [rampUpDuration, setRampUpDuration] = useState(1.5);
   const [underlayVolume, setUnderlayVolume] = useState(0.5);
-  const [trimSilenceEnabled, setTrimSilenceEnabled] = useState(true);
-  const [silenceThreshold, setSilenceThreshold] = useState(-45);
-  const [normalizeTracks, setNormalizeTracks] = useState(true);
   const [normalizeOutput, setNormalizeOutput] = useState(true);
+  const [trimSilence, setTrimSilence] = useState(true);
+  const [silenceThreshold, setSilenceThreshold] = useState(-50); // in dB
+  const [smartLeveling, setSmartLeveling] = useState(true);
 
   // App UI State
   const [uploadingType, setUploadingType] = useState<'music' | 'spoken' | 'jingle' | 'underlay' | null>(null);
@@ -163,12 +94,6 @@ const AppContent: React.FC = () => {
   const [showStripePopup, setShowStripePopup] = useState(false);
   const [showActivatedPopup, setShowActivatedPopup] = useState(false);
   const wasProRef = useRef(isPro);
-
-
-  // AI Content
-  const [suggestedTitle, setSuggestedTitle] = useState('');
-  const [suggestedDescription, setSuggestedDescription] = useState('');
-  const [isSuggestingContent, setIsSuggestingContent] = useState(false);
 
   // Refs for audio playback
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -206,8 +131,6 @@ const AppContent: React.FC = () => {
   const resetMix = useCallback(() => {
     if (mixedAudioUrl) URL.revokeObjectURL(mixedAudioUrl);
     setMixedAudioUrl(null);
-    setSuggestedTitle('');
-    setSuggestedDescription('');
   }, [mixedAudioUrl]);
 
   const handleError = (key: TranslationKey, params: { [key: string]: string | number } = {}, error?: any) => {
@@ -321,10 +244,10 @@ const AppContent: React.FC = () => {
         setDuckingAmount(projectData.mixerSettings.duckingAmount ?? 0.7);
         setRampUpDuration(projectData.mixerSettings.rampUpDuration ?? 1.5);
         setUnderlayVolume(projectData.mixerSettings.underlayVolume ?? 0.5);
-        setTrimSilenceEnabled(projectData.mixerSettings.trimSilenceEnabled ?? true);
-        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -45);
-        setNormalizeTracks(projectData.mixerSettings.normalizeTracks ?? true);
         setNormalizeOutput(projectData.mixerSettings.normalizeOutput ?? true);
+        setTrimSilence(projectData.mixerSettings.trimSilence ?? true);
+        setSilenceThreshold(projectData.mixerSettings.silenceThreshold ?? -50);
+        setSmartLeveling(projectData.mixerSettings.smartLeveling ?? true);
       }
       
       resetMix();
@@ -336,14 +259,21 @@ const AppContent: React.FC = () => {
      try {
         const { duration, arrayBuffer } = await readAudioFile(file);
         
+        const updateTrack = (track: Track) => ({
+            ...track, file, duration, name: file.name, fileName: file.name, 
+            fileBuffer: arrayBuffer, fileType: file.type,
+            // Reset smart properties to trigger re-analysis
+            smartTrimStart: undefined, smartTrimEnd: undefined, normalizationGain: undefined
+        });
+
         setTracks(current => current.map(track => {
             if (track.id !== trackId) return track;
-            return { ...track, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer, fileType: file.type };
+            return updateTrack(track);
         }));
 
         setUnderlayTrack(current => {
             if (!current || current.id !== trackId) return current;
-            return { ...current, file, duration, name: file.name, fileName: file.name, fileBuffer: arrayBuffer, fileType: file.type };
+            return updateTrack(current);
         });
         
         resetMix();
@@ -375,10 +305,10 @@ const AppContent: React.FC = () => {
                 setDuckingAmount(settings.duckingAmount ?? 0.7);
                 setRampUpDuration(settings.rampUpDuration ?? 1.5);
                 setUnderlayVolume(settings.underlayVolume ?? 0.5);
-                setTrimSilenceEnabled(settings.trimSilenceEnabled ?? true);
-                setSilenceThreshold(settings.silenceThreshold ?? -45);
-                setNormalizeTracks(settings.normalizeTracks ?? true);
                 setNormalizeOutput(settings.normalizeOutput ?? true);
+                setTrimSilence(settings.trimSilence ?? true);
+                setSilenceThreshold(settings.silenceThreshold ?? -50);
+                setSmartLeveling(settings.smartLeveling ?? true);
             }
         }
     } catch (e) { console.error("Failed to load settings", e); }
@@ -386,9 +316,9 @@ const AppContent: React.FC = () => {
 
   const mixerSettings = useMemo(() => ({
       mixDuration, autoCrossfadeEnabled, duckingAmount, rampUpDuration, underlayVolume,
-      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput
+      normalizeOutput, trimSilence, silenceThreshold, smartLeveling
   }), [mixDuration, autoCrossfadeEnabled, duckingAmount, rampUpDuration, underlayVolume,
-      trimSilenceEnabled, silenceThreshold, normalizeTracks, normalizeOutput]);
+      normalizeOutput, trimSilence, silenceThreshold, smartLeveling]);
 
   // Save mixer settings whenever they change
   useEffect(() => {
@@ -398,6 +328,103 @@ const AppContent: React.FC = () => {
           console.error("Failed to save settings", e);
       }
   }, [mixerSettings]);
+
+  const analyzeTrack = useCallback(async (
+      track: Track,
+      audioBuffer: AudioBuffer,
+      threshold: number
+  ): Promise<Partial<Track>> => {
+      const updates: Partial<Track> = {};
+      const channelData = audioBuffer.getChannelData(0); // Analyze first channel
+      const sampleRate = audioBuffer.sampleRate;
+      const thresholdValue = Math.pow(10, threshold / 20);
+
+      let firstAudioFrame = 0;
+      for (let i = 0; i < channelData.length; i++) {
+          if (Math.abs(channelData[i]) > thresholdValue) {
+              firstAudioFrame = i;
+              break;
+          }
+      }
+
+      let lastAudioFrame = channelData.length - 1;
+      for (let i = channelData.length - 1; i >= 0; i--) {
+          if (Math.abs(channelData[i]) > thresholdValue) {
+              lastAudioFrame = i;
+              break;
+          }
+      }
+      
+      const bufferFrames = Math.floor(sampleRate * 0.05); // 50ms buffer
+      const finalStartFrame = Math.max(0, firstAudioFrame - bufferFrames);
+      const finalEndFrame = Math.min(channelData.length - 1, lastAudioFrame + bufferFrames);
+
+      updates.smartTrimStart = finalStartFrame / sampleRate;
+      updates.smartTrimEnd = finalEndFrame / sampleRate;
+      
+      let sumOfSquares = 0;
+      const contentData = channelData.subarray(finalStartFrame, finalEndFrame);
+      for(let i = 0; i < contentData.length; i++) {
+          sumOfSquares += contentData[i] * contentData[i];
+      }
+      const rms = Math.sqrt(sumOfSquares / contentData.length);
+      
+      const targetRms = 0.1; 
+      if (rms > 0.001) { 
+          updates.normalizationGain = targetRms / rms;
+      } else {
+          updates.normalizationGain = 1.0;
+      }
+
+      return updates;
+  }, []);
+
+  // Auto-analyze tracks when they are added or threshold changes
+  useEffect(() => {
+    const analyzeAllTracks = async () => {
+        const allCurrentTracks = [...tracks, underlayTrack].filter((t): t is Track => !!t && !!t.fileBuffer);
+        if (allCurrentTracks.length === 0) return;
+
+        const updatesMap = new Map<string, Partial<Track>>();
+
+        for (const track of allCurrentTracks) {
+            let buffer = decodedAudioBuffers.current.get(track.id);
+            if (!buffer) {
+                try {
+                    const tempAudioCtx = new AudioContext();
+                    buffer = await tempAudioCtx.decodeAudioData(track.fileBuffer!.slice(0));
+                    decodedAudioBuffers.current.set(track.id, buffer);
+                    await tempAudioCtx.close();
+                } catch (e) {
+                    console.error(`Failed to decode for analysis: ${track.name}`, e);
+                    continue;
+                }
+            }
+
+            if (buffer) {
+                const updates = await analyzeTrack(track, buffer, silenceThreshold);
+                updatesMap.set(track.id, updates);
+            }
+        }
+        
+        if (updatesMap.size > 0) {
+             setTracks(current => current.map(t => {
+                const updateData = updatesMap.get(t.id);
+                // FIX: Property 'updates' does not exist on type 'Partial<Track>'. The updates are in the 'updateData' object itself.
+                return updateData ? { ...t, ...updateData } : t;
+             }));
+             setUnderlayTrack(current => {
+                if (!current) return null;
+                const updateData = updatesMap.get(current.id);
+                // FIX: Property 'updates' does not exist on type 'Partial<Track>'. The updates are in the 'updateData' object itself.
+                return updateData ? { ...current, ...updateData } : current;
+             });
+             resetMix();
+        }
+    };
+
+    analyzeAllTracks();
+  }, [trackIds, underlayId, silenceThreshold, analyzeTrack, resetMix]);
 
 
   const getProjectData = useCallback(() => {
@@ -410,6 +437,7 @@ const AppContent: React.FC = () => {
             manualCrossfadePoint: t.manualCrossfadePoint,
             smartTrimStart: t.smartTrimStart,
             smartTrimEnd: t.smartTrimEnd,
+            normalizationGain: t.normalizationGain,
         })),
         underlayTrack: underlayTrack ? {
             id: underlayTrack.id, name: underlayTrack.name, fileName: underlayTrack.fileName,
@@ -417,6 +445,7 @@ const AppContent: React.FC = () => {
             fileBuffer: underlayTrack.fileBuffer, fileType: underlayTrack.fileType,
             smartTrimStart: underlayTrack.smartTrimStart,
             smartTrimEnd: underlayTrack.smartTrimEnd,
+            normalizationGain: underlayTrack.normalizationGain,
         } : null,
         mixerSettings: mixerSettings
     };
@@ -511,74 +540,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-   useEffect(() => {
-    const analyzeAllTracks = async () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const allTracks = underlayTrack ? [...tracks, underlayTrack] : tracks;
-
-      const updates = new Map<string, Partial<Track>>();
-
-      for (const track of allTracks) {
-        if (!track.file || !track.fileBuffer) continue;
-        try {
-          let buffer = decodedAudioBuffers.current.get(track.id);
-          if (!buffer) {
-            buffer = await audioContext.decodeAudioData(track.fileBuffer.slice(0));
-            decodedAudioBuffers.current.set(track.id, buffer);
-          }
-          
-          const trackUpdates: Partial<Track> = {};
-          const currentTrackState = track.id.startsWith('underlay-') ? underlayTrack : tracks.find(t => t.id === track.id);
-
-          // Only auto-analyze if trim times haven't been set yet (or feature is toggled)
-          if (trimSilenceEnabled) {
-              if (currentTrackState?.smartTrimStart === undefined || currentTrackState?.smartTrimEnd === undefined) {
-                  const { smartTrimStart, smartTrimEnd } = analyzeTrackBoundaries(buffer, silenceThreshold);
-                  trackUpdates.smartTrimStart = smartTrimStart;
-                  trackUpdates.smartTrimEnd = smartTrimEnd;
-              }
-          } else {
-              // Reset if feature is disabled
-              trackUpdates.smartTrimStart = undefined;
-              trackUpdates.smartTrimEnd = undefined;
-          }
-
-          if (normalizeTracks) {
-              const targetLoudness = -16; // Target RMS in dBFS
-              const rmsDb = calculateRMS(buffer);
-              if (isFinite(rmsDb)) {
-                const gain = Math.pow(10, (targetLoudness - rmsDb) / 20);
-                trackUpdates.normalizationGain = gain;
-              } else {
-                trackUpdates.normalizationGain = 1;
-              }
-          } else {
-              trackUpdates.normalizationGain = undefined;
-          }
-          
-          const needsUpdate = Object.keys(trackUpdates).some(key => trackUpdates[key as keyof Track] !== currentTrackState?.[key as keyof Track]);
-          
-          if (needsUpdate) {
-            updates.set(track.id, trackUpdates);
-          }
-
-        } catch (err) {
-          handleError('error_process_file', { fileName: track.name }, err);
-        }
-      }
-
-      if (updates.size > 0) {
-        setTracks(current => current.map(t => updates.has(t.id) ? { ...t, ...updates.get(t.id) } : t));
-        if (underlayTrack && updates.has(underlayTrack.id)) {
-          setUnderlayTrack(t => t ? ({...t, ...updates.get(underlayTrack.id)}) : null);
-        }
-        resetMix();
-      }
-    };
-
-    analyzeAllTracks();
-  }, [trimSilenceEnabled, normalizeTracks, trackIds, underlayId, silenceThreshold, t, resetMix]);
-
   const handleReorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
     setTracks(prevTracks => {
         const newTracks = [...prevTracks];
@@ -608,10 +569,12 @@ const AppContent: React.FC = () => {
     }
      // Live update preview gain if this track is playing
     if (previewState.trackId === id && gainNodeRef.current && audioContextRef.current) {
-        gainNodeRef.current.gain.setValueAtTime(volume, audioContextRef.current.currentTime);
+        const track = [...tracks, underlayTrack].find(t => t?.id === id);
+        const normalizationGain = (smartLeveling && track?.normalizationGain) ? track.normalizationGain : 1.0;
+        gainNodeRef.current.gain.setValueAtTime(volume * normalizationGain, audioContextRef.current.currentTime);
     }
     resetMix();
-  }, [underlayTrack, resetMix, previewState.trackId]);
+  }, [underlayTrack, resetMix, previewState.trackId, smartLeveling, tracks]);
 
   const updateVocalStartTime = useCallback((id: string, time: number) => {
     setTracks(current => current.map(t => t.id === id ? { ...t, vocalStartTime: time } : t));
@@ -731,13 +694,15 @@ const AppContent: React.FC = () => {
     // Determine start time: from parameter, or resume, or from beginning
     const isResumingFromPause = previewState.trackId === trackId && previewState.currentTime < track.duration && !previewState.isPlaying;
 
+    const effectiveStart = trimSilence && track.smartTrimStart ? track.smartTrimStart : 0;
+    
     let timeToStart;
     if (startTime !== undefined) { // 1. Direct click on waveform or CUE button
         timeToStart = startTime;
     } else if (isResumingFromPause) { // 2. Resuming a paused track
         timeToStart = previewState.currentTime;
     } else { // 3. Fresh play from beginning (for non-music) or 0 (for music without CUE)
-        timeToStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+        timeToStart = effectiveStart;
     }
     
     if (timeToStart >= track.duration) {
@@ -755,7 +720,9 @@ const AppContent: React.FC = () => {
       source.buffer = buffer;
       
       const gainNode = audioContext.createGain();
-      gainNode.gain.value = track.volume ?? 1.0;
+      const userVolume = track.volume ?? 1.0;
+      const normalizationGain = (smartLeveling && track.normalizationGain) ? track.normalizationGain : 1.0;
+      gainNode.gain.value = userVolume * normalizationGain;
       gainNodeRef.current = gainNode;
 
       const analyser = audioContext.createAnalyser();
@@ -785,7 +752,7 @@ const AppContent: React.FC = () => {
     } catch (err) {
       handleError('error_preview_failed', { fileName: track.name }, err);
     }
-  }, [previewState, stopCurrentPreview, tracks, underlayTrack, t, updatePreviewTime, trimSilenceEnabled]);
+  }, [previewState, stopCurrentPreview, tracks, underlayTrack, t, updatePreviewTime, trimSilence, smartLeveling]);
 
   const handleCuePlay = useCallback((trackId: string) => {
     const track = tracks.find(t => t.id === trackId);
@@ -793,10 +760,10 @@ const AppContent: React.FC = () => {
     
     const cueTime = track.type === 'music' 
         ? track.vocalStartTime ?? 0 
-        : (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+        : (trimSilence && track.smartTrimStart ? track.smartTrimStart : 0);
         
     handlePreview(trackId, cueTime);
-  }, [tracks, handlePreview, trimSilenceEnabled]);
+  }, [tracks, handlePreview, trimSilence]);
 
   const handleWaveformClick = (trackId: string, time: number, isShiftClick: boolean) => {
     const track = tracks.find(t => t.id === trackId);
@@ -822,8 +789,8 @@ const AppContent: React.FC = () => {
         const track = tracksWithFiles[i];
         const prevTrack = i > 0 ? tracksWithFiles[i - 1] : null;
 
-        const smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
-        const smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
+        const smartStart = trimSilence && track.smartTrimStart ? track.smartTrimStart : 0;
+        const smartEnd = trimSilence && track.smartTrimEnd ? track.smartTrimEnd : track.duration;
         
         const effectiveDuration = smartEnd - smartStart;
         if (effectiveDuration <= 0) continue;
@@ -893,7 +860,7 @@ const AppContent: React.FC = () => {
                 }
 
                 if (underlayEnd > underlayStart) {
-                     const underlaySmartStart = (trimSilenceEnabled && underlayTrack.smartTrimStart !== undefined) ? underlayTrack.smartTrimStart : 0;
+                     const underlaySmartStart = trimSilence && underlayTrack.smartTrimStart ? underlayTrack.smartTrimStart : 0;
                      underlayLayout.push({
                          track: underlayTrack,
                          startTime: underlayStart,
@@ -909,7 +876,7 @@ const AppContent: React.FC = () => {
     const finalTotalDuration = Math.max(totalDuration, ...underlayLayout.map(item => item.endTime));
     
     return { layout, underlayLayout, totalDuration: finalTotalDuration };
-}, [tracks, underlayTrack, mixDuration, trimSilenceEnabled, rampUpDuration, autoCrossfadeEnabled]);
+}, [tracks, underlayTrack, mixDuration, rampUpDuration, autoCrossfadeEnabled, trimSilence]);
 
   const defaultCrossfadePoints = useMemo(() => {
     const points = new Map<string, number>();
@@ -920,11 +887,11 @@ const AppContent: React.FC = () => {
             const nextTrack = tracks[index + 1];
             // Only create auto-crossfade points for music->music or music->spoken/jingle transitions
             if (nextTrack.type === 'music' || nextTrack.type === 'spoken' || nextTrack.type === 'jingle') {
-                const smartEnd = (trimSilenceEnabled && track.smartTrimEnd !== undefined) ? track.smartTrimEnd : track.duration;
+                const smartEnd = trimSilence && track.smartTrimEnd ? track.smartTrimEnd : track.duration;
                 // The crossfade happens 'mixDuration' seconds before the effective end of the track.
                 const point = smartEnd - mixDuration;
 
-                const smartStart = (trimSilenceEnabled && track.smartTrimStart !== undefined) ? track.smartTrimStart : 0;
+                const smartStart = trimSilence && track.smartTrimStart ? track.smartTrimStart : 0;
                 // Ensure the point is after the start of the audible content
                 if (point > smartStart) {
                     points.set(track.id, point);
@@ -933,7 +900,7 @@ const AppContent: React.FC = () => {
         }
     });
     return points;
-  }, [tracks, mixDuration, trimSilenceEnabled]);
+  }, [tracks, mixDuration, trimSilence]);
 
 const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> => {
     const { layout, underlayLayout, totalDuration } = timelineLayout;
@@ -969,8 +936,9 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        const trackVolume = item.track.volume ?? 1.0;
-        const baseGainValue = (item.track.normalizationGain ?? 1.0) * trackVolume;
+        const trackVolumeSetting = item.track.volume ?? 1.0;
+        const normalizationGain = (smartLeveling && item.track.normalizationGain) ? item.track.normalizationGain : 1.0;
+        const baseGainValue = trackVolumeSetting * normalizationGain;
 
         if (isUnderlay) {
             source.loop = true;
@@ -1073,7 +1041,7 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
     }
     
     return mixedBuffer;
-}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration, normalizeTracks, autoCrossfadeEnabled]);
+}, [timelineLayout, duckingAmount, mixDuration, underlayVolume, normalizeOutput, rampUpDuration, autoCrossfadeEnabled, smartLeveling]);
 
 
   const estimatedDuration = timelineLayout.totalDuration;
@@ -1192,64 +1160,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
         setExportProgress(0);
     }
   };
-
-  const handleSuggestContent = async () => {
-    if (tracks.length === 0) {
-      handleError("error_no_tracks_to_mix");
-      return;
-    }
-    if (!isPro) {
-      setIsUnlockModalOpen(true);
-      return;
-    }
-
-    setIsSuggestingContent(true);
-    setError(null);
-
-    const trackList = tracks.map(t => `- ${t.name} (type: ${t.type})`).join('\n');
-    
-    try {
-      const response = await fetch('/api/suggest-content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ trackList, locale }),
-      });
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        let errorDetail = 'Failed to get suggestion.';
-        try {
-          const errorJson = JSON.parse(responseText);
-          errorDetail = errorJson.error || errorJson.detail || errorDetail;
-        } catch (e) {
-          if (responseText && !responseText.trim().startsWith('<')) {
-            errorDetail = responseText;
-          }
-        }
-        throw new Error(errorDetail);
-      }
-      
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || result.detail || 'Failed to get suggestion.');
-      }
-      
-      const { title, description } = result.data;
-      
-      setSuggestedTitle(title || '');
-      setSuggestedDescription(description || '');
-
-    } catch (err: any) {
-      const errorMessage = err.message || 'An unknown error occurred.';
-      handleError('error_suggestion_failed', {}, { message: errorMessage });
-    } finally {
-      setIsSuggestingContent(false);
-    }
-  };
-
 
   const showDuckingControl = useMemo(() => {
     for (let i = 0; i < tracks.length - 1; i++) {
@@ -1393,12 +1303,6 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               onRampUpDurationChange={(d) => { setRampUpDuration(d); resetMix(); }}
               underlayVolume={underlayVolume}
               onUnderlayVolumeChange={(v) => { setUnderlayVolume(v); resetMix(); }}
-              trimSilenceEnabled={trimSilenceEnabled}
-              onTrimSilenceChange={(e) => { setTrimSilenceEnabled(e); resetMix(); }}
-              silenceThreshold={silenceThreshold}
-              onSilenceThresholdChange={(t) => { setSilenceThreshold(t); resetMix(); }}
-              normalizeTracks={normalizeTracks}
-              onNormalizeTracksChange={(e) => { setNormalizeTracks(e); resetMix(); }}
               normalizeOutput={normalizeOutput}
               onNormalizeOutputChange={(e) => { setNormalizeOutput(e); resetMix(); }}
               onMix={handleMix}
@@ -1414,10 +1318,12 @@ const renderMix = useCallback(async (sampleRate: number): Promise<AudioBuffer> =
               demoMaxDuration={DEMO_MAX_DURATION_SECONDS}
               showDuckingControl={showDuckingControl}
               showUnderlayControl={showUnderlayControl}
-              onSuggestContent={handleSuggestContent}
-              isSuggestingContent={isSuggestingContent}
-              suggestedTitle={suggestedTitle}
-              suggestedDescription={suggestedDescription}
+              trimSilence={trimSilence}
+              onTrimSilenceChange={(e) => { setTrimSilence(e); resetMix(); }}
+              silenceThreshold={silenceThreshold}
+              onSilenceThresholdChange={setSilenceThreshold}
+              smartLeveling={smartLeveling}
+              onSmartLevelingChange={(e) => { setSmartLeveling(e); resetMix(); }}
             />
           </div>
           <div className="lg:col-span-2 bg-gray-800/50 rounded-lg p-6 shadow-2xl border border-gray-700">

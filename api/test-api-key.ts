@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Using CommonJS export to match user-provided snippet style
-module.exports = (req: VercelRequest, res: VercelResponse) => {
+// Fix: Changed from CommonJS export to ES module default export to resolve TypeScript error.
+export default (req: VercelRequest, res: VercelResponse) => {
   try {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');

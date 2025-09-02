@@ -7,12 +7,12 @@ export interface Track {
   duration: number; // in seconds
   type: 'music' | 'spoken' | 'jingle';
   volume?: number; // User-defined volume from 0 to 1.5
+  normalizationGain?: number; // Suggested gain from analysis, from 0 to infinity
   vocalStartTime?: number; // in seconds
   smartTrimStart?: number; // Time in seconds where content starts
   smartTrimEnd?: number;   // Time in seconds where content ends
   talkOverPoint?: number;  // Time where music drops for talk-over
   fileBuffer?: ArrayBuffer; // In-memory buffer of the file content
-  normalizationGain?: number; // Gain applied for volume leveling
   manualCrossfadePoint?: number; // User-defined point in seconds to start the next track
 }
 
