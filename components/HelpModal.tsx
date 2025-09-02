@@ -96,11 +96,12 @@ export const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <p>{t('help_detail_mixer_recommended_p1')}</p>
                 </AccordionItem>
 
-                <AccordionItem title={t('help_section_smart_tools')}>
-                    <p>{t('help_detail_smart_tools_p1')}</p>
+                <AccordionItem title={t('help_section_ai_tools')}>
+                    <p>{t('help_ai_p1')}</p>
                     <ul className="list-disc list-inside space-y-2 pl-2 mt-4">
-                        <li><b>{t('help_smart_tools_trim_silence_title')}</b> {t('help_smart_tools_trim_silence_desc')}</li>
-                        <li><b>{t('help_smart_tools_smart_leveling_title')}</b> {t('help_smart_tools_smart_leveling_desc')}</li>
+                        <li><b>{t('help_ai_trim_title')}</b> {t('help_ai_trim_desc')}</li>
+                        <li><b>{t('help_ai_threshold_title')}</b> {t('help_ai_threshold_desc')}</li>
+                        <li><b>{t('help_detail_ai_leveling_title')}</b> {t('help_detail_ai_leveling_p1')}</li>
                     </ul>
                 </AccordionItem>
 
