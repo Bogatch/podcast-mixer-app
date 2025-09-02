@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -12,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
-
+    
     if (!process.env.API_KEY) {
         if (process.env.GOOGLE_API) {
             return res.status(500).json({
@@ -43,33 +44,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const language = locale === 'sk' ? 'Slovak' : 'English';
 
-        // Combine all instructions into a single prompt for robustness.
-        const fullPrompt = `You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative podcast episode title and a short, engaging description. Your response must be in ${language}.
+        const prompt = `
+You are a creative assistant for podcasters. Based on the following list of audio tracks, generate a creative podcast episode title and a short, engaging description.
+The language of the title and description must be ${language}.
 
 Tracks:
 ${trackList}`;
 
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: fullPrompt, // Using the new combined prompt
+            contents: prompt,
             config: {
-                // systemInstruction is removed to increase stability.
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
                         title: {
                             type: Type.STRING,
-                            description: `A creative title for the podcast episode in ${language}.`
+                            description: "The creative and catchy title for the podcast episode."
                         },
                         description: {
                             type: Type.STRING,
-                            description: `A short, engaging description (2-3 sentences) for the podcast episode in ${language}.`
-                        }
-                    }
-                }
-            }
+                            description: "A short, engaging description for the podcast episode."
+                        },
+                    },
+                    required: ["title", "description"],
+                },
+            },
         });
 
         const resultText = response.text;
@@ -89,7 +92,7 @@ ${trackList}`;
 
         if (!resultJson.title || !resultJson.description) {
             console.warn("Parsed JSON from Gemini is missing required fields:", resultJson);
-            throw new Error("AI response was malformed.");
+            throw new Error("AI response was malformed or missing required fields.");
         }
         
         return res.status(200).json({ success: true, data: resultJson });
